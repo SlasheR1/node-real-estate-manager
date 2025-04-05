@@ -161,65 +161,74 @@ app.on('quit', () => {
 
 // Функция для безопасной отправки сообщений в окно
 function sendStatusToWindow(channel, data) {
-  log.info(`[IPC Send] Channel: ${channel}, Data: ${JSON.stringify(data) || '<no data>'}`);
+  const dataString = typeof data === 'object' ? JSON.stringify(data).substring(0, 150) + '...' : data; // Обрезаем длинные объекты для лога
+  log.info(`[IPC Send -> Renderer] Channel: ${channel}, Data: ${dataString || '<no data>'}`);
   if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
     try {
         mainWindow.webContents.send(channel, data);
     } catch (error) {
-        log.error(`[IPC Send] Error sending to webContents: ${error.message}`);
+        log.error(`[IPC Send -> Renderer] ERROR Sending on ${channel}: ${error.message}`);
     }
   } else {
-    log.warn(`[IPC Send] Cannot send on channel ${channel}, mainWindow is not available or destroyed.`);
+    log.warn(`[IPC Send -> Renderer] FAILED Sending on ${channel}. Reason: mainWindow not available or destroyed.`);
   }
 }
 
 autoUpdater.on('checking-for-update', () => {
+  log.info('[AutoUpdater Event] === CHECKING ===');
   sendStatusToWindow('update-status', 'Проверка обновлений...');
 });
 
 autoUpdater.on('update-available', (info) => {
-  log.info('[AutoUpdater Event] Update available.', info);
-  sendStatusToWindow('update-available', info); // Отправляем инфо об обновлении
-  sendStatusToWindow('update-status', `Найдена версия ${info.version}. Загрузка...`); // Обновляем статус
+  log.info('[AutoUpdater Event] === AVAILABLE ===', info);
+  sendStatusToWindow('update-available', info);
+  sendStatusToWindow('update-status', `Найдена версия ${info.version}. Загрузка...`);
 });
 
 autoUpdater.on('update-not-available', (info) => {
-  log.info('[AutoUpdater Event] Update not available.', info);
+  log.info('[AutoUpdater Event] === NOT AVAILABLE ===', info);
   sendStatusToWindow('update-status', 'Установлена последняя версия.');
-  // Скрываем сообщение через 5 секунд
   setTimeout(() => sendStatusToWindow('update-status', ''), 5000);
 });
 
 autoUpdater.on('error', (err) => {
-  log.error('[AutoUpdater Event] Error: ', err);
+  log.error('[AutoUpdater Event] === ERROR ===', err);
   sendStatusToWindow('update-error', `Ошибка обновления: ${err.message || 'Неизвестная ошибка'}`);
 });
 
 autoUpdater.on('download-progress', (progressObj) => {
   let percent = progressObj.percent.toFixed(2);
-  log.info(`[AutoUpdater Event] Download progress: ${percent}%`);
-  sendStatusToWindow('update-progress', percent); // Отправляем процент
-  sendStatusToWindow('update-status', `Загрузка: ${percent}%`); // Обновляем и статус
+  // Логируем прогресс не так часто, чтобы не засорять лог
+  if (Math.round(progressObj.percent) % 10 === 0 || progressObj.percent > 98) {
+      log.info(`[AutoUpdater Event] === PROGRESS === ${percent}%`);
+  }
+  sendStatusToWindow('update-progress', percent);
+  sendStatusToWindow('update-status', `Загрузка: ${percent}%`);
 });
 
 autoUpdater.on('update-downloaded', (info) => {
-  log.info('[AutoUpdater Event] Update downloaded.', info);
-  // Отправляем сигнал, что обновление готово
+  log.info('[AutoUpdater Event] === DOWNLOADED ===', info);
+  // Отправляем два сигнала: готовности и обновление статуса
   sendStatusToWindow('update-ready', info);
-  // Обновляем статус в последний раз
   sendStatusToWindow('update-status', `Версия ${info.version} загружена. Готово к установке.`);
 });
 
 // --- Слушатель IPC от окна для старта установки ---
 ipcMain.on('install-update', (event) => {
-  log.info('[IPC Receive] Received "install-update" signal from renderer.');
+  log.info('[IPC Receive <- Renderer] === INSTALL SIGNAL RECEIVED ===');
+  // Добавим проверку, что mainWindow еще существует
+  if (!mainWindow || mainWindow.isDestroyed()) {
+       log.error('[IPC Receive <- Renderer] Cannot quit and install, mainWindow is destroyed.');
+       // Можно попытаться отправить ошибку обратно, но окно, скорее всего, тоже уже закрыто
+       // event.sender.send('update-error', 'Не удалось начать установку: основное окно закрыто.');
+       return;
+   }
   try {
-    // Выходим и ЗАПУСКАЕМ установщик (НЕ в тихом режиме)
-    // Второй параметр `isForceRunAfter` = true, чтобы приложение запустилось после установки
     log.info('[AutoUpdater] Calling quitAndInstall(isSilent=false, isForceRunAfter=true)');
-    autoUpdater.quitAndInstall(false, true);
+    autoUpdater.quitAndInstall(false, true); // Установка НЕ тихая
   } catch (e) {
       log.error('[AutoUpdater] Error calling quitAndInstall:', e);
+      // Попытка отправить ошибку обратно в окно
       sendStatusToWindow('update-error', `Ошибка запуска установки: ${e.message}`);
   }
 });
