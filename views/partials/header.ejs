@@ -1,3 +1,4 @@
+<!-- views/partials/header.ejs -->
 <header class="main-header">
     <nav class="header-content">
         <a href="/" class="brand-logo">
@@ -14,7 +15,7 @@
                 <% if (currentUser) { %>
                     <%# Для Арендатора %>
                     <% if (currentUser.role === 'Tenant') { %>
-                        <a href="/bookings">Мои бронирования</a> <%# Твой текст %>
+                        <a href="/bookings">Мои бронированияТЕСТСТСТС</a> <%# Твой текст %>
                     <% } %>
 
                     <%# Управление Арендами (для всех кроме Tenant) %>
@@ -95,8 +96,8 @@
         <button class="mobile-nav-toggle" aria-label="Открыть меню" style="display: none;">☰</button>
     </nav>
     <!-- ===== МОДАЛЬНОЕ ОКНО ОБНОВЛЕНИЯ ===== -->
-    <div id="updateModalOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); z-index: 1050; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease;">
-        <div id="updateModalContent" class="" style="background-color: #fff; padding: 30px 40px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15); width: 90%; max-width: 550px; text-align: center; opacity: 0; transform: scale(0.95) translateY(-10px); transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s; border-top: 5px solid #5bc0de;">
+    <div id="updateModalOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); z-index: 1050; align-items: center; justify-content: center;">
+        <div id="updateModalContent" class="" style="background-color: #fff; padding: 30px 40px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15); width: 90%; max-width: 550px; text-align: center; border-top: 5px solid #5bc0de;">
             <h2 id="updateModalTitle" style="margin-top: 0; margin-bottom: 15px; color: #2c3e50; font-size: 1.7rem; font-weight: 600;">Обновление Приложения</h2>
             <p id="updateModalMessage" style="color: #555; margin-bottom: 25px; line-height: 1.6; font-size: 1.05rem;">Проверяем наличие обновлений...</p>
 
@@ -107,7 +108,7 @@
             <style> @keyframes progress-bar-stripes{from{background-position:1rem 0}to{background-position:0 0}} </style>
 
 
-            <!-- Кнопки установки/закрытия (СНОВА ДВЕ КНОПКИ) -->
+            <!-- Кнопки установки/закрытия (ВОЗВРАЩАЕМ ДВЕ КНОПКИ) -->
             <div id="updateModalActions">
                  <button id="updateModalRestartButton" class="btn btn-primary" style="display: none; padding: 12px 30px; font-size: 1rem; margin: 5px; min-width: 150px;">Перезапустить и установить</button>
                  <button id="updateModalCloseButton" class="btn btn-secondary" style="display: none; padding: 12px 20px; font-size: 1rem; margin: 5px;">Закрыть</button>
@@ -150,7 +151,6 @@
                   socket.on('connect', () => { console.log(`[Socket.IO Client] Connected: ${socket.id}. Registering: ${currentUsername}`); socket.emit('register_user', currentUsername); });
                   socket.on('disconnect', (reason) => { console.warn(`[Socket.IO Client] Disconnected. Reason: ${reason}`); });
                   socket.on('connect_error', (err) => { console.error(`[Socket.IO Client] Connection Error: ${err.message}`); });
-
                   // --- Обработчики событий Socket.IO ---
                   socket.on('balance_updated', (newBalance) => {
                     const userRoleElement = document.getElementById('headerUserRole');
@@ -291,8 +291,7 @@
             const restartButtonModal = document.getElementById('updateModalRestartButton');
             const closeButtonModal = document.getElementById('updateModalCloseButton');
             const errorDetails = document.getElementById('updateErrorDetails');
-            let listeners = {};
-            let updateInfoGlobal = null;
+            let listeners = {}; // Для хранения функций отписки
 
             // Функция установки класса статуса для стилизации окна
             function setModalStatusClass(statusClass) {
@@ -304,54 +303,37 @@
                 }
             }
 
-            // Функция показа модального окна (возвращаем с анимацией)
+            // Функция показа модального окна (прямое управление стилями)
             function showUpdateModal(statusClass = 'info') {
                 console.log(`[Renderer Updater] Вызов showUpdateModal со статусом: ${statusClass}`);
                 if (!modalOverlay || !modalContent) {
-                    console.error("[Renderer Updater] showUpdateModal: ОШИБКА - Оверлей или контент не найден!");
+                    console.error("[Renderer Updater] ОШИБКА в showUpdateModal: modalOverlay или modalContent не найден!");
                     return;
                 }
-
-                setModalStatusClass(statusClass); // Устанавливаем класс для стилизации рамки
-                // Сбрасываем стили перед показом для анимации
-                modalContent.style.opacity = '0';
-                modalContent.style.transform = 'scale(0.95) translateY(-10px)';
+                setModalStatusClass(statusClass);
                 modalOverlay.style.display = 'flex';
-                modalOverlay.style.opacity = '0';
-
-                // Даем браузеру время применить display: flex
-                requestAnimationFrame(() => {
-                    setTimeout(() => {
-                        console.log("[Renderer Updater] showUpdateModal: Добавляем класс 'visible' к оверлею и контенту");
-                        modalOverlay.classList.add('visible'); // Запускаем анимацию фона
-                        modalContent.classList.add('visible'); // Запускаем анимацию окна
-                    }, 10); // Минимальная задержка
-                });
-                console.log("[Renderer Updater] showUpdateModal: Конец функции.");
+                modalOverlay.style.opacity = '1';
+                modalContent.style.opacity = '1';
+                modalContent.style.transform = 'none'; // Убираем анимационные стили
+                console.log("[Renderer Updater] Установлен display=flex и opacity=1.");
             }
 
-            // Функция скрытия модального окна (возвращаем с анимацией)
+            // Функция скрытия модального окна (прямое управление стилями)
             function hideUpdateModal() {
-                 console.log("[Renderer Updater] Вызов hideUpdateModal");
-                 if (!modalOverlay || !modalContent) {
-                     console.error("[Renderer Updater] hideUpdateModal: ОШИБКА - Оверлей или контент не найден!");
-                     return;
-                 }
-
-                 modalOverlay.classList.remove('visible');
-                 modalContent.classList.remove('visible'); // Запускаем анимацию исчезновения
-                 console.log("[Renderer Updater] hideUpdateModal: Удален класс 'visible'.");
-
-                 setTimeout(() => {
-                     modalOverlay.style.display = 'none'; // Скрываем после анимации
-                     // Сброс элементов внутри окна
+                console.log("[Renderer Updater] Вызов hideUpdateModal");
+                 if (modalOverlay) {
+                    modalOverlay.style.display = 'none';
+                    modalOverlay.style.opacity = '0';
+                     // Сброс элементов
                      if(progressBar) progressBar.style.width = '0%';
                      if(progressContainer) progressContainer.style.display = 'none';
                      if(restartButtonModal) restartButtonModal.style.display = 'none';
                      if(closeButtonModal) closeButtonModal.style.display = 'none';
                      if(errorDetails) errorDetails.style.display = 'none';
-                     console.log("[Renderer Updater] hideUpdateModal: Установлен display=none.");
-                 }, 300); // Должно совпадать с временем transition в CSS
+                    console.log("[Renderer Updater] Установлен display=none.");
+                } else {
+                     console.error("[Renderer Updater] ОШИБКА в hideUpdateModal: modalOverlay не найден!");
+                }
             }
 
             // Проверяем наличие API И ВСЕХ ЭЛЕМЕНТОВ окна
@@ -372,17 +354,27 @@
 
                 listeners['update-status'] = window.electronUpdater.on('update-status', (message) => {
                     console.log('[Renderer Updater] <<< RECEIVED update-status >>>', message);
-                    if (!message) { hideUpdateModal(); return; }
-                    // НЕ показываем окно просто для статуса "проверка" или "последняя версия", если только не было ошибки
-                    // Но если окно УЖЕ открыто (например, при 'available' или 'downloading'), то статус обновляем
-                    if (modalOverlay.style.display === 'flex') {
-                         if(modalMessage) modalMessage.textContent = message;
-                         // Не меняем кнопки и заголовок, если это просто статус
+                    if (!message) {
+                        // Если пришло пустое сообщение после 'Установлена последняя версия', скрываем окно
+                        if (modalMessage && modalMessage.textContent === 'Установлена последняя версия.') {
+                             hideUpdateModal();
+                        }
+                        return;
                     }
-                    // Если сообщение "Установлена последняя версия", скроем окно через 5 сек
-                    if (message === 'Установлена последняя версия.') {
-                        setTimeout(hideUpdateModal, 5000);
+                    // Показываем окно для всех статусов, КРОМЕ финального "Готово к установке" (он обрабатывается в update-ready)
+                    if (message !== `Версия ${updateInfoGlobal?.version} загружена. Готово к установке.`) {
+                        if(modalMessage) modalMessage.textContent = message;
+                        if(modalTitle) modalTitle.textContent = 'Статус обновления';
+                        if(progressContainer) progressContainer.style.display = 'none';
+                        if(restartButtonModal) restartButtonModal.style.display = 'none';
+                        if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; }
+                        if(errorDetails) errorDetails.style.display = 'none';
+                        showUpdateModal('info');
                     }
+                     // Скрываем "Установлена последняя версия" через 5 секунд
+                     if (message === 'Установлена последняя версия.') {
+                         setTimeout(hideUpdateModal, 5000);
+                     }
                 });
 
                 listeners['update-error'] = window.electronUpdater.on('update-error', (message) => {
@@ -391,19 +383,20 @@
                     if(modalMessage) modalMessage.textContent = 'Не удалось проверить или загрузить обновление.';
                     if(errorDetails) { errorDetails.textContent = `Детали: ${message}`; errorDetails.style.display = 'block'; }
                     if(progressContainer) progressContainer.style.display = 'none';
-                    if(restartButtonModal) restartButtonModal.style.display = 'none'; // Ошибка - только закрыть
-                    if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } // Показываем "Закрыть"
-                    showUpdateModal('error'); // Показываем окно с ошибкой
+                    if(restartButtonModal) restartButtonModal.style.display = 'none';
+                    if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; }
+                    showUpdateModal('error');
                 });
 
                 listeners['update-available'] = window.electronUpdater.on('update-available', (info) => {
                     console.log('[Renderer Updater] <<< RECEIVED update-available >>>', info);
+                    updateInfoGlobal = info; // Сохраняем для использования в update-status
                     if(modalTitle) modalTitle.textContent = `Доступна версия ${info.version}`;
                     if(modalMessage) modalMessage.textContent = 'Начинается автоматическая загрузка...';
                     if(progressBar) progressBar.style.width = '0%';
                     if(progressContainer) progressContainer.style.display = 'block';
-                    if(restartButtonModal) restartButtonModal.style.display = 'none'; // Прячем перезапуск
-                    if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } // Показываем "Закрыть"
+                    if(restartButtonModal) restartButtonModal.style.display = 'none';
+                    if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; }
                     if(errorDetails) errorDetails.style.display = 'none';
                     showUpdateModal('available');
                 });
@@ -416,14 +409,15 @@
                     if(modalMessage) modalMessage.textContent = `Пожалуйста, подождите... ${percent}%`;
                     if(progressBar) progressBar.style.width = `${percent}%`;
                     if(progressContainer) progressContainer.style.display = 'block';
-                    if(restartButtonModal) restartButtonModal.style.display = 'none'; // Прячем перезапуск
-                    if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } // Показываем "Закрыть"
+                    if(restartButtonModal) restartButtonModal.style.display = 'none';
+                    if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; }
                     if(errorDetails) errorDetails.style.display = 'none';
-                    showUpdateModal('downloading'); // Показываем или обновляем окно
+                    showUpdateModal('downloading');
                 });
 
                 listeners['update-ready'] = window.electronUpdater.on('update-ready', (info) => {
                     console.log('%c[Renderer Updater] <<< RECEIVED update-ready! >>>', 'color: green; font-size: 1.2em;', info);
+                    updateInfoGlobal = info; // Сохраняем инфо, чтобы 'update-status' его не перебил
                     if(modalTitle) modalTitle.textContent = `Обновление ${info.version} готово!`;
                     if(modalMessage) modalMessage.textContent = 'Нажмите кнопку ниже, чтобы перезапустить приложение и установить обновление.';
                     if(progressContainer) progressContainer.style.display = 'none';
@@ -441,7 +435,6 @@
                     } else { console.error("[Renderer Updater] Кнопка ЗАКРЫТЬ НЕ НАЙДЕНА при update-ready!"); }
                     // ---
                     showUpdateModal('ready');
-                    // showJsNotification('success', `Обновление ${info.version} готово к установке!`, 10000, true);
                 });
 
             } else {
@@ -450,7 +443,10 @@
                  console.error('window.electronUpdater exists:', !!window.electronUpdater);
                  console.error('#updateModalOverlay exists:', !!modalOverlay);
                  console.error('#updateModalContent exists:', !!modalContent);
-                 // ... (остальные проверки элементов) ...
+                 console.error('#updateModalTitle exists:', !!modalTitle);
+                 console.error('#updateModalMessage exists:', !!modalMessage);
+                 console.error('#updateProgressContainer exists:', !!progressContainer);
+                 console.error('#updateProgressBar exists:', !!progressBar);
                  console.error('#updateModalRestartButton exists:', !!restartButtonModal);
                  console.error('#updateModalCloseButton exists:', !!closeButtonModal);
                  console.error('#updateErrorDetails exists:', !!errorDetails);
