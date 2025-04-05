@@ -308,51 +308,42 @@
 
             // Функция показа модального окна (исправленная)
             function showUpdateModal(statusClass = 'info') {
-                console.log(`[Renderer Updater] Вызов showUpdateModal со статусом: ${statusClass}`);
+                console.log(`[Renderer Updater] Вызов ФИНАЛЬНОЙ showUpdateModal со статусом: ${statusClass}`);
                 if (!modalOverlay || !modalContent) {
-                     console.error("[Renderer Updater] ОШИБКА в showUpdateModal: modalOverlay или modalContent не найден!");
-                     return;
-                }
-
-                setModalStatusClass(statusClass);
-                modalOverlay.style.display = 'flex';
-                modalOverlay.style.opacity = '0'; // Убедимся, что оверлей изначально прозрачный
-                modalContent.style.opacity = '0'; // И контент тоже
-                modalContent.style.transform = 'scale(0.95) translateY(-10px)'; // И в начальной позиции анимации
-
-                // Даем браузеру время применить display: flex
-                requestAnimationFrame(() => {
-                    setTimeout(() => {
-                        console.log("[Renderer Updater] showUpdateModal: Добавляем класс 'visible' к оверлею и контенту");
-                        modalOverlay.classList.add('visible'); // Запускаем анимацию фона
-                        modalContent.classList.add('visible'); // Запускаем анимацию окна
-                    }, 10);
-                });
-                 console.log("[Renderer Updater] showUpdateModal: Конец функции.");
-            }
-
-            // Функция скрытия модального окна (исправленная)
-            function hideUpdateModal() {
-                console.log("[Renderer Updater] Вызов hideUpdateModal");
-                if (!modalOverlay || !modalContent) {
-                    console.error("[Renderer Updater] ОШИБКА в hideUpdateModal: modalOverlay или modalContent не найден!");
+                    console.error("[Renderer Updater] ОШИБКА в showUpdateModal: modalOverlay или modalContent не найден!");
                     return;
                 }
 
-                modalOverlay.classList.remove('visible');
-                modalContent.classList.remove('visible');
-                console.log("[Renderer Updater] hideUpdateModal: Удален класс 'visible'.");
+                // Устанавливаем класс для цвета рамки
+                setModalStatusClass(statusClass);
 
-                setTimeout(() => {
+                // Устанавливаем стили НАПРЯМУЮ для немедленного показа
+                modalOverlay.style.display = 'flex';
+                modalOverlay.style.opacity = '1';
+                modalContent.style.opacity = '1';
+                modalContent.style.transform = 'none'; // Убираем любой сдвиг/масштаб
+
+                console.log("[Renderer Updater] ФИНАЛЬНАЯ showUpdateModal: Установлен display=flex и opacity=1 для оверлея.");
+            }
+
+            function hideUpdateModal() {
+                console.log("[Renderer Updater] Вызов ФИНАЛЬНОЙ hideUpdateModal");
+                 if (modalOverlay) {
+                    // Просто скрываем элементы
                     modalOverlay.style.display = 'none';
-                    // Сброс элементов
-                    if(progressBar) progressBar.style.width = '0%';
-                    if(progressContainer) progressContainer.style.display = 'none';
-                    if(restartButtonModal) restartButtonModal.style.display = 'none';
-                    if(closeButtonModal) closeButtonModal.style.display = 'none';
-                    if(errorDetails) errorDetails.style.display = 'none';
-                    console.log("[Renderer Updater] hideUpdateModal: Установлен display=none.");
-                }, 300);
+                    modalOverlay.style.opacity = '0'; // На всякий случай сбрасываем
+
+                     // Сброс элементов внутри окна
+                     if(progressBar) progressBar.style.width = '0%';
+                     if(progressContainer) progressContainer.style.display = 'none';
+                     if(restartButtonModal) restartButtonModal.style.display = 'none';
+                     if(closeButtonModal) closeButtonModal.style.display = 'none';
+                     if(errorDetails) errorDetails.style.display = 'none';
+
+                    console.log("[Renderer Updater] ФИНАЛЬНАЯ hideUpdateModal: Установлен display=none для оверлея.");
+                } else {
+                    console.error("[Renderer Updater] ОШИБКА в hideUpdateModal: modalOverlay не найден!");
+                }
             }
 
             // Проверяем наличие API И ВСЕХ ЭЛЕМЕНТОВ окна
