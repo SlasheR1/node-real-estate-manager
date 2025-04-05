@@ -307,21 +307,43 @@
             }
 
             function showUpdateModal(statusClass = 'info') {
-                console.log(`[Renderer Updater] Attempting showUpdateModal with status: ${statusClass}`);
-                if (modalOverlay && modalContent) {
-                    setModalStatusClass(statusClass);
-                    modalOverlay.style.display = 'flex';
-                    // Даем браузеру время применить display: flex перед анимацией opacity
-                    requestAnimationFrame(() => {
-                        setTimeout(() => {
-                           modalOverlay.classList.add('visible');
-                           console.log("[Renderer Updater] showUpdateModal: Added 'visible' class to overlay.");
-                        }, 10); // Минимальная задержка
-                    });
-                } else {
-                     console.error("[Renderer Updater] Cannot show modal, elements not found. Overlay:", modalOverlay, "Content:", modalContent);
+                console.log(`[MODAL DEBUG] ====> Вызов showUpdateModal со статусом: ${statusClass}`);
+                if (!modalOverlay) { console.error("[MODAL DEBUG] ОШИБКА: modalOverlay НЕ НАЙДЕН!"); return; }
+                if (!modalContent) { console.error("[MODAL DEBUG] ОШИБКА: modalContent НЕ НАЙДЕН!"); return; }
+
+                console.log("[MODAL DEBUG] Шаг 1: Установка класса статуса...");
+                try {
+                    setModalStatusClass(statusClass); // Устанавливаем класс для стилизации (вынесли в отдельную функцию раньше)
+                    console.log(`[MODAL DEBUG] Шаг 1a: Класс статуса ${statusClass} установлен для modalContent.`);
+                } catch (e) {
+                    console.error("[MODAL DEBUG] ОШИБКА при установке класса статуса:", e);
+                    // Продолжаем пытаться показать окно, даже если класс не установился
                 }
+
+                console.log("[MODAL DEBUG] Шаг 2: Показ оверлея (display: flex)...");
+                try {
+                    modalOverlay.style.display = 'flex';
+                    console.log("[MODAL DEBUG] Шаг 2a: display оверлея установлен в flex.");
+                } catch (e) {
+                    console.error("[MODAL DEBUG] ОШИБКА при установке display для оверлея:", e);
+                    return; // Если оверлей не показать, дальше нет смысла
+                }
+
+                console.log("[MODAL DEBUG] Шаг 3: Запуск анимации видимости (добавление класса visible)...");
+                 // Убираем задержки setTimeout и requestAnimationFrame для чистоты теста
+                 try {
+                     modalOverlay.classList.add('visible');
+                     console.log("[MODAL DEBUG] Шаг 3a: Класс 'visible' добавлен к оверлею.");
+                     // Анимация контента (тоже без задержки)
+                     modalContent.classList.remove('visible'); // Убедимся что его нет перед добавлением
+                     modalContent.classList.add('visible');
+                     console.log("[MODAL DEBUG] Шаг 3b: Класс 'visible' добавлен к контенту.");
+                 } catch (e) {
+                     console.error("[MODAL DEBUG] ОШИБКА при добавлении класса 'visible':", e);
+                 }
+                 console.log("[MODAL DEBUG] ====> Конец showUpdateModal");
             }
+
 
             function hideUpdateModal() {
                  console.log("[Renderer Updater] Attempting hideUpdateModal");
