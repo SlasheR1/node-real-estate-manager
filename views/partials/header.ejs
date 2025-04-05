@@ -15,7 +15,7 @@
                 <% if (currentUser) { %>
                     <%# Для Арендатора %>
                     <% if (currentUser.role === 'Tenant') { %>
-                        <a href="/bookings">Мои бронирования111</a>
+                        <a href="/bookings">Мои бронирования111</a> <%# Ты добавил 111, я оставил %>
                     <% } %>
 
                     <%# Управление Арендами (для всех кроме Tenant) %>
@@ -69,14 +69,12 @@
                             <%
                                 let avatarSrc = '/images/placeholder-avatar.png';
                                 if (currentUser.imageData && typeof currentUser.imageData === 'string') {
-                                    // Добавим проверку на длину, чтобы избежать слишком больших data URI
-                                    if (currentUser.imageData.length < 2000000) { // Примерный лимит ~1.5MB
+                                    if (currentUser.imageData.length < 2000000) {
                                         try {
                                             let t = currentUser.imageData.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
                                             avatarSrc = `data:${t};base64,${currentUser.imageData}`;
                                         } catch(e) {
                                             console.error("Error creating avatar data URI in header:", e);
-                                            // Оставляем плейсхолдер, если ошибка
                                         }
                                     } else {
                                         console.warn("Header avatar skipped: Image data too large.");
@@ -97,119 +95,50 @@
         <%# Кнопка мобильного меню (стилями скрыта/показана) %>
         <button class="mobile-nav-toggle" aria-label="Открыть меню" style="display: none;">☰</button>
     </nav>
+    <!-- ===== БЛОК УВЕДОМЛЕНИЯ ОБ ОБНОВЛЕНИИ ===== -->
+    <div id="updateNotificationBanner" style="display: none; background-color: #888; color: white; padding: 10px 25px; text-align: center; font-size: 0.9rem; position: sticky; top: 65px; /* Сразу под шапкой */ z-index: 999; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: background-color 0.3s ease;">
+        <span id="updateMessage" style="margin-right: 15px; vertical-align: middle;">Сообщение об обновлении</span>
+        <button id="updateRestartButton" style="display: none; margin-left: 15px; padding: 4px 12px; background-color: #fff; color: #3498db; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; vertical-align: middle; transition: background-color 0.2s ease, color 0.2s ease;">Перезапустить и установить</button>
+        <span id="updateDismiss" style="float: right; cursor: pointer; font-weight: bold; margin-left: 15px; line-height: 1.5; font-size: 1.2rem; vertical-align: middle;" title="Скрыть">×</span>
+    </div>
+    <!-- ============================================= -->
 </header>
 
-<%# --- Подключение и логика Socket.IO клиента --- %>
+<%# --- Подключение и логика Socket.IO клиента И AutoUpdater --- %>
 <% if (currentUser) { %>
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        // *** ОБНОВЛЕННАЯ ФУНКЦИЯ ДЛЯ ПОКАЗА УВЕДОМЛЕНИЙ С ЗВУКОМ ***
+        // Функция для показа красивых JS-уведомлений (оставляем твою)
         function showJsNotification(type, text, duration = 7000, playSound = true) {
-            // Находим первый подходящий контейнер для сообщений
-            const container = document.getElementById('js-messages-rentals') // Сначала ищем на странице аренд
-                         || document.getElementById('js-messages-container') // Потом на странице броней
-                         || document.getElementById('js-review-messages') // Потом на деталях объекта
-                         || document.getElementById('js-messages-user-list') // Потом в списке юзеров
-                         || document.getElementById('js-messages-user-form') // Потом в форме юзера
-                         || document.getElementById('js-messages')          // Потом на других страницах (профиль, дашборд...)
-                         || document.getElementById('js-company-messages') // Потом на странице компании
-                         || document.body.querySelector('main.container') // В крайнем случае - в main
-                         || document.body; // Или просто в body
-
-            if (!container) {
-                console.warn("No suitable container found for JS notification.");
-                return; // Не можем показать уведомление
-            }
-
-            // --- ВОСПРОИЗВЕДЕНИЕ ЗВУКА ---
-            if (playSound) {
-                try {
-                    // Указываем путь к вашему звуковому файлу в /public
-                    const audio = new Audio('/sounds/notification.mp3');
-                    // Пытаемся воспроизвести, ловим возможную ошибку (браузер может блокировать автоплей)
-                    audio.play().catch(e => console.warn("Audio playback failed (browser might block autoplay without user interaction):", e));
-                } catch (e) {
-                    console.error("Error creating or playing notification sound:", e);
-                }
-            }
-            // --- КОНЕЦ ВОСПРОИЗВЕДЕНИЯ ЗВУКА ---
-
+            const container = document.getElementById('js-messages-rentals') || document.getElementById('js-messages-container') || document.getElementById('js-review-messages') || document.getElementById('js-messages-user-list') || document.getElementById('js-messages-user-form') || document.getElementById('js-messages') || document.getElementById('js-company-messages') || document.body.querySelector('main.container') || document.body;
+            if (!container) { console.warn("No suitable container found for JS notification."); return; }
+            if (playSound) { try { const audio = new Audio('/sounds/notification.mp3'); audio.play().catch(e => console.warn("Audio playback failed:", e)); } catch (e) { console.error("Error playing sound:", e); } }
             const notifDiv = document.createElement('div');
-            // Используем общие классы для стилизации flash-сообщений
             notifDiv.className = `flash-message flash-${type}`;
-            // Стили для анимации и базового вида
-            notifDiv.style.cssText = 'opacity:0; transform:translateY(-10px); transition: opacity 0.5s ease, transform 0.5s ease; margin-top: 10px; cursor: pointer; z-index: 1056; position: relative;'; // Добавил z-index и position relative
-            // Вставляем текст и кнопку закрытия
-            // Используем innerHTML, так как текст может содержать HTML (например, ссылку)
+            notifDiv.style.cssText = 'opacity:0; transform:translateY(-10px); transition: opacity 0.5s ease, transform 0.5s ease; margin-top: 10px; cursor: pointer; z-index: 1056; position: relative;';
             notifDiv.innerHTML = `${text} <button type="button" class="close-flash" onclick="event.stopPropagation(); this.parentElement.remove()">×</button>`;
-
-            // Закрытие по клику на само уведомление
             notifDiv.addEventListener('click', () => notifDiv.remove());
-
-            // Добавляем уведомление в начало контейнера
-            if (container.firstChild) {
-                container.insertBefore(notifDiv, container.firstChild);
-            } else {
-                container.appendChild(notifDiv);
-            }
-
-            // Плавное появление (небольшая задержка для рендеринга)
-            setTimeout(() => {
-                notifDiv.style.opacity = '1';
-                notifDiv.style.transform = 'translateY(0)';
-            }, 10);
-
-            // Плавное удаление через 'duration' миллисекунд
-            setTimeout(() => {
-                 notifDiv.style.opacity = '0';
-                 notifDiv.style.transform = 'translateY(-10px)';
-                 // Удаляем элемент из DOM после завершения анимации
-                 setTimeout(() => notifDiv.remove(), 500);
-             }, duration);
+            if (container.firstChild) { container.insertBefore(notifDiv, container.firstChild); } else { container.appendChild(notifDiv); }
+            setTimeout(() => { notifDiv.style.opacity = '1'; notifDiv.style.transform = 'translateY(0)'; }, 10);
+            setTimeout(() => { notifDiv.style.opacity = '0'; notifDiv.style.transform = 'translateY(-10px)'; setTimeout(() => notifDiv.remove(), 500); }, duration);
         }
 
-
         document.addEventListener('DOMContentLoaded', () => {
+            // --- Инициализация Socket.IO (Твой существующий код) ---
             try {
                 console.log('[Socket.IO Client] Initializing...');
-                const socket = io({
-                    reconnectionAttempts: 5,
-                    reconnectionDelay: 3000,
-                     // Добавим query для передачи сессии, если нужно (обычно не требуется с io.use)
-                     // query: { sessionId: document.cookie.match(/connect.sid=s%3A([^;]+)/)?.[1] }
-                 });
+                const socket = io({ reconnectionAttempts: 5, reconnectionDelay: 3000 });
                 let currentUsername = null;
-                try {
-                    // Экранируем вывод EJS на всякий случай
-                    currentUsername = decodeURIComponent("<%= encodeURIComponent(currentUser.username) %>");
-                } catch(e) {
-                    console.error("Could not get username from EJS:", e);
-                }
+                try { currentUsername = decodeURIComponent("<%= encodeURIComponent(currentUser.username) %>"); } catch(e) { console.error("Could not get username from EJS:", e); }
 
-                if (!currentUsername) {
-                    console.error("[Socket.IO Client] Username missing. Socket features disabled.");
-                    return; // Прерываем, если нет username
-                }
+                if (!currentUsername) { console.error("[Socket.IO Client] Username missing."); /* Не прерываем, чтобы код апдейтера выполнился */ }
+                else {
+                  socket.on('connect', () => { console.log(`[Socket.IO Client] Connected: ${socket.id}. Registering: ${currentUsername}`); socket.emit('register_user', currentUsername); });
+                  socket.on('disconnect', (reason) => { console.warn(`[Socket.IO Client] Disconnected. Reason: ${reason}`); });
+                  socket.on('connect_error', (err) => { console.error(`[Socket.IO Client] Connection Error: ${err.message}`); });
 
-                socket.on('connect', () => {
-                    console.log(`[Socket.IO Client] Connected with id: ${socket.id}. Registering user: ${currentUsername}`);
-                    socket.emit('register_user', currentUsername); // Регистрируем пользователя на сервере
-                });
-
-                socket.on('disconnect', (reason) => {
-                    console.warn(`[Socket.IO Client] Disconnected from server. Reason: ${reason}`);
-                });
-
-                socket.on('connect_error', (err) => {
-                    console.error(`[Socket.IO Client] Connection Error: ${err.message}`);
-                    // Можно показать пользователю сообщение об ошибке подключения
-                    // showJsNotification('error', 'Ошибка подключения к серверу уведомлений.', 10000, false);
-                });
-
-                // --- Обработчики событий от сервера ---
-
-                // Обновление баланса (только для Tenant)
-                socket.on('balance_updated', (newBalance) => {
+                  // --- Обработчики событий Socket.IO (Твои существующие) ---
+                  socket.on('balance_updated', (newBalance) => {
                     const userRoleElement = document.getElementById('headerUserRole');
                     const isTenant = userRoleElement && userRoleElement.textContent === 'Tenant';
                     if (isTenant) {
@@ -218,134 +147,92 @@
                         if (balanceEl && typeof newBalance === 'number') {
                              try {
                                  balanceEl.textContent = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(newBalance);
-                             } catch (e) {
-                                 console.error("Error formatting balance:", e);
-                                 balanceEl.textContent = "ERR";
-                             }
+                             } catch (e) { console.error("Error formatting balance:", e); balanceEl.textContent = "ERR"; }
                         }
-                    } else {
-                        console.log("[Socket.IO Client] Ignored 'balance_updated' event for non-tenant user.");
-                    }
-                });
+                    } else { console.log("[Socket.IO Client] Ignored 'balance_updated' for non-tenant."); }
+                  });
 
-                 // Обновление аватара
-                socket.on('avatar_updated', () => {
+                  socket.on('avatar_updated', () => {
                      console.log(`[Socket.IO Client] Event 'avatar_updated' received for ${currentUsername}.`);
                      const avatarImg = document.getElementById('headerUserAvatar');
                      if (avatarImg) {
-                         // Простейший способ обновить - добавить параметр к URL, чтобы сбросить кэш браузера
-                         // Если используется data URI, нужно будет запросить новые данные через AJAX
                          if (avatarImg.src.startsWith('data:')) {
-                             console.log("Avatar is data URI, reload page or implement AJAX update for avatar.");
-                             // Для простоты можно просто показать уведомление о необходимости обновить страницу
-                             showJsNotification('info', 'Ваш аватар обновлен. Обновите страницу, чтобы увидеть изменения.', 5000, false);
-                         } else {
-                             avatarImg.src = avatarImg.src.split('?')[0] + '?t=' + new Date().getTime(); // Добавляем timestamp
-                         }
+                             console.log("Avatar is data URI, reload page or implement AJAX update.");
+                             showJsNotification('info', 'Ваш аватар обновлен. Обновите страницу.', 5000, false);
+                         } else { avatarImg.src = avatarImg.src.split('?')[0] + '?t=' + new Date().getTime(); }
                      }
-                     // Можно добавить обновление аватара на странице профиля, если она открыта
-                     const profileAvatar = document.querySelector('.profile-avatar'); // На странице profile.ejs
+                     const profileAvatar = document.querySelector('.profile-avatar');
                      if (profileAvatar && profileAvatar.src !== avatarImg?.src) {
-                         if (profileAvatar.src.startsWith('data:')) {
-                             // Опять же, нужен AJAX или перезагрузка
-                         } else {
+                         if (!profileAvatar.src.startsWith('data:')) {
                               profileAvatar.src = profileAvatar.src.split('?')[0] + '?t=' + new Date().getTime();
                          }
                      }
-                });
+                  });
 
-                 // Обновление данных профиля (имя/роль/компания)
                  socket.on('profile_data_updated', (data) => {
                      console.log(`[Socket.IO Client] Event 'profile_data_updated' received:`, data);
                      const nameEl = document.getElementById('headerUserName');
                      const roleEl = document.getElementById('headerUserRole');
-                     const companyContainer = document.querySelector('.user-sub-info .user-company'); // Контейнер span.user-company
-                     const companyTextSpan = companyContainer?.querySelector('span'); // Текст внутри span.user-company
-
+                     const companyContainer = document.querySelector('.user-sub-info .user-company');
+                     const companyTextSpan = companyContainer?.querySelector('span');
                      if (nameEl && data?.fullName) { nameEl.textContent = data.fullName; }
                      if (roleEl && data?.role) { roleEl.textContent = data.role; }
-
-                      // Обновляем/добавляем/удаляем инфо о компании
-                      if (companyContainer) { // Если элемент компании существует в разметке
+                      if (companyContainer) {
                           if (data?.companyName && (data.role === 'Owner' || data.role === 'Staff')) {
-                               if (companyTextSpan) companyTextSpan.textContent = data.companyName; // Обновляем текст
-                               companyContainer.title = data.companyName; // Обновляем title
-                               companyContainer.style.display = 'inline-flex'; // Показываем, если был скрыт
-                          } else {
-                               companyContainer.style.display = 'none'; // Скрываем для других ролей или если нет имени
-                          }
+                               if (companyTextSpan) companyTextSpan.textContent = data.companyName;
+                               companyContainer.title = data.companyName;
+                               companyContainer.style.display = 'inline-flex';
+                          } else { companyContainer.style.display = 'none'; }
                       } else if (data?.companyName && (data.role === 'Owner' || data.role === 'Staff')) {
-                           // Если элемента компании НЕ было, а теперь он нужен - сложнее.
-                           // Проще положиться на перезагрузку страницы при смене роли или добавлении компании.
-                            console.warn("Header company element not found, cannot display company name dynamically.");
+                           console.warn("Header company element not found.");
                       }
-
-                      // Обновляем доступность ссылок в меню (пример для "Добавить объект")
                       const addPropertyLink = document.querySelector('.main-nav-links a[href="/properties/add"]');
                       if (addPropertyLink) {
                             const canAdd = data?.role === 'Admin' || (data?.role === 'Owner' && data?.companyProfileCompleted === true);
                             addPropertyLink.style.display = canAdd ? 'inline' : 'none';
                       }
-                      // Аналогично можно обновлять другие ссылки ('Моя Компания', 'Упр. Арендами' и т.д.)
                  });
 
-                 // Удаление аккаунта
                  socket.on('account_deleted', (data) => {
                      console.warn(`[Socket.IO Client] Event 'account_deleted' received:`, data?.message);
-                     if(socket.connected) {
-                        socket.disconnect(); // Отключаем сокет
-                     }
-                     // Показываем сообщение и принудительно разлогиниваем
+                     if(socket.connected) { socket.disconnect(); }
                      alert(data?.message || 'Ваш аккаунт был удален администратором.');
-                     // Создаем и отправляем форму для /logout
                      const logoutForm = document.createElement('form');
-                     logoutForm.method = 'POST';
-                     logoutForm.action = '/logout';
-                     document.body.appendChild(logoutForm);
-                     logoutForm.submit();
+                     logoutForm.method = 'POST'; logoutForm.action = '/logout';
+                     document.body.appendChild(logoutForm); logoutForm.submit();
                  });
 
-                // --- ОБРАБОТЧИКИ УВЕДОМЛЕНИЙ О БРОНИРОВАНИЯХ ---
-
-                // 1. Для Арендатора: Бронь подтверждена
                 socket.on('booking_confirmed', (data) => {
                     console.log("[Socket.IO Client] Event 'booking_confirmed':", data);
                     showJsNotification('success', `✅ Бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>" <strong>подтверждена</strong>!`, 7000, true);
-                    // Динамическое обновление UI на /bookings
                     const row = document.getElementById(`booking-row-${data.bookingId}`);
-                    if (row && window.location.pathname === '/bookings') { // Только на странице броней
+                    if (row && window.location.pathname === '/bookings') {
                         const statusCell = row.querySelector('.status-cell .status-label');
                         const actionsCell = row.querySelector('.actions-cell');
                         if (statusCell) { statusCell.textContent = 'Активна'; statusCell.className = 'status-label status-active'; statusCell.title = 'Активна'; }
-                         if (actionsCell) {
-                             const form = actionsCell.querySelector('form'); if(form) form.dataset.currentStatus = 'Активна'; // Обновляем статус для confirm()
-                         }
+                         if (actionsCell) { const form = actionsCell.querySelector('form'); if(form) form.dataset.currentStatus = 'Активна'; }
                     }
                 });
 
-                // 2. Для Арендатора: Бронь отклонена
                 socket.on('booking_rejected', (data) => {
                     console.log("[Socket.IO Client] Event 'booking_rejected':", data);
                     const reasonText = data.reason ? ` Причина: ${data.reason}` : '';
                     showJsNotification('warning', `❌ Запрос #${data.bookingId?.substring(0,6)} на "<strong>${data.propertyTitle || '?'}</strong>" <strong>отклонен</strong>.${reasonText}`, 10000, true);
-                    // Динамическое обновление UI на /bookings
                      const row = document.getElementById(`booking-row-${data.bookingId}`);
                      if (row && window.location.pathname === '/bookings') {
-                        const statusCell = row.querySelector('.status-cell'); // Вся ячейка
+                        const statusCell = row.querySelector('.status-cell');
                         const actionsCell = row.querySelector('.actions-cell');
                          if (statusCell) {
                              statusCell.innerHTML = `<span class="status-label status-rejected" title="Отклонена">Отклонена</span>`;
                              if(data.reason) { statusCell.innerHTML += ` <i class="fas fa-info-circle" title="${data.reason}" style="margin-left: 5px; color: #d35400; cursor: help;"></i>`; }
                          }
-                         if (actionsCell) { actionsCell.innerHTML = '<span>-</span>'; } // Убираем кнопку Отменить
+                         if (actionsCell) { actionsCell.innerHTML = '<span>-</span>'; }
                      }
                 });
 
-                // 3. Для Арендатора: Бронь аннулирована владельцем/админом
                 socket.on('booking_cancelled_by_owner', (data) => {
                     console.log("[Socket.IO Client] Event 'booking_cancelled_by_owner':", data);
                     showJsNotification('error', `❗ Бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>" была <strong>аннулирована</strong> администрацией.`, 10000, true);
-                     // Динамическое обновление UI на /bookings
                     const row = document.getElementById(`booking-row-${data.bookingId}`);
                     if (row && window.location.pathname === '/bookings') {
                         const statusCell = row.querySelector('.status-cell .status-label');
@@ -355,44 +242,30 @@
                     }
                 });
 
-                // 4. Для Владельца/Staff: Новый запрос на бронирование
                 socket.on('new_booking_pending', (data) => {
                     console.log("[Socket.IO Client] Event 'new_booking_pending':", data);
                     if (!window.location.pathname.startsWith('/rentals')) {
                         showJsNotification('info', `📬 Новый запрос на бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>" от ${data.tenantName}. <a href="/rentals" style='color:inherit; font-weight:bold;'>К арендам</a>`, 15000, true);
                     }
-                    // Опционально: Динамически добавить строку в таблицу "Ожидают" на /rentals
-                    // (Это сложнее, т.к. требует рендеринга HTML на клиенте)
                 });
 
-                // 5. Для Владельца/Staff: Арендатор отменил ОЖИДАЮЩУЮ бронь
                 socket.on('pending_booking_cancelled', (data) => {
                      console.log("[Socket.IO Client] Event 'pending_booking_cancelled':", data);
                      showJsNotification('warning', `❌ Арендатор <strong>${data.tenantName}</strong> отменил запрос #${data.bookingId?.substring(0,6)} на "<strong>${data.propertyTitle || '?'}</strong>".`, 7000, true);
-                     // Опционально: Динамически удалить строку из таблицы "Ожидают" на /rentals
                       const row = document.getElementById(`rental-row-${data.bookingId}`);
                       if (row && window.location.pathname.startsWith('/rentals')) {
                           row.remove();
-                          // Обновить счетчик
                           const pendingCountSpan = document.getElementById('pendingCount');
-                          if(pendingCountSpan) {
-                               let count = parseInt(pendingCountSpan.textContent || '0') - 1;
-                               pendingCountSpan.textContent = Math.max(0, count); // Убедимся, что не < 0
-                          }
-                          // Показать сообщение "Нет броней", если таблица стала пустой
-                            const pendingBody = document.getElementById('pendingBookingsTableBody');
-                            const noPendingMsg = pendingBody?.closest('.rentals-section')?.querySelector('.no-bookings-message');
-                            if(pendingBody && noPendingMsg) {
-                                noPendingMsg.style.display = pendingBody.rows.length === 0 ? 'block' : 'none';
-                            }
+                          if(pendingCountSpan) { let count = parseInt(pendingCountSpan.textContent || '0') - 1; pendingCountSpan.textContent = Math.max(0, count); }
+                          const pendingBody = document.getElementById('pendingBookingsTableBody');
+                          const noPendingMsg = pendingBody?.closest('.rentals-section')?.querySelector('.no-bookings-message');
+                          if(pendingBody && noPendingMsg) { noPendingMsg.style.display = pendingBody.rows.length === 0 ? 'block' : 'none'; }
                       }
                  });
 
-                 // 6. Для Владельца/Staff: Арендатор отменил АКТИВНУЮ бронь
                  socket.on('active_booking_cancelled', (data) => {
                      console.log("[Socket.IO Client] Event 'active_booking_cancelled':", data);
                      showJsNotification('error', `🚫 Арендатор <strong>${data.tenantName}</strong> отменил активную бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>".`, 10000, true);
-                     // Опционально: Динамически обновить статус в таблице "Активные/Прошедшие" на /rentals
                      const row = document.getElementById(`rental-row-${data.bookingId}`);
                      if (row && window.location.pathname.startsWith('/rentals')) {
                          const statusCell = row.querySelector('.status-cell .status-label');
@@ -400,7 +273,7 @@
                          if (statusCell) { statusCell.textContent = 'Отменена'; statusCell.className = 'status-label status-cancelled'; statusCell.title = 'Отменена'; }
                          row.dataset.status = 'Отменена';
                          if (actionsCell) {
-                             actionsCell.innerHTML = ''; // Убираем кнопку "Аннулировать"
+                             actionsCell.innerHTML = '';
                              const isAdmin = document.body.querySelector('#pendingBookingsTableBody')?.closest('table')?.parentElement?.dataset?.isAdmin === 'true';
                              if (isAdmin) {
                                   actionsCell.innerHTML = `
@@ -411,11 +284,116 @@
                          }
                      }
                  });
-
+                 // --- Конец обработчиков Socket.IO ---
+                }
 
             } catch(e) {
                 console.error("[Socket.IO Client] Error setting up listeners:", e);
             }
-        });
+
+            // --- КОД ДЛЯ УПРАВЛЕНИЯ БАННЕРОМ ОБНОВЛЕНИЯ ---
+            const updateBanner = document.getElementById('updateNotificationBanner');
+            const updateMessage = document.getElementById('updateMessage');
+            const restartButton = document.getElementById('updateRestartButton');
+            const dismissButton = document.getElementById('updateDismiss');
+            let listeners = {}; // Для хранения функций отписки
+
+            // Проверяем наличие API из preload.js и элементов баннера
+            if (window.electronUpdater && updateBanner && updateMessage && restartButton && dismissButton) {
+                console.log('[Renderer Updater] Setting up electronUpdater listeners.');
+
+                // Скрыть баннер по крестику
+                dismissButton.onclick = () => {
+                    updateBanner.style.display = 'none';
+                };
+
+                // Кнопка перезапуска и установки
+                restartButton.onclick = () => {
+                    console.log('[Renderer Updater] Sending "install-update" to main process.');
+                    restartButton.textContent = 'Перезапуск...';
+                    restartButton.disabled = true;
+                    window.electronUpdater.send('install-update');
+                };
+
+                // Обработка статуса проверки
+                const statusListener = (message) => {
+                    if (!message) { updateBanner.style.display = 'none'; return; }
+                    console.log('[Renderer Updater] Received update-status:', message);
+                    updateMessage.textContent = message;
+                    restartButton.style.display = 'none';
+                    updateBanner.style.backgroundColor = '#5bc0de'; // Инфо цвет
+                    updateBanner.style.display = 'block';
+                };
+                 listeners['update-status'] = window.electronUpdater.on('update-status', statusListener);
+
+                // Обработка ошибки
+                const errorListener = (message) => {
+                    console.error('[Renderer Updater] Received update-error:', message);
+                    updateMessage.textContent = message;
+                    restartButton.style.display = 'none';
+                    updateBanner.style.backgroundColor = '#d9534f'; // Цвет ошибки
+                    updateBanner.style.display = 'block';
+                };
+                 listeners['update-error'] = window.electronUpdater.on('update-error', errorListener);
+
+                // Обновление найдено
+                const availableListener = (info) => {
+                    console.log('[Renderer Updater] Received update-available:', info);
+                    updateMessage.textContent = `Найдена новая версия ${info.version}. Загрузка...`;
+                    restartButton.style.display = 'none';
+                    updateBanner.style.backgroundColor = '#f0ad4e'; // Цвет предупреждения
+                    updateBanner.style.display = 'block';
+                };
+                 listeners['update-available'] = window.electronUpdater.on('update-available', availableListener);
+
+                // Прогресс загрузки
+                const progressListener = (percent) => {
+                    console.log('[Renderer Updater] Received update-progress:', percent);
+                    updateMessage.textContent = `Загрузка обновления: ${percent}%`;
+                    restartButton.style.display = 'none';
+                    updateBanner.style.backgroundColor = '#f0ad4e';
+                    updateBanner.style.display = 'block';
+                };
+                 listeners['update-progress'] = window.electronUpdater.on('update-progress', progressListener);
+
+                // Обновление загружено
+                const readyListener = (info) => {
+                    console.log('[Renderer Updater] Received update-ready:', info);
+                    updateMessage.textContent = `Обновление ${info.version} готово к установке!`;
+                    restartButton.textContent = 'Перезапустить и установить';
+                    restartButton.disabled = false;
+                    restartButton.style.display = 'inline-block';
+                    updateBanner.style.backgroundColor = '#5cb85c'; // Цвет успеха
+                    updateBanner.style.display = 'block';
+                    // Можно добавить звук
+                    // showJsNotification('success', `Обновление ${info.version} готово к установке!`, 10000, true);
+                };
+                 listeners['update-ready'] = window.electronUpdater.on('update-ready', readyListener);
+
+                // Опциональная отписка при выходе (если будет много переходов по страницам)
+                // window.addEventListener('beforeunload', () => {
+                //    console.log('[Renderer Updater] Unsubscribing from update events.');
+                //    if (window.electronUpdater && window.electronUpdater.removeListener) {
+                //         Object.entries(listeners).forEach(([channel, unsubscribeFunc]) => {
+                //             if (unsubscribeFunc && typeof unsubscribeFunc === 'function') {
+                //                  // В preload.js функция on возвращает функцию отписки
+                //                 try { unsubscribeFunc(); } catch(e){console.error("Error unsubscribing:", e);}
+                //             }
+                //         });
+                //    }
+                // });
+
+            } else {
+                console.warn('[Renderer Updater] electronUpdater API or required banner elements are not available.');
+                if (!window.electronUpdater) {
+                    console.error('[Renderer Updater] window.electronUpdater is undefined. Check preload.js script loading and contextBridge setup.');
+                }
+                 if (!updateBanner || !updateMessage || !restartButton || !dismissButton) {
+                    console.error('[Renderer Updater] One or more banner elements are missing in the DOM.');
+                 }
+            }
+            // --- КОНЕЦ КОДА ДЛЯ ОБНОВЛЕНИЙ ---
+
+        }); // Конец DOMContentLoaded
     </script>
 <% } %>
