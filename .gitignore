@@ -3,3 +3,4 @@ node_modules/
 serviceAccountKey.json 
 dist/
 *.log
+.env
