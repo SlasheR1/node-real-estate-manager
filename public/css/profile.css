@@ -1,0 +1,127 @@
+/* public/css/profile.css */
+
+.profile-container {
+    max-width: 700px; /* Сделаем контейнер профиля не очень широким */
+}
+
+.profile-container h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    font-weight: 600;
+}
+
+.profile-card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07);
+    overflow: hidden; /* Чтобы скругление работало */
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    padding: 25px 30px;
+    background: linear-gradient(135deg, #e1e7fd 0%, #e8e1fc 100%); /* Нежный градиент для шапки профиля */
+    border-bottom: 1px solid #dee2e6;
+}
+
+.profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    margin-right: 20px;
+    object-fit: cover;
+}
+
+.profile-name-role h2 {
+    margin: 0 0 5px 0;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: #343a40;
+}
+
+.profile-name-role .role {
+    margin: 0;
+    font-size: 1rem;
+    color: #6c757d;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.profile-details {
+    padding: 25px 30px;
+}
+
+.profile-details h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #495057;
+    margin-top: 20px; /* Отступ перед секциями */
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+}
+.profile-details h3:first-of-type {
+    margin-top: 0; /* Убираем отступ у первой секции */
+}
+
+
+.profile-details p {
+    margin-bottom: 10px;
+    color: #495057;
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+
+.profile-details p strong {
+    color: #343a40;
+    margin-right: 5px;
+    min-width: 90px;
+    display: inline-block;
+}
+
+.profile-details .balance strong {
+    font-size: 1.1rem; /* Выделяем баланс */
+}
+.profile-details .balance {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #198754; /* Зеленый цвет для баланса */
+}
+
+
+.profile-actions {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Отступ для основной кнопки редактирования */
+ .main-actions {
+    margin-top: 30px;
+ }
+
+
+/* Используем стили .btn из style.css */
+ .profile-actions .btn { }
+ .profile-actions .btn-primary { }
+ .profile-actions .btn-secondary { }
+ .profile-actions .btn-edit {
+     background-color: #ffc107;
+     border-color: #ffc107;
+     color: #000;
+  }
+ .profile-actions .btn-edit:hover {
+      background-color: #ffca2c;
+      border-color: #ffc720;
+  }
+
+  button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+   }

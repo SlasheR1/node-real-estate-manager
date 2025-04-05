@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/profile.css">
+    <style>
+        /* Стиль для заблокированной кнопки */
+        .btn:disabled {
+             opacity: 0.65;
+             cursor: not-allowed;
+         }
+    </style>
+</head>
+<body>
+    <%- include('partials/header') %>
+    <%- include('partials/messages') %>
+
+    <main class="container profile-container">
+        <h1><%= title %></h1>
+
+        <div class="profile-card">
+            <div class="profile-header">
+                <img src="<%= user.DisplayAvatarSrc %>" alt="Аватар пользователя" class="profile-avatar">
+                <div class="profile-name-role">
+                    <h2><%= user.FullName || user.Username %></h2>
+                    <p class="role"><%= user.Role %></p>
+                </div>
+            </div>
+
+            <div class="profile-details">
+                <h3>Контактная информация</h3>
+                <p><strong>Email:</strong> <%= user.Email || 'Не указан' %></p>
+                <p><strong>Телефон:</strong> <%= user.Phone %></p>
+
+                <% if (user.Role === 'Tenant') { %>
+                    <h3>Финансы</h3>
+                    <p class="balance"><strong>Баланс:</strong> <%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(user.Balance || 0) %></p>
+                    <div class="profile-actions">
+                         <!-- *** ДОБАВЛЕН ID КНОПКЕ *** -->
+                         <button id="addFundsBtn" class="btn btn-primary" onclick="addFunds(this)">Пополнить баланс (Тест)</button>
+                         <a href="/profile/balance-history" class="btn btn-secondary">История операций</a>
+                    </div>
+                <% } %>
+
+                 <div class="profile-actions main-actions">
+                       <a href="/profile/edit" class="btn btn-edit">Редактировать профиль</a>
+                 </div>
+
+            </div>
+        </div>
+    </main>
+
+    <%- include('partials/footer') %>
+
+    <% if (user.Role === 'Tenant') { %>
+        <script>
+             // *** ОБНОВЛЕНА ФУНКЦИЯ addFunds ***
+             async function addFunds(buttonElement) {
+                 // Блокируем кнопку и меняем текст
+                 buttonElement.disabled = true;
+                 const originalText = buttonElement.textContent;
+                 buttonElement.textContent = 'Пополнение...';
+
+                 try {
+                    const response = await fetch('/profile/add-funds', {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' }
+                     });
+
+                    const result = await response.json(); // Получаем ответ
+
+                    if (!response.ok) {
+                         // Если ошибка, показываем сообщение из ответа или стандартное
+                         throw new Error(result.error || `Ошибка сервера: ${response.statusText}`);
+                    }
+                    // Успех: перезагружаем страницу для обновления баланса и заголовка
+                    window.location.reload();
+                    // Сообщение об успехе покажется после перезагрузки, если оно установлено сервером
+                 } catch (error) {
+                     console.error('Ошибка пополнения баланса:', error);
+                     alert('Не удалось пополнить баланс: ' + error.message);
+                      // Возвращаем кнопку в исходное состояние при ошибке
+                      buttonElement.disabled = false;
+                      buttonElement.textContent = originalText;
+                 }
+                 // Не нужно разблокировать кнопку здесь, т.к. при успехе идет перезагрузка
+             }
+        </script>
+    <% } %>
+</body>
+</html>

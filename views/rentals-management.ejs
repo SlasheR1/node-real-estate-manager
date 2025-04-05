@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/tables.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* Стили статусов */
+        .status-label { padding: 3px 8px; border-radius: 4px; font-size: 0.85em; font-weight: 500; display: inline-block; }
+        .status-active { background-color: #e6f9f0; color: #27ae60; } /* Зеленый */
+        .status-pending { background-color: #fff8e1; color: #f39c12; } /* Желтый */
+        .status-rejected { background-color: #fbeee6; color: #d35400; } /* Оранжевый */
+        .status-cancelled { background-color: #fdeded; color: #e74c3c; } /* Красный (Отменена арендатором) */
+        .status-annulled { background-color: #eaeded; color: #7f8c8d; } /* Серый (Аннулирована админом) */
+        .status-other { background-color: #f8f9fa; color: #6c757d; }
+
+        .actions-cell form { margin: 0 5px 0 0; display: inline-block; }
+        .actions-cell .btn-small { margin-top: 2px; margin-bottom: 2px; vertical-align: middle; } /* Добавил vertical-align */
+
+        /* Кнопки подтверждения/отклонения */
+        .btn-confirm { background-color: #27ae60; border-color: #229954; color: white; }
+        .btn-confirm:hover:not(:disabled) { background-color: #229954; border-color: #1e8449; }
+        .btn-reject { background-color: #e74c3c; border-color: #cb4335; color: white; }
+        .btn-reject:hover:not(:disabled) { background-color: #cb4335; border-color: #b03a2e; }
+
+        /* Старые кнопки */
+        .btn-annul { background-color: #e67e22; border-color: #d35400; color: white; }
+        .btn-annul:hover:not(:disabled) { background-color: #d35400; border-color: #a04000; }
+        .btn-delete { background-color: #c0392b; border-color: #a03020; color: white; }
+        .btn-delete:hover:not(:disabled) { background-color: #a03020; border-color: #802010; }
+
+        .actions-cell .btn:disabled, .actions-cell form button:disabled { opacity: 0.65; cursor: not-allowed; }
+        #js-messages-rentals { margin-bottom: 15px; }
+
+        /* --- Стили сообщений --- */
+        .flash-message { padding: 12px 20px; margin-bottom: 20px; border-radius: 6px; border: 1px solid transparent; position: relative; font-size: 0.95rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .flash-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
+        .flash-error { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
+        .flash-info { color: #055160; background-color: #cff4fc; border-color: #b6effb; }
+        .flash-message .close-flash { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); background: none; border: none; font-size: 1.5rem; line-height: 1; color: inherit; opacity: 0.6; cursor: pointer; padding: 0 5px; }
+        .flash-message .close-flash:hover { opacity: 0.9; }
+
+        /* Стили для спиннера */
+        .button-spinner { margin-left: 5px; display: none; font-size: 0.9em; }
+        button:disabled .button-spinner { display: inline-block; }
+        button .button-text { vertical-align: middle; }
+
+        /* Разделение таблиц */
+        .rentals-section { margin-bottom: 40px; }
+        .rentals-section h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            color: #34495e;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .rentals-section h2 i { color: #95a5a6; font-size: 0.9em; }
+        .no-bookings-message { text-align: center; color: #7f8c8d; margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 6px;} /* Улучшил вид */
+
+         /* Анимация */
+         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+         .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+         /* .table-responsive { overflow-x: visible; } */ /* Убрал, т.к. может ломать скролл */
+         .data-table { border-collapse: separate; border-spacing: 0; }
+         .data-table th, .data-table td { border-bottom: 1px solid #e9ecef; }
+         .data-table tbody tr:last-child td { border-bottom: none; }
+         .data-table tbody tr { transition: background-color 0.2s ease; }
+         .data-table tbody tr:hover { background-color: #f8f9fa; }
+
+         /* Стили для модального окна причины отклонения */
+         .modal { display: none; position: fixed; z-index: 1050; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+         .modal-dialog { position: relative; margin: 50px auto; pointer-events: none; max-width: 500px; }
+         .modal.fade .modal-dialog { transition: transform .3s ease-out; transform: translate(0,-50px); }
+         .modal.show .modal-dialog { transform: none; }
+         .modal-content { position: relative; display: flex; flex-direction: column; width: 100%; pointer-events: auto; background-color: #fff; background-clip: padding-box; border: 1px solid rgba(0,0,0,.2); border-radius: .3rem; outline: 0; }
+         .modal-header { display: flex; align-items: flex-start; justify-content: space-between; padding: 1rem 1rem; border-bottom: 1px solid #dee2e6; border-top-left-radius: calc(.3rem - 1px); border-top-right-radius: calc(.3rem - 1px); }
+         .modal-title { margin-bottom: 0; line-height: 1.5; font-size: 1.25rem; }
+         .modal-header .btn-close { padding: .5rem .5rem; margin: -.5rem -.5rem -.5rem auto; background: transparent; border: 0; font-size: 1.5rem; font-weight: 700; line-height: 1; color: #000; text-shadow: 0 1px 0 #fff; opacity: .5; }
+         .modal-body { position: relative; flex: 1 1 auto; padding: 1rem; }
+         .modal-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; padding: .75rem; border-top: 1px solid #dee2e6; border-bottom-right-radius: calc(.3rem - 1px); border-bottom-left-radius: calc(.3rem - 1px); }
+         .modal-footer>:not(:first-child) { margin-left: .25rem; }
+         .modal-footer>:not(:last-child) { margin-right: .25rem; }
+         /* Добавляем стили для textarea внутри модалки */
+         #rejectReasonTextarea { width: 100%; min-height: 80px; padding: .375rem .75rem; font-size: 1rem; font-weight: 400; line-height: 1.5; color: #212529; background-color: #fff; background-clip: padding-box; border: 1px solid #ced4da; appearance: none; border-radius: .25rem; transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out; }
+         #rejectReasonTextarea:focus { color: #212529; background-color: #fff; border-color: #86b7fe; outline: 0; box-shadow: 0 0 0 .25rem rgba(13,110,253,.25); }
+    </style>
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <main class="container">
+        <h1><%= title %></h1>
+        <%- include('partials/messages') %>
+        <div id="js-messages-rentals"></div>
+
+        <%
+            // Разделяем бронирования по статусу прямо здесь
+            const allBookings = Array.isArray(bookings) ? bookings : [];
+            const pendingBookings = allBookings.filter(b => b.Status === 'Ожидает подтверждения');
+            // Сортируем остальные: сначала Активные, потом остальные по дате создания
+            const otherBookings = allBookings
+                .filter(b => b.Status !== 'Ожидает подтверждения')
+                .sort((a, b) => {
+                    if (a.Status === 'Активна' && b.Status !== 'Активна') return -1;
+                    if (a.Status !== 'Активна' && b.Status === 'Активна') return 1;
+                    // Если оба не активные, сортируем по дате создания (новые сверху)
+                    return new Date(b.CreatedAt || 0) - new Date(a.CreatedAt || 0);
+                });
+            const isAdminUser = locals.currentUser && locals.currentUser.role === 'Admin';
+        %>
+
+        <!-- Секция Ожидающих Подтверждения -->
+        <section class="rentals-section">
+            <h2><i class="fas fa-hourglass-half"></i> Ожидают подтверждения (<span id="pendingCount"><%= pendingBookings.length %></span>)</h2>
+            <% if (pendingBookings.length > 0) { %>
+                <div class="table-responsive fade-in">
+                    <table class="data-table">
+                        <thead> <tr> <th>Объект</th> <th>Арендатор</th> <th>Даты</th> <th>Сумма</th> <th>Действия</th> </tr> </thead>
+                        <tbody id="pendingBookingsTableBody">
+                            <% pendingBookings.forEach(booking => { %>
+                                <tr id="rental-row-<%= booking.Id %>" data-status="<%= booking.Status %>">
+                                    <td> <a href="/properties/<%= booking.PropertyId %>" title="<%= booking.PropertyTitle %>"><%= booking.PropertyTitle.substring(0, 25) %><% if(booking.PropertyTitle.length > 25) { %>...<% } %></a> </td>
+                                    <td><%= booking.TenantName %></td>
+                                    <td><%= booking.StartDateFormatted %> - <%= booking.EndDateFormatted %></td>
+                                    <td><%= booking.TotalCost ? new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(booking.TotalCost) : '?' %></td>
+                                    <td class="actions-cell">
+                                         <form class="rental-action-form" data-action="confirm" data-booking-id="<%= booking.Id %>" action="/rentals/<%= booking.Id %>/confirm" method="POST">
+                                             <button type="submit" class="btn btn-small btn-confirm">
+                                                 <span class="button-text">Подтвердить</span>
+                                                 <i class="fas fa-spinner fa-spin button-spinner"></i>
+                                             </button>
+                                         </form>
+                                         <form class="rental-action-form" data-action="reject" data-booking-id="<%= booking.Id %>" action="/rentals/<%= booking.Id %>/reject" method="POST">
+                                             <button type="button" class="btn btn-small btn-reject reject-button"> <%# Изменили type="submit" на type="button" %>
+                                                 <span class="button-text">Отклонить</span>
+                                                 <i class="fas fa-spinner fa-spin button-spinner"></i>
+                                             </button>
+                                         </form>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } else { %>
+                <p class="no-bookings-message">Нет бронирований, ожидающих подтверждения.</p>
+            <% } %>
+        </section>
+
+        <!-- Секция Остальных Бронирований -->
+        <section class="rentals-section">
+            <h2><i class="fas fa-history"></i> Активные и Прошедшие (<span id="otherCount"><%= otherBookings.length %></span>)</h2>
+             <% if (otherBookings.length > 0) { %>
+                <div class="table-responsive fade-in" style="animation-delay: 0.1s;">
+                    <table class="data-table">
+                        <thead> <tr> <th>Объект</th> <th>Арендатор</th> <th>Даты</th> <th>Сумма</th> <th>Статус</th> <th>Действия</th> </tr> </thead>
+                        <tbody id="otherBookingsTableBody">
+                            <% otherBookings.forEach(booking => { %>
+                                <%
+                                    let statusClass = 'status-other';
+                                    let statusText = booking.Status || 'Неизвестен';
+                                    // Определяем класс и текст статуса
+                                    switch(booking.Status) {
+                                        case 'Активна': statusClass = 'status-active'; break;
+                                        case 'Отклонена': statusClass = 'status-rejected'; break;
+                                        case 'Отменена': statusClass = 'status-cancelled'; break; // Отменена арендатором
+                                        case 'Аннулирована': statusClass = 'status-annulled'; break; // Аннулирована админом/владельцем
+                                        case 'Удержан': statusClass = 'status-hold'; break; // Пример, если такой статус будет
+                                    }
+                                %>
+                                <tr id="rental-row-<%= booking.Id %>" data-status="<%= booking.Status %>">
+                                     <td> <a href="/properties/<%= booking.PropertyId %>" title="<%= booking.PropertyTitle %>"><%= booking.PropertyTitle.substring(0, 25) %><% if(booking.PropertyTitle.length > 25) { %>...<% } %></a> </td>
+                                     <td><%= booking.TenantName %></td>
+                                     <td><%= booking.StartDateFormatted %> - <%= booking.EndDateFormatted %></td>
+                                     <td><%= booking.TotalCost ? new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(booking.TotalCost) : '?' %></td>
+                                     <td class="status-cell">
+                                        <span class="status-label <%= statusClass %>" title="<%= booking.Status %>"><%= statusText %></span>
+                                        <%# Показываем причину отклонения, если есть %>
+                                        <% if (booking.Status === 'Отклонена' && booking.RejectedReason) { %>
+                                            <i class="fas fa-info-circle" title="<%= booking.RejectedReason %>" style="margin-left: 5px; color: #d35400; cursor: help;"></i>
+                                        <% } %>
+                                     </td>
+                                    <td class="actions-cell">
+                                        <% if (booking.Status === 'Активна') { %>
+                                            <%# Кнопка Аннулировать для Owner/Staff/Admin %>
+                                            <form class="rental-action-form" data-action="cancel" data-booking-id="<%= booking.Id %>" action="/rentals/<%= booking.Id %>/cancel" method="POST">
+                                                <button type="submit" class="btn btn-small btn-annul">
+                                                     <span class="button-text">Аннулировать</span>
+                                                     <i class="fas fa-spinner fa-spin button-spinner"></i>
+                                                </button>
+                                            </form>
+                                        <% } %>
+                                        <% if (isAdminUser && booking.Status !== 'Активна' && booking.Status !== 'Ожидает подтверждения') { %>
+                                            <%# Кнопка Удалить для Admin для неактивных/неожидающих %>
+                                            <form class="rental-action-form" data-action="delete" data-booking-id="<%= booking.Id %>" action="/rentals/<%= booking.Id %>/delete" method="POST">
+                                                <button type="submit" class="btn btn-small btn-delete">
+                                                    <span class="button-text">Удалить</span>
+                                                    <i class="fas fa-spinner fa-spin button-spinner"></i>
+                                                </button>
+                                            </form>
+                                        <% } else if (booking.Status !== 'Активна' && booking.Status !== 'Ожидает подтверждения') { %>
+                                            <%# Прочерк для не-админов для неактивных/неожидающих %>
+                                            <span>-</span>
+                                        <% } %>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } else { %>
+                <p class="no-bookings-message">Нет активных или прошедших бронирований.</p>
+            <% } %>
+        </section>
+
+    </main>
+
+    <!-- Модальное окно для причины отклонения -->
+    <div class="modal fade" id="rejectReasonModal" tabindex="-1" aria-labelledby="rejectReasonModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="rejectReasonModalLabel">Причина отклонения бронирования #<span id="rejectBookingIdSpan"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="closeRejectModal()"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="rejectReasonForm">
+                        <input type="hidden" id="rejectBookingIdInput">
+                        <div class="mb-3">
+                            <label for="rejectReasonTextarea" class="form-label">Укажите причину (необязательно):</label>
+                            <textarea class="form-control" id="rejectReasonTextarea" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="closeRejectModal()">Отмена</button>
+                    <button type="button" class="btn btn-danger" id="confirmRejectBtn">Отклонить бронь</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <%- include('partials/footer') %>
+
+    <script>
+        function showRentalsJsMessage(type, text) { const container = document.getElementById('js-messages-rentals'); if (!container) return; const messageDiv = document.createElement('div'); messageDiv.className = `flash-message flash-${type}`; messageDiv.innerHTML = `${text} <button type="button" class="close-flash" onclick="this.parentElement.remove()">×</button>`; container.innerHTML = ''; container.appendChild(messageDiv); setTimeout(() => { if(messageDiv) messageDiv.remove(); }, 6000); }
+
+        const pendingBody = document.getElementById('pendingBookingsTableBody');
+        const otherBody = document.getElementById('otherBookingsTableBody');
+        const isAdmin = document.body.querySelector('#pendingBookingsTableBody')?.closest('table')?.parentElement?.dataset?.isAdmin === 'true'; // Более надежный способ
+        const pendingCountSpan = document.getElementById('pendingCount');
+        const otherCountSpan = document.getElementById('otherCount');
+
+        // --- Модальное окно для причины отклонения ---
+        const rejectModalElement = document.getElementById('rejectReasonModal');
+        const rejectBookingIdSpan = document.getElementById('rejectBookingIdSpan');
+        const rejectBookingIdInput = document.getElementById('rejectBookingIdInput');
+        const rejectReasonTextarea = document.getElementById('rejectReasonTextarea');
+        const confirmRejectBtn = document.getElementById('confirmRejectBtn');
+        let rejectTargetForm = null; // Храним форму, которая вызвала модалку
+
+        function openRejectModal(buttonElement) {
+            rejectTargetForm = buttonElement.closest('form'); // Сохраняем форму
+            const bookingId = rejectTargetForm.dataset.bookingId;
+            rejectBookingIdSpan.textContent = bookingId.substring(0, 6) + '...';
+            rejectBookingIdInput.value = bookingId;
+            rejectReasonTextarea.value = ''; // Очищаем поле
+            rejectModalElement.style.display = 'block'; // Показываем модалку
+            setTimeout(() => rejectModalElement.classList.add('show'), 10); // Добавляем класс для анимации (если есть)
+            rejectReasonTextarea.focus();
+        }
+
+        function closeRejectModal() {
+            rejectModalElement.classList.remove('show');
+            setTimeout(() => rejectModalElement.style.display = 'none', 150); // Задержка для анимации fade
+            rejectTargetForm = null; // Сбрасываем таргет
+        }
+
+        // Назначаем обработчик на клик по кнопкам "Отклонить"
+        document.querySelectorAll('.reject-button').forEach(button => {
+            button.addEventListener('click', (event) => {
+                event.preventDefault(); // Предотвращаем отправку формы
+                openRejectModal(button);
+            });
+        });
+
+        // Обработчик клика на кнопку "Отклонить бронь" внутри модалки
+        confirmRejectBtn.addEventListener('click', async () => {
+            if (!rejectTargetForm) return;
+            const bookingId = rejectBookingIdInput.value;
+            const reason = rejectReasonTextarea.value.trim();
+            const form = rejectTargetForm; // Используем сохраненную форму
+            const action = 'reject';
+            const submitButton = form.querySelector('button'); // Кнопка "Отклонить" из таблицы
+            const buttonText = submitButton.querySelector('.button-text');
+            const originalButtonText = buttonText.textContent;
+
+            closeRejectModal(); // Закрываем модалку
+
+            submitButton.disabled = true;
+            buttonText.textContent = 'Откл...';
+            document.getElementById('js-messages-rentals').innerHTML = '';
+
+            try {
+                const response = await fetch(form.action, {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                     body: JSON.stringify({ reason: reason }) // Передаем причину
+                });
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    handleActionSuccess(action, bookingId, result);
+                } else { throw new Error(result.error || `Ошибка действия '${action}'.`); }
+            } catch (error) {
+                handleActionError(error, action, bookingId, submitButton, originalButtonText);
+            }
+        });
+
+
+        // Общий обработчик отправки форм (для Confirm, Cancel, Delete)
+        document.body.addEventListener('submit', async (event) => {
+            if (event.target && event.target.matches('.rental-action-form')) {
+                event.preventDefault();
+                const form = event.target;
+                const action = form.dataset.action;
+                const bookingId = form.dataset.bookingId;
+                const submitButton = form.querySelector('button[type="submit"]');
+                const buttonText = submitButton.querySelector('.button-text');
+
+                if (!submitButton || submitButton.disabled || action === 'reject') return; // Игнорируем reject здесь
+
+                const originalButtonText = buttonText.textContent;
+                let confirmMessage = '';
+                let loadingText = '...';
+
+                switch(action) {
+                    case 'confirm': confirmMessage = 'Подтвердить это бронирование?'; loadingText = 'Подтв...'; break;
+                    case 'cancel': confirmMessage = 'Аннулировать это бронирование (средства будут возвращены арендатору)?'; loadingText = 'Аннул...'; break;
+                    case 'delete': confirmMessage = 'Удалить эту запись о бронировании навсегда?'; loadingText = 'Удал...'; break;
+                    default: return;
+                }
+
+                if (!confirm(confirmMessage)) { return; }
+
+                submitButton.disabled = true;
+                buttonText.textContent = loadingText;
+                document.getElementById('js-messages-rentals').innerHTML = '';
+
+                try {
+                    const response = await fetch(form.action, { method: 'POST', headers: { 'Accept': 'application/json' } });
+                    const result = await response.json();
+                    if (response.ok && result.success) {
+                        handleActionSuccess(action, bookingId, result);
+                    } else { throw new Error(result.error || `Ошибка действия '${action}'.`); }
+                } catch (error) {
+                    handleActionError(error, action, bookingId, submitButton, originalButtonText);
+                }
+            }
+        });
+
+        // Функция обработки успеха AJAX запроса
+        function handleActionSuccess(action, bookingId, result) {
+            const row = document.getElementById(`rental-row-${bookingId}`);
+            if (row) {
+                if (action === 'confirm' || action === 'reject') {
+                     // Перемещаем строку из "Ожидают" в "Активные/Прошедшие"
+                     const newStatus = result.newStatus;
+                     const statusCell = document.createElement('td'); // Создаем ячейку статуса
+                     statusCell.classList.add('status-cell');
+                     let statusClass = 'status-other';
+                     if (newStatus === 'Активна') statusClass = 'status-active';
+                     else if (newStatus === 'Отклонена') statusClass = 'status-rejected';
+                     statusCell.innerHTML = `<span class="status-label ${statusClass}" title="${newStatus}">${newStatus}</span>`;
+                     // Добавляем иконку с причиной отклонения, если есть
+                      if (newStatus === 'Отклонена' && result.rejectedReason) {
+                          statusCell.innerHTML += ` <i class="fas fa-info-circle" title="${result.rejectedReason}" style="margin-left: 5px; color: #d35400; cursor: help;"></i>`;
+                      }
+
+                     const actionsCell = row.querySelector('.actions-cell');
+                     row.insertBefore(statusCell, actionsCell); // Вставляем статус ПЕРЕД действиями
+                     row.dataset.status = newStatus; // Обновляем data-атрибут
+
+                     // Обновляем кнопки действий
+                     actionsCell.innerHTML = ''; // Очищаем старые кнопки Confirm/Reject
+                     if (newStatus === 'Активна') {
+                         actionsCell.innerHTML = `
+                             <form class="rental-action-form" data-action="cancel" data-booking-id="${bookingId}" action="/rentals/${bookingId}/cancel" method="POST">
+                                 <button type="submit" class="btn btn-small btn-annul"> <span class="button-text">Аннулировать</span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button>
+                             </form>`;
+                     } else if (isAdmin && newStatus !== 'Активна') { // Отклонена или другие неактивные
+                         actionsCell.innerHTML = `
+                              <form class="rental-action-form" data-action="delete" data-booking-id="${bookingId}" action="/rentals/${bookingId}/delete" method="POST">
+                                  <button type="submit" class="btn btn-small btn-delete"> <span class="button-text">Удалить</span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button>
+                              </form>`;
+                     } else { actionsCell.innerHTML = '<span>-</span>'; }
+
+                     otherBody.prepend(row); // Добавляем в начало "других"
+
+                 } else if (action === 'cancel') {
+                     // Обновляем статус и кнопки в таблице "Активные/Прошедшие"
+                     const newStatus = result.newStatus || 'Аннулирована'; // 'Аннулирована' теперь статус по умолчанию для отмены админом
+                     const statusCell = row.querySelector('.status-cell .status-label');
+                     const actionsCell = row.querySelector('.actions-cell');
+                     if (statusCell) { statusCell.textContent = newStatus; statusCell.className = 'status-label status-annulled'; statusCell.title = newStatus; }
+                     row.dataset.status = newStatus;
+                     actionsCell.innerHTML = '';
+                     if (isAdmin) {
+                         actionsCell.innerHTML = `
+                              <form class="rental-action-form" data-action="delete" data-booking-id="${bookingId}" action="/rentals/${bookingId}/delete" method="POST">
+                                  <button type="submit" class="btn btn-small btn-delete"> <span class="button-text">Удалить</span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button>
+                              </form>`;
+                     } else { actionsCell.innerHTML = '<span>-</span>'; }
+                 } else if (action === 'delete') { row.remove(); }
+            }
+            showRentalsJsMessage('success', result.message);
+            updateCounts(); // Обновляем счетчики
+        }
+
+        // Функция обработки ошибки AJAX запроса
+        function handleActionError(error, action, bookingId, submitButton, originalButtonText) {
+            console.error(`Error action '${action}' for ${bookingId}:`, error);
+            showRentalsJsMessage('error', error.message || 'Произошла ошибка.');
+            if(submitButton){ // Кнопка может быть уже удалена из DOM при успехе
+                 const buttonText = submitButton.querySelector('.button-text');
+                 submitButton.disabled = false;
+                 if(buttonText) buttonText.textContent = originalButtonText;
+            }
+        }
+
+        // Функция обновления счетчиков в заголовках
+        function updateCounts() {
+            if (pendingCountSpan) pendingCountSpan.textContent = pendingBody.rows.length;
+            if (otherCountSpan) otherCountSpan.textContent = otherBody.rows.length;
+            // Показываем/скрываем сообщения "Нет бронирований"
+            const noPendingMsg = pendingBody.closest('.rentals-section').querySelector('.no-bookings-message');
+            const noOtherMsg = otherBody.closest('.rentals-section').querySelector('.no-bookings-message');
+            if(noPendingMsg) noPendingMsg.style.display = pendingBody.rows.length === 0 ? 'block' : 'none';
+            if(noOtherMsg) noOtherMsg.style.display = otherBody.rows.length === 0 ? 'block' : 'none';
+        }
+
+        // Вызываем updateCounts при загрузке страницы для инициализации
+        document.addEventListener('DOMContentLoaded', updateCounts);
+
+    </script>
+
+</body>
+</html>

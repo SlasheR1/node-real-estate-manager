@@ -1,0 +1,75 @@
+<!-- views/register.ejs -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/auth.css">
+    <!-- Font Awesome для спиннера -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .ajax-message { padding: 10px 15px; margin-bottom: 15px; border-radius: 5px; text-align: center; display: none; }
+        .ajax-error { color: #842029; background-color: #f8d7da; border: 1px solid #f5c2c7; }
+        #registerForm button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }
+        /* Стили для спиннера внутри кнопки */
+        .button-spinner { margin-left: 8px; display: none; }
+        button:disabled .button-spinner { display: inline-block; }
+        button .button-text { vertical-align: middle; }
+    </style>
+</head>
+<body>
+     <div class="auth-container">
+        <h1>Регистрация</h1>
+        <div id="registerError" class="ajax-message ajax-error"></div>
+
+        <form id="registerForm" action="/register" method="POST">
+            <div class="form-group"> <label for="username">Логин:</label> <input type="text" id="username" name="username" required autocomplete="username"> </div>
+            <div class="form-group"> <label for="fullName">Полное имя:</label> <input type="text" id="fullName" name="fullName" required autocomplete="name"> </div>
+            <div class="form-group"> <label for="phone">Телефон:</label> <input type="tel" id="phone" name="phone" required autocomplete="tel"> </div>
+            <div class="form-group"> <label for="email">Email (необязательно):</label> <input type="email" id="email" name="email" autocomplete="email"> </div>
+            <div class="form-group"> <label for="password">Пароль:</label> <input type="password" id="password" name="password" required minlength="6" autocomplete="new-password"> </div>
+
+            <button type="submit">
+                <span class="button-text">Зарегистрироваться</span>
+                <i class="fas fa-spinner fa-spin button-spinner"></i> <%# Спиннер %>
+            </button>
+        </form>
+         <p>Уже есть аккаунт? <a href="/login">Войти</a></p>
+    </div>
+
+    <script>
+        const registerForm = document.getElementById('registerForm');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const fullNameInput = document.getElementById('fullName');
+        const phoneInput = document.getElementById('phone');
+        const emailInput = document.getElementById('email');
+        const errorDiv = document.getElementById('registerError');
+        const submitButton = registerForm.querySelector('button[type="submit"]');
+        const buttonText = submitButton.querySelector('.button-text'); // Находим текст
+        const originalButtonText = buttonText.textContent; // Сохраняем
+
+        registerForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+            submitButton.disabled = true;
+            buttonText.textContent = 'Регистрация...'; // Меняем текст
+
+            const formData = { username: usernameInput.value, password: passwordInput.value, fullName: fullNameInput.value, phone: phoneInput.value, email: emailInput.value, };
+            try {
+                const response = await fetch('/register', { method: 'POST', headers: { 'Content-Type': 'application/json', }, body: JSON.stringify(formData) });
+                const data = await response.json();
+                if (response.ok && data.success) { window.location.href = data.redirectUrl || '/login'; }
+                else { errorDiv.textContent = data.error || 'Произошла ошибка регистрации.'; errorDiv.style.display = 'block'; }
+            } catch (err) { console.error('Registration fetch error:', err); errorDiv.textContent = 'Не удалось подключиться к серверу.'; errorDiv.style.display = 'block';
+            } finally {
+                submitButton.disabled = false;
+                buttonText.textContent = originalButtonText; // Возвращаем текст
+            }
+        });
+    </script>
+</body>
+</html>

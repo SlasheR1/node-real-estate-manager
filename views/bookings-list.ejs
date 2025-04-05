@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/tables.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* Стили для статусов (как в rentals-management) */
+        .status-label { padding: 3px 8px; border-radius: 4px; font-size: 0.85em; font-weight: 500; display: inline-block; }
+        .status-active { background-color: #e6f9f0; color: #27ae60; } /* Зеленый */
+        .status-pending { background-color: #fff8e1; color: #f39c12; } /* Желтый */
+        .status-rejected { background-color: #fbeee6; color: #d35400; } /* Оранжевый */
+        .status-cancelled { background-color: #fdeded; color: #e74c3c; } /* Красный (Отменена арендатором) */
+        .status-annulled { background-color: #eaeded; color: #7f8c8d; } /* Серый (Аннулирована админом) */
+        .status-other { background-color: #f8f9fa; color: #6c757d; }
+
+        /* Остальные стили (JS сообщения, спиннер) */
+        .actions-cell .btn:disabled { opacity: 0.65; cursor: not-allowed; }
+        .cancel-booking-form { display: inline-block; }
+        #js-messages-container { margin-bottom: 15px; }
+        .flash-message { padding: 12px 20px; margin-bottom: 15px; border-radius: 6px; border: 1px solid transparent; position: relative; font-size: 0.95rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .flash-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
+        .flash-error { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
+        .flash-warning { color: #664d03; background-color: #fff3cd; border-color: #ffecb5; }
+        .flash-info { color: #055160; background-color: #cff4fc; border-color: #b6effb; }
+        .flash-message .close-flash { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); background: none; border: none; font-size: 1.5rem; line-height: 1; color: inherit; opacity: 0.6; cursor: pointer; padding: 0 5px; }
+        .flash-message .close-flash:hover { opacity: 0.9; }
+        .button-spinner { margin-left: 5px; display: none; font-size: 0.9em; }
+        button:disabled .button-spinner { display: inline-block; }
+        button .button-text { vertical-align: middle; }
+        .actions-cell button { vertical-align: middle; }
+        /* Стиль для иконки информации */
+        .fa-info-circle { cursor: help; }
+    </style>
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <main class="container">
+        <h1><%= title %></h1>
+
+        <!-- Сообщения после редиректа -->
+        <%- include('partials/messages') %>
+
+        <!-- Контейнер для сообщений от JS -->
+        <div id="js-messages-container"></div>
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Объект</th>
+                        <th>Дата начала</th>
+                        <th>Дата окончания</th>
+                        <th>Сумма</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (typeof bookings !== 'undefined' && bookings.length > 0) { %>
+                        <% bookings.forEach(booking => { %>
+                            <%
+                                let statusClass = 'status-other';
+                                let statusText = booking.Status || 'Неизвестен'; // Текст для отображения
+                                let fullStatusTitle = booking.Status || 'Неизвестен'; // Полный текст для title
+
+                                // Определяем класс и текст статуса
+                                switch(booking.Status) {
+                                    case 'Активна': statusClass = 'status-active'; break;
+                                    case 'Ожидает подтверждения': statusClass = 'status-pending'; statusText = 'Ожидает'; break; // Короткий текст
+                                    case 'Отклонена': statusClass = 'status-rejected'; break;
+                                    case 'Отменена': statusClass = 'status-cancelled'; break; // Отменена арендатором
+                                    case 'Аннулирована': statusClass = 'status-annulled'; break; // Аннулирована админом
+                                    // case 'Удержан': statusClass = 'status-hold'; break; // Если будет
+                                }
+                            %>
+                            <tr id="booking-row-<%= booking.Id %>">
+                                <td> <a href="/properties/<%= booking.PropertyId %>"><%= booking.PropertyTitle %></a> </td>
+                                <td><%= booking.StartDateFormatted %></td>
+                                <td><%= booking.EndDateFormatted %></td>
+                                <td><%= booking.TotalCost ? new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(booking.TotalCost) : '?' %></td>
+                                <td class="status-cell">
+                                    <span class="status-label <%= statusClass %>" title="<%= fullStatusTitle %>"><%= statusText %></span>
+                                    <%# Показываем причину отклонения, если есть %>
+                                    <% if (booking.Status === 'Отклонена' && booking.RejectedReason) { %>
+                                        <i class="fas fa-info-circle" title="<%= booking.RejectedReason %>" style="margin-left: 5px; color: #d35400;"></i>
+                                    <% } %>
+                                </td>
+                                <td class="actions-cell">
+                                    <%# Кнопку "Отменить" показываем только для Активных и Ожидающих %>
+                                    <% if (booking.Status === 'Активна' || booking.Status === 'Ожидает подтверждения') { %>
+                                        <form class="cancel-booking-form" data-booking-id="<%= booking.Id %>" data-current-status="<%= booking.Status %>" action="/bookings/<%= booking.Id %>/cancel" method="POST">
+                                            <button type="submit" class="btn btn-small btn-cancel">
+                                                <span class="button-text">Отменить</span>
+                                                <i class="fas fa-spinner fa-spin button-spinner"></i>
+                                            </button>
+                                        </form>
+                                     <% } else { %>
+                                        <span>-</span>
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr> <td colspan="6" style="text-align: center;">У вас пока нет бронирований.</td> </tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+
+    </main>
+    <%- include('partials/footer') %>
+
+    <script>
+        // JS для отмены (Обновлен для разных сообщений confirm)
+        function showJsMessage(type, text) {
+            const container = document.getElementById('js-messages-container');
+            if (!container) return;
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flash-message flash-${type}`;
+            messageDiv.innerHTML = `${text} <button type="button" class="close-flash" onclick="this.parentElement.remove()">×</button>`;
+            // Добавляем перед существующими сообщениями, если они есть
+            if (container.firstChild) { container.insertBefore(messageDiv, container.firstChild); }
+            else { container.appendChild(messageDiv); }
+            setTimeout(() => { if(messageDiv) messageDiv.remove(); }, 6000); // Увеличил время показа
+        }
+
+        const cancelForms = document.querySelectorAll('.cancel-booking-form');
+        cancelForms.forEach(form => {
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const bookingId = form.dataset.bookingId;
+                const currentStatus = form.dataset.currentStatus; // Получаем статус из data-атрибута
+                const submitButton = form.querySelector('button[type="submit"]');
+                const buttonText = submitButton.querySelector('.button-text');
+                const originalButtonText = buttonText.textContent;
+
+                let confirmMsg = 'Вы уверены, что хотите отменить?';
+                if (currentStatus === 'Ожидает подтверждения') {
+                    confirmMsg = 'Вы уверены, что хотите отменить ЗАПРОС на бронирование?';
+                } else if (currentStatus === 'Активна') {
+                    confirmMsg = 'Вы уверены, что хотите отменить АКТИВНОЕ бронирование? Средства будут возвращены на баланс.';
+                }
+
+                if (!confirm(confirmMsg)) { return; }
+
+                submitButton.disabled = true;
+                buttonText.textContent = 'Отмена...';
+                document.getElementById('js-messages-container').innerHTML = '';
+
+                try {
+                    const response = await fetch(form.action, { method: 'POST', headers: { 'Accept': 'application/json' } });
+                    const result = await response.json();
+                    if (response.ok && result.success) {
+                        const row = document.getElementById(`booking-row-${bookingId}`);
+                        if (row) {
+                            const statusCell = row.querySelector('.status-cell .status-label');
+                            if (statusCell) {
+                                statusCell.textContent = 'Отменена'; // Новый текст статуса
+                                statusCell.className = 'status-label status-cancelled'; // Новый класс
+                                statusCell.title = 'Отменена'; // Обновляем title
+                                // Удаляем иконку с причиной, если она была
+                                const infoIcon = row.querySelector('.status-cell .fa-info-circle');
+                                if(infoIcon) infoIcon.remove();
+                            }
+                            const actionsCell = row.querySelector('.actions-cell');
+                            if (actionsCell) { actionsCell.innerHTML = '<span>-</span>'; } // Убираем кнопку
+                        }
+                        showJsMessage('success', result.message || 'Действие выполнено.');
+                        // Обновляем баланс в шапке, если он изменился
+                        if (typeof result.newBalance === 'number') {
+                            const balanceEl = document.getElementById('headerUserBalance');
+                            if (balanceEl) {
+                                 try { balanceEl.textContent = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(result.newBalance); } catch(e){}
+                            }
+                        }
+                    } else { throw new Error(result.error || 'Не удалось отменить.'); }
+                } catch (error) {
+                     console.error(`Error cancelling booking ${bookingId}:`, error);
+                     showJsMessage('error', error.message || 'Произошла ошибка.');
+                     submitButton.disabled = false;
+                     buttonText.textContent = originalButtonText;
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>

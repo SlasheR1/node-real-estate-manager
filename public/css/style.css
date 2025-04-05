@@ -1,0 +1,306 @@
+/* public/css/style.css */
+
+/* ======================== */
+/* ==== ОСНОВНЫЕ СТИЛИ ==== */
+/* ======================== */
+body, h1, h2, p, ul, li, form, button, a, div, span, header, nav, main, footer, fieldset, legend, label, input, select, textarea, img {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    color: inherit;
+    text-decoration: none;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    background-color: #f8f9fa;
+    color: #343a40;
+    line-height: 1.6;
+    font-size: 16px;
+}
+
+/* ================================ */
+/* ==== СТИЛИ ОБЩЕГО КОНТЕЙНЕРА ==== */
+/* ================================ */
+/* Этот контейнер в основном для main и других секций, но НЕ для .main-header */
+.container {
+    max-width: 1300px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 25px;
+    padding-right: 25px;
+}
+
+/* ======================== */
+/* ===== HEADER STYLES ==== */
+/* ======================== */
+
+/* Фон и позиционирование хедера - на всю ширину */
+.main-header {
+    background-color: #ffffff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    height: 65px; /* Фиксированная высота */
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    display: flex; /* Используем flex для выравнивания внутреннего nav */
+    align-items: center; /* Выравнивание контента по вертикали */
+    /* Отступы по бокам для контента внутри хедера */
+    padding: 0 25px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Контейнер для КОНТЕНТА внутри хедера */
+.main-header nav.header-content { /* Используем класс из header.ejs */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%; /* Занимает доступную ширину внутри .main-header */
+    max-width: 1300px; /* Ограничиваем максимальную ширину контента */
+    margin: 0 auto; /* Центрируем контент */
+    padding: 0; /* Убираем паддинги, они теперь у .main-header */
+}
+
+/* --- Логотип --- */
+.brand-logo {
+    display: flex;
+    align-items: center;
+    color: #4a5568;
+    font-size: 1.3rem;
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-right: 20px;
+}
+
+.logo-img {
+    height: 30px;
+    margin-right: 10px;
+}
+
+/* --- Правая часть шапки --- */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+}
+
+/* --- Навигационные ссылки --- */
+.nav-links { /* Используется как для .main-nav-links так и для мобильного (если будет) */
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.nav-links a {
+    color: #4a5568;
+    font-weight: 500;
+    font-size: 0.95rem;
+    padding-bottom: 2px;
+    position: relative;
+    transition: color 0.2s ease;
+    white-space: nowrap;
+}
+
+.nav-links a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: -2px;
+    left: 0;
+    background-color: #667eea;
+    transition: width 0.3s ease;
+}
+
+.nav-links a:hover { color: #667eea; }
+.nav-links a:hover::after { width: 100%; }
+
+/* --- Блок профиля --- */
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.profile-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+}
+.profile-link:hover { background-color: #f1f5f9; }
+
+.profile-link .user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: right;
+}
+
+.profile-link .user-name {
+    font-weight: 600; color: #2d3748; font-size: 0.9rem;
+    white-space: nowrap; line-height: 1.3;
+}
+
+.profile-link .user-sub-info {
+    display: flex; gap: 8px; align-items: center; margin-top: 2px;
+}
+
+.profile-link .user-role {
+    font-size: 0.75rem; color: #4a5568; background-color: #e9ecef;
+    padding: 1px 6px; border-radius: 4px; text-transform: capitalize;
+    white-space: nowrap; line-height: 1.3;
+}
+
+.profile-link .user-balance {
+    font-size: 0.8rem; font-weight: 500; color: #198754;
+    white-space: nowrap; line-height: 1.3;
+}
+
+.profile-link .avatar-container {
+    width: 38px; height: 38px; border-radius: 50%; overflow: hidden;
+    border: 1px solid #dee2e6; background-color: #f8f9fa; flex-shrink: 0;
+}
+.profile-link .user-avatar { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+/* Кнопка выхода */
+.logout-form { display: flex; flex-shrink: 0; }
+
+.btn-logout {
+    background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 50%;
+    width: 36px; height: 36px;
+    display: flex;
+    justify-content: center; /* Центр по горизонтали */
+    align-items: center; /* Центр по вертикали */
+    cursor: pointer; color: #64748b; transition: all 0.2s ease;
+    padding: 0; /* Убираем внутренние отступы */
+    line-height: 0; /* Убираем влияние высоты строки */
+    overflow: hidden; /* Обрезаем SVG если больше */
+}
+
+.btn-logout:hover { background-color: #ffeef0; color: #e53e3e; border-color: #fecaca; }
+
+.btn-logout svg {
+    width: 18px; height: 18px; /* Размер иконки */
+    display: block; /* Убираем пространство под SVG */
+    flex-shrink: 0; /* Не сжимать иконку */
+}
+
+/* --- Адаптивность хедера --- */
+@media (max-width: 992px) {
+    .main-header {
+        padding: 0 15px; /* Уменьшаем отступы на маленьких экранах */
+    }
+    .header-right { gap: 15px; }
+    .main-nav-links { display: none; } /* Скрываем ссылки */
+    .profile-sub-optional { display: none; } /* Скрываем баланс */
+    .profile-link { padding: 4px; gap: 8px; }
+
+    /* Кнопка мобильной навигации (пока скрыта через style в HTML) */
+    .mobile-nav-toggle {
+         display: block; /* Делаем ее видимой */
+         background: none; border: none; font-size: 1.8rem; cursor: pointer;
+         color: #4a5568; padding: 0 5px; margin-left: 10px;
+         order: 3; /* Ставим после профиля, если нужно */
+    }
+    /* Здесь должны быть стили для .mobile-nav-menu */
+}
+
+@media (max-width: 480px) {
+     .brand-logo span { display: none; } /* Скрываем текст лого */
+     .brand-logo { margin-right: 10px; }
+     .profile-link .user-info { display: none; } /* Скрываем всю инфу, оставляем аватар */
+     .profile-link { gap: 0; padding: 4px; }
+     .header-right { gap: 8px; }
+     .btn-logout { width: 32px; height: 32px; }
+     .btn-logout svg { width: 16px; height: 16px; }
+}
+
+/* ============================ */
+/* ===== КОНЕЦ HEADER STYLES ==== */
+/* ============================ */
+
+
+/* --- Стили основного контента и подвала --- */
+main.container {
+    padding-top: 30px;
+    padding-bottom: 30px;
+}
+
+.main-footer {
+     text-align: center;
+     margin-top: 50px;
+     padding: 30px 20px;
+     background-color: #e9ecef;
+     color: #6c757d;
+     border-top: 1px solid #dee2e6;
+     font-size: 0.9rem;
+ }
+
+ /* Общие стили кнопок .btn */
+ .btn {
+    display: inline-block;
+    padding: 8px 18px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-align: center;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    white-space: nowrap;
+}
+/* Добавим общие стили для disabled кнопок */
+.btn:disabled, button:disabled {
+    opacity: 0.65;
+    cursor: not-allowed !important; /* Важно, чтобы перебить :hover */
+}
+
+/* --- Стили для флеш-сообщений --- */
+/* (Включая те, что для JS) */
+.flash-message {
+    padding: 12px 20px;
+    margin: 15px 0; /* Отступы сверху/снизу по умолчанию */
+    border-radius: 6px;
+    border: 1px solid transparent;
+    position: relative;
+    font-size: 0.95rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+/* Отступ для JS сообщений внутри их контейнеров */
+#js-messages .flash-message,
+#js-messages-user-list .flash-message,
+#js-messages-rentals .flash-message {
+     margin-top: 0; /* Убираем верхний отступ для JS */
+     margin-bottom: 15px;
+}
+
+
+.flash-success {
+    color: #0f5132; background-color: #d1e7dd; border-color: #badbcc;
+}
+.flash-error {
+    color: #842029; background-color: #f8d7da; border-color: #f5c2c7;
+}
+.flash-warning {
+    color: #664d03; background-color: #fff3cd; border-color: #ffecb5;
+}
+.flash-info {
+    color: #055160; background-color: #cff4fc; border-color: #b6effb;
+}
+
+/* Кнопка закрытия сообщения */
+.close-flash {
+    position: absolute; top: 50%; right: 15px; transform: translateY(-50%);
+    background: none; border: none; font-size: 1.5rem; line-height: 1;
+    color: inherit; opacity: 0.6; cursor: pointer; padding: 0 5px;
+}
+.close-flash:hover { opacity: 0.9; }
+
+/* Другие общие стили (если есть) */

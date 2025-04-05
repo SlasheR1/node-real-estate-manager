@@ -1,0 +1,323 @@
+/* public/css/properties.css - Обновленные стили */
+
+.properties-grid {
+    display: grid;
+    /* Адаптивная сетка: мин. 320px, макс. 1fr */
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 25px; /* Увеличим отступ */
+    margin-top: 20px;
+}
+
+/* === Обновленные стили карточки === */
+.property-card {
+    background-color: #ffffff;
+    border-radius: 12px; /* Больше скругления */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06); /* Мягкая тень */
+    overflow: hidden; /* Скрываем все, что выходит за рамки */
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease, box-shadow 0.3s ease; /* Плавные переходы */
+    border: 1px solid #e5e7eb; /* Тонкая граница */
+}
+
+.property-card:hover {
+    transform: translateY(-8px); /* Подъем побольше */
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Тень побольше */
+}
+
+/* --- Изображение --- */
+.card-image-container {
+    position: relative; /* Для возможных оверлеев */
+    width: 100%;
+    height: 220px; /* Увеличим высоту */
+    overflow: hidden; /* Скрыть выходящее изображение при увеличении */
+    background-color: #f3f4f6; /* Фон для плейсхолдера */
+}
+
+.card-image-container img {
+    display: block; /* Убирает лишний отступ снизу */
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease; /* Анимация для зума */
+}
+
+.property-card:hover .card-image-container img {
+    transform: scale(1.08); /* Легкий зум картинки при наведении на карточку */
+}
+
+/* --- Контент карточки --- */
+.card-content {
+    padding: 18px 20px 20px 20px; /* Паддинги */
+    flex-grow: 1; /* Занимает доступное пространство */
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid #f3f4f6; /* Тонкий разделитель */
+}
+
+.card-content h2 {
+    font-size: 1.3rem; /* Крупнее заголовок */
+    font-weight: 600;
+    margin-top: 0;
+    margin-bottom: 6px;
+    color: #1f2937; /* Темно-серый */
+    line-height: 1.4;
+    /* Ограничение текста в 2 строки */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.card-content .address {
+    font-size: 0.875rem;
+    color: #6b7280; /* Светлее серый */
+    margin-bottom: 12px;
+    display: flex; /* Иконка и текст */
+    align-items: center;
+    gap: 5px;
+}
+.card-content .address i { /* Иконка адреса */
+    color: #9ca3af;
+    font-size: 0.9em;
+}
+
+.property-meta { /* Контейнер для типа и площади */
+    display: flex;
+    gap: 15px;
+    font-size: 0.875rem;
+    color: #4b5563;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.property-meta span { /* Отдельные элементы мета */
+     display: inline-flex; align-items: center; gap: 5px;
+}
+.property-meta i,
+.amenity-item i {
+    font-family: "Font Awesome 6 Free", "FontAwesome"; /* Указываем шрифт */
+    font-weight: 900; /* Для solid иконок */
+    font-style: normal;
+    display: inline-block; /* Или inline-flex */
+    /* Возможно, потребуется установить line-height, vertical-align */
+}
+/* --- Цена --- */
+.card-price {
+     margin-top: auto; /* Прижимает цену к удобствам, если контент невысокий */
+     margin-bottom: 16px; /* Отступ перед удобствами */
+     padding-top: 12px;
+     border-top: 1px dashed #e5e7eb; /* Пунктирный разделитель */
+}
+.card-price p {
+    margin: 4px 0;
+    font-weight: 500;
+    display: flex;
+    justify-content: space-between; /* Цена справа */
+    align-items: center;
+}
+.card-price .price-label { color: #4b5563; font-size: 0.9rem;}
+.card-price .price-value { font-weight: 600; }
+
+.price-monthly .price-value {
+    color: #10b981; /* Зеленый */
+    font-size: 1.1rem;
+}
+.price-daily .price-value {
+    color: #3b82f6; /* Синий */
+    font-size: 0.95rem;
+}
+
+/* --- Удобства (Используем Font Awesome) --- */
+.card-amenities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px; /* Отступы между иконками */
+    margin-bottom: 20px;
+    padding-top: 10px;
+    border-top: 1px dashed #e5e7eb;
+}
+.amenity-item {
+    display: inline-flex; /* Чтобы tooltip работал */
+    align-items: center;
+    gap: 6px;
+    background-color: #f3f4f6; /* Фон для тега */
+    color: #4b5563;
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-size: 0.8rem;
+    cursor: default; /* Убираем курсор help */
+    position: relative; /* Для tooltip */
+}
+.amenity-item i {
+    color: #6b7280; /* Цвет иконки */
+    font-size: 0.9em; /* Размер иконки относительно текста */
+    width: 14px; /* Фикс ширина иконки */
+    text-align: center;
+}
+/* Простое всплывающее название удобства (Tooltip) */
+.amenity-item::after {
+    content: attr(data-tooltip); /* Текст из атрибута */
+    position: absolute;
+    bottom: 110%; /* Позиция над элементом */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.75);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    opacity: 0; /* Скрыто по умолчанию */
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    z-index: 10;
+    pointer-events: none; /* Не мешает кликам */
+}
+.amenity-item:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* --- Действия --- */
+.card-actions {
+    margin-top: auto; /* Прижимаем кнопки к низу */
+    padding-top: 15px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px; /* Отступ между кнопками */
+}
+
+/* Обновляем общие стили кнопок в карточке */
+.card-actions .btn {
+    padding: 8px 14px; /* Немного другие паддинги */
+    font-size: 0.85rem;
+    border-radius: 6px;
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    border: 1px solid transparent;
+    font-weight: 500;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.15s ease;
+    flex-grow: 1; /* Растягиваем кнопки, чтобы занять место */
+}
+.card-actions .btn:hover {
+     opacity: 0.9;
+     transform: translateY(-1px); /* Легкий подъем кнопки */
+     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Переопределяем цвета кнопок (если стандартные не подходят) */
+.card-actions .btn-details { background-color: #3b82f6; color: white; border-color: #3b82f6;}
+.card-actions .btn-details:hover { background-color: #2563eb; border-color: #2563eb; }
+
+.card-actions .btn-book { background-color: #10b981; color: white; border-color: #10b981; }
+.card-actions .btn-book:hover { background-color: #059669; border-color: #059669;}
+
+.card-actions .btn-edit { background-color: #f59e0b; color: white; border-color: #f59e0b; }
+.card-actions .btn-edit:hover { background-color: #d97706; border-color: #d97706;}
+
+.card-actions .btn-delete { background-color: #ef4444; color: white; border-color: #ef4444;}
+.card-actions .btn-delete:hover { background-color: #dc2626; border-color: #dc2626;}
+
+.card-actions form {
+    flex-grow: 1; /* Форма тоже растягивается */
+    display: flex; /* Чтобы кнопка внутри растянулась */
+}
+.card-actions form button {
+    width: 100%; /* Кнопка в форме занимает всю ширину формы */
+}
+/* === Конец обновленных стилей карточки === */
+
+
+/* --- Стили скрытия и пагинации --- */
+.property-card.hidden-filter,
+.property-card.hidden-card {
+    display: none !important;
+}
+
+/* Стили пагинации */
+.pagination-container {
+    margin-top: 30px; /* Увеличим отступ сверху */
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: center; /* Центрируем элементы пагинации */
+    align-items: center;
+    flex-wrap: wrap; /* Позволим перенос на маленьких экранах */
+    gap: 15px; /* Отступ между блоками (инфо и кнопки) */
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px; /* Отступ между кнопками страниц */
+}
+
+.pagination-controls button {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    border: 1px solid #dee2e6;
+    background-color: #fff;
+    color: #0d6efd;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    min-width: 36px; /* Минимальная ширина для кнопок */
+     text-align: center;
+}
+
+.pagination-controls button:hover:not(:disabled) {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.pagination-controls button:disabled {
+    color: #6c757d;
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.pagination-controls button.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
+    cursor: default;
+    font-weight: 500;
+}
+
+.pagination-info {
+    font-size: 0.9rem;
+    color: #6c757d;
+    display: flex; /* Используем flex для select и label */
+    align-items: center;
+    gap: 8px;
+}
+
+.pagination-info select {
+    padding: 5px 8px;
+    /* margin-left: 8px; */ /* Убираем левый маргин, используем gap */
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    vertical-align: middle;
+    background-color: #f8fafc;
+}
+ .pagination-info label { /* Стили для label рядом с select */
+     margin-bottom: 0; /* Убираем отступ снизу, если он есть */
+     font-size: 0.9rem;
+     color: #6c757d;
+ }
+
+.pagination-container.hidden { /* Класс для скрытия всей пагинации */
+    display: none;
+}
+/* === Конец стилей пагинации === */
+
+/* Старые стили кнопок (могут быть не нужны, если кнопки полностью переопределены в .card-actions) */
+/* .btn { ... } */
+/* .btn-details { ... } */
+/* .btn-book { ... } */
+/* .btn-edit { ... } */
+/* .btn-delete { ... } */

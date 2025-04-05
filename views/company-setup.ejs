@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/forms.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .setup-container { max-width: 700px; margin: 40px auto; }
+        .setup-form { margin-top: 20px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 30px; }
+        .form-group-full { grid-column: 1 / -1; }
+        .logo-upload-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
+        .current-logo-display img { max-width: 120px; max-height: 120px; border-radius: 8px; margin-bottom: 10px; display: block; object-fit: contain; border: 1px solid #eee; background-color: #f8f9fa; padding: 5px; }
+        .logo-upload-section input[type="file"] { margin-bottom: 10px; }
+        .logo-preview-container { margin-top: 10px; margin-bottom: 15px; }
+        .logo-preview-container label { font-size: 0.9em; color: #6c757d; display: block; margin-bottom: 5px; }
+        #logoPreview { max-width: 120px; max-height: 120px; border-radius: 8px; object-fit: contain; border: 1px solid #eee; display: none; background-color: #f8f9fa; padding: 5px; }
+        .btn:disabled { opacity: 0.65; cursor: not-allowed; }
+        .form-actions { justify-content: center; }
+        .button-spinner { margin-left: 8px; display: none; }
+        button:disabled .button-spinner { display: inline-block; }
+        button .button-text { vertical-align: middle; }
+        /* Минималистичный хедер */
+        .minimal-header { padding: 15px 0; border-bottom: 1px solid #eee; margin-bottom: 30px; }
+        .minimal-header .brand-logo { margin: 0 auto; display: table; } /* Центрируем лого */
+    </style>
+</head>
+<body>
+    <%# Упрощенный хедер без навигации %>
+     <header class="minimal-header">
+        <div class="container">
+            <a href="/" class="brand-logo" style="text-decoration: none;">
+                 <img src="/images/logo.svg" alt="Real Estate Logo" class="logo-img" style="height: 28px; margin-right: 8px; vertical-align: middle;">
+                 <span style="font-size: 1.2rem; font-weight: 600; vertical-align: middle;">RealEstate</span>
+             </a>
+        </div>
+     </header>
+
+    <main class="container setup-container form-container">
+        <h1><%= title %></h1>
+        <p>Добро пожаловать! Заполните информацию о вашей компании для начала работы.</p>
+
+        <%- include('partials/messages') %>
+
+        <% const currentCompanyName = locals.company?.companyName || locals.user?.companyName || ''; %>
+        <% const currentEmail = locals.company?.companyContactEmail || locals.user?.companyContactEmail || ''; %>
+        <% const currentPhone = locals.company?.companyContactPhone || locals.user?.companyContactPhone || ''; %>
+        <% const currentWebsite = locals.company?.companyWebsite || locals.user?.companyWebsite || ''; %>
+        <% const currentLogoData = locals.company?.companyLogoData || locals.user?.companyLogoData || null; %>
+
+        <form id="companySetupForm" class="setup-form" action="/company/setup" method="POST" enctype="multipart/form-data">
+            <div class="form-grid">
+                <div class="form-group form-group-full"> <label for="companyName">Название компании *</label> <input type="text" id="companyName" name="companyName" value="<%= currentCompanyName %>" required> </div>
+                <div class="form-group"> <label for="companyContactEmail">Контактный Email</label> <input type="email" id="companyContactEmail" name="companyContactEmail" value="<%= currentEmail %>"> </div>
+                <div class="form-group"> <label for="companyContactPhone">Контактный Телефон</label> <input type="tel" id="companyContactPhone" name="companyContactPhone" value="<%= currentPhone %>"> </div>
+                <div class="form-group form-group-full"> <label for="companyWebsite">Веб-сайт (если есть)</label> <input type="url" id="companyWebsite" name="companyWebsite" value="<%= currentWebsite %>" placeholder="https://..."> </div>
+
+                <div class="form-group form-group-full logo-upload-section">
+                     <label for="companyLogo">Логотип компании (макс. 1MB, необязательно)</label>
+                    <input type="file" id="companyLogo" name="companyLogo" accept="image/*">
+                     <% if (currentLogoData) { %>
+                         <div class="current-logo-display"> <p>Текущий логотип:</p> <% let logoType = currentLogoData.startsWith('/9j/')?'image/jpeg':'image/png'; %> <img src="data:<%= logoType %>;base64,<%= currentLogoData %>" alt="Текущий логотип"> </div>
+                     <% } %>
+                     <div class="logo-preview-container"> <label>Предпросмотр нового:</label> <img id="logoPreview" src="#" alt="Предпросмотр нового логотипа"> </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" id="saveCompanyProfileBtn" class="btn btn-primary"> <span class="button-text">Сохранить и продолжить</span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button>
+            </div>
+        </form>
+         <div style="text-align: center; margin-top: 20px;">
+              <form action="/logout" method="POST"><button type="submit" class="btn btn-link" style="color:#dc3545; text-decoration:none;">Выйти</button></form>
+         </div>
+    </main>
+
+    <%- include('partials/footer') %>
+
+    <script>
+        // Предпросмотр логотипа
+        const logoInput = document.getElementById('companyLogo');
+        const logoPreview = document.getElementById('logoPreview');
+        if (logoInput && logoPreview) {
+            logoInput.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    if (file.size > 1048576) { alert('Файл > 1MB'); event.target.value = null; logoPreview.style.display = 'none'; return; }
+                    const reader = new FileReader();
+                    reader.onload = function(e) { logoPreview.src = e.target.result; logoPreview.style.display = 'block'; }
+                    reader.readAsDataURL(file);
+                } else { logoPreview.src = '#'; logoPreview.style.display = 'none'; if (file) event.target.value = null; }
+            });
+        }
+         // Блокировка кнопки отправки
+         const setupForm = document.getElementById('companySetupForm');
+         const saveButton = document.getElementById('saveCompanyProfileBtn');
+         if (setupForm && saveButton) {
+             const saveButtonText = saveButton.querySelector('.button-text');
+             const originalSaveButtonText = saveButtonText.textContent;
+             setupForm.addEventListener('submit', () => {
+                 if (setupForm.checkValidity()) { saveButton.disabled = true; saveButtonText.textContent = 'Сохранение...'; }
+                 else { setTimeout(()=>{ saveButton.disabled = false; saveButtonText.textContent = originalSaveButtonText; }, 100); } // Небольшая задержка для сброса
+             });
+         }
+    </script>
+</body>
+</html>

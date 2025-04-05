@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/forms.css">
+    <style>
+        /* Стили для секции аватара */
+         .avatar-upload-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
+         .avatar-upload-section .current-avatar-display img {
+             max-width: 100px; height: 100px; border-radius: 50%;
+             margin-bottom: 10px; display: block; object-fit: cover;
+             border: 1px solid #eee;
+         }
+         .avatar-upload-section input[type="file"] { margin-bottom: 10px; }
+         .avatar-preview-container { margin-top: 10px; margin-bottom: 15px; /* Отступ снизу */ }
+         .avatar-preview-container label { font-size: 0.9em; color: #6c757d; display: block; margin-bottom: 5px; }
+         #avatarPreview {
+             max-width: 100px; height: 100px; border-radius: 50%;
+             object-fit: cover; border: 1px solid #eee; display: none;
+         }
+         /* Общие стили */
+         .btn:disabled { opacity: 0.65; cursor: not-allowed; }
+
+         /* --- Стили для флеш-сообщений (полные) --- */
+         .flash-message, #js-messages .flash-message {
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            position: relative;
+            font-size: 0.95rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+         }
+         .flash-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
+         .flash-error { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
+         .flash-warning { color: #664d03; background-color: #fff3cd; border-color: #ffecb5; }
+         .flash-info { color: #055160; background-color: #cff4fc; border-color: #b6effb; }
+         .flash-message .close-flash {
+            position: absolute; top: 50%; right: 15px; transform: translateY(-50%);
+            background: none; border: none; font-size: 1.5rem; line-height: 1;
+            color: inherit; opacity: 0.6; cursor: pointer; padding: 0 5px;
+         }
+         .flash-message .close-flash:hover { opacity: 0.9; }
+         #js-messages .flash-message { margin-bottom: 15px; } /* Отступ для JS сообщений */
+    </style>
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <main class="container form-container">
+        <h1><%= title %></h1>
+        <%- include('partials/messages') %>
+        <div id="js-messages"></div>
+
+         <!-- Секция Аватара -->
+         <div class="avatar-upload-section">
+             <label style="font-weight: 500; margin-bottom: 10px; display: block;">Аватар</label>
+             <div class="current-avatar-display">
+                <img src="<%= (typeof user !== 'undefined' && user.DisplayAvatarSrc) ? user.DisplayAvatarSrc : '/images/placeholder-avatar.png' %>" alt="Текущий аватар">
+             </div>
+            <form id="avatarUploadForm" action="/profile/avatar" method="POST" enctype="multipart/form-data">
+                 <div class="form-group" style="margin-bottom: 5px;">
+                     <label for="profileAvatar" style="font-weight: normal; font-size: 0.9rem;">Загрузить новый аватар (макс. 2MB):</label>
+                    <input type="file" id="profileAvatar" name="profileAvatar" accept="image/*" required>
+                </div>
+                <div class="avatar-preview-container">
+                    <label>Предпросмотр нового:</label>
+                    <img id="avatarPreview" src="#" alt="Предпросмотр нового аватара">
+                </div>
+                 <button type="submit" id="uploadAvatarBtn" class="btn btn-secondary btn-small">Загрузить</button>
+             </form>
+         </div>
+
+        <!-- Форма для Основных Данных Профиля -->
+        <hr style="margin: 25px 0;">
+        <h2 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 20px;">Основные данные</h2>
+        <form id="profileEditForm" action="/profile/edit" method="POST">
+            <div class="form-grid">
+                <div class="form-group form-group-full"> <label for="username">Логин</label> <input type="text" id="username" name="username" value="<%= (typeof user !== 'undefined' && user.Username) ? user.Username : '' %>" readonly> <small>Логин изменить нельзя.</small> </div>
+                <div class="form-group form-group-full"> <label for="fullName">ФИО</label> <input type="text" id="fullName" name="fullName" value="<%= (typeof user !== 'undefined' && user.FullName) ? user.FullName : '' %>" required> </div>
+                <div class="form-group"> <label for="email">Email</label> <input type="email" id="email" name="email" value="<%= (typeof user !== 'undefined' && user.Email) ? user.Email : '' %>"> </div>
+                <div class="form-group"> <label for="phone">Телефон</label> <input type="tel" id="phone" name="phone" value="<%= (typeof user !== 'undefined' && user.Phone) ? user.Phone : '' %>" required> </div>
+                <div class="form-group form-group-full"> <hr style="margin: 15px 0;"> <label for="currentPassword">Текущий пароль (для смены пароля)</label> <input type="password" id="currentPassword" name="currentPassword" placeholder="Введите текущий пароль"> </div>
+                <div class="form-group form-group-full"> <label for="newPassword">Новый пароль (оставьте пустым, чтобы не менять)</label> <input type="password" id="newPassword" name="newPassword" minlength="6" placeholder="Минимум 6 символов"> </div>
+            </div>
+            <div class="form-actions">
+                 <button type="submit" id="saveProfileBtn" class="btn btn-primary">Сохранить изменения</button>
+                 <a href="/profile" class="btn btn-secondary">Отмена</a>
+            </div>
+        </form>
+    </main>
+
+    <%- include('partials/footer') %>
+
+    <script>
+        // --- Блокировка кнопок ---
+        function disableFormButton(formId, buttonId, loadingText = 'Сохранение...') {
+            const form = document.getElementById(formId);
+            const button = document.getElementById(buttonId);
+            if (form && button) {
+                form.addEventListener('submit', () => {
+                    let fileInput = form.querySelector('input[type=file]');
+                    // Для форм с файлами - блокируем если файл выбран или если файлов нет вообще (обычная форма)
+                    if (!fileInput || form.checkValidity() || (fileInput && fileInput.files.length > 0) ) {
+                        button.disabled = true;
+                        button.textContent = loadingText;
+                    }
+                });
+            }
+        }
+        disableFormButton('profileEditForm', 'saveProfileBtn', 'Сохранение...');
+        disableFormButton('avatarUploadForm', 'uploadAvatarBtn', 'Загрузка...');
+
+        // --- Предпросмотр аватара ---
+        const avatarInput = document.getElementById('profileAvatar');
+        const avatarPreview = document.getElementById('avatarPreview');
+        if (avatarInput && avatarPreview) {
+            avatarInput.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        avatarPreview.src = e.target.result;
+                        avatarPreview.style.display = 'block';
+                    }
+                    reader.readAsDataURL(file);
+                } else {
+                    avatarPreview.src = '#';
+                    avatarPreview.style.display = 'none';
+                    if (file) { // Если был выбран файл, но не картинка
+                         event.target.value = null; // Очищаем поле
+                         alert('Пожалуйста, выберите файл изображения.');
+                    }
+                }
+            });
+        }
+    </script>
+
+</body>
+</html>

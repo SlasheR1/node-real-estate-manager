@@ -1,0 +1,259 @@
+/* public/css/dashboard.css */
+
+.dashboard-container {
+    padding-top: 20px; /* Уменьшим верхний отступ */
+}
+
+.dashboard-container h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #2c3e50; /* Темно-синий */
+}
+
+.dashboard-subtitle {
+    font-size: 1rem;
+    color: #7f8c8d; /* Сероватый */
+    margin-bottom: 30px;
+}
+
+.dashboard-grid {
+    display: grid;
+    /* Адаптивные колонки: минимум 280px, максимум 1 фракция */
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px; /* Отступы между виджетами */
+}
+
+.dashboard-widget {
+    background-color: #ffffff;
+    border-radius: 12px; /* Скругление углов */
+    padding: 25px;
+    display: flex;
+    align-items: flex-start; /* Выравнивание по верху */
+    gap: 20px; /* Отступ между иконкой и контентом */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); /* Легкая тень */
+    border: 1px solid #ecf0f1; /* Тонкая светлая граница */
+    position: relative;
+    overflow: hidden; /* Для градиентов и эффектов */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    opacity: 0; /* Начальная прозрачность для анимации */
+    transform: translateY(20px); /* Начальное смещение для анимации */
+}
+
+.dashboard-widget:hover {
+    transform: translateY(-5px); /* Подъем при наведении */
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08); /* Усиленная тень */
+}
+
+/* Анимация появления */
+@keyframes slideUpFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-slide-up {
+    animation: slideUpFadeIn 0.5s ease-out forwards;
+}
+
+.widget-icon {
+    flex-shrink: 0; /* Иконка не сжимается */
+    width: 50px;
+    height: 50px;
+    border-radius: 50%; /* Круглая иконка */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem; /* Размер иконки */
+    color: #ffffff; /* Белый цвет иконки */
+}
+
+.widget-content {
+    flex-grow: 1; /* Занимает оставшееся пространство */
+}
+
+.widget-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #34495e; /* Темно-серый/синий */
+    margin-top: 0;
+    margin-bottom: 8px;
+    line-height: 1.3;
+}
+
+.widget-value {
+    font-size: 2.2rem; /* Большой размер для значения */
+    font-weight: 700; /* Жирный */
+    color: #2c3e50;
+    margin-top: 0;
+    margin-bottom: 5px;
+    line-height: 1.1;
+}
+
+.widget-description {
+    font-size: 0.85rem;
+    color: #95a5a6; /* Светло-серый */
+    margin-top: -2px; /* Подтянуть ближе к значению */
+    margin-bottom: 12px;
+}
+
+.widget-link {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #3498db; /* Синий для ссылок */
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.widget-link:hover {
+    color: #2980b9; /* Темнее при наведении */
+    text-decoration: underline;
+}
+
+/* Цвета для ролей */
+.widget-tenant .widget-icon { background: linear-gradient(135deg, #5dade2, #2e86c1); } /* Синий */
+.widget-owner .widget-icon { background: linear-gradient(135deg, #58d68d, #239b56); } /* Зеленый */
+.widget-admin .widget-icon { background: linear-gradient(135deg, #f5b041, #d35400); } /* Оранжевый */
+
+/* Стили для виджетов-списков */
+.widget-full-width {
+    grid-column: 1 / -1; /* Растягиваем на всю ширину */
+    flex-direction: column; /* Элементы внутри колонкой */
+    align-items: stretch; /* Растягиваем контент по ширине */
+    gap: 15px; /* Отступ под заголовком */
+}
+
+.widget-full-width .widget-icon { /* Убираем иконку у списков */
+    display: none;
+}
+
+.widget-full-width .widget-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #ecf0f1;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+}
+.widget-full-width .widget-title i { /* Иконка в заголовке списка */
+     font-size: 1em;
+     color: #95a5a6;
+}
+
+
+.widget-recent-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.widget-recent-list li {
+    display: flex;
+    flex-wrap: wrap; /* Перенос на маленьких экранах */
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px dashed #ecf0f1;
+    font-size: 0.9rem;
+    gap: 10px; /* Отступы между элементами строки */
+}
+
+.widget-recent-list li:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.recent-item-title {
+    font-weight: 500;
+    color: #34495e;
+    text-decoration: none;
+    flex-grow: 1; /* Занимает доступное место */
+    min-width: 150px; /* Минимальная ширина для названия */
+}
+.recent-item-title:hover {
+    color: #2980b9;
+}
+
+
+.recent-item-details {
+    color: #7f8c8d;
+    font-size: 0.85rem;
+    display: inline-flex; /* Для иконки и текста */
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap; /* Не переносить дату/имя */
+}
+.recent-item-details i {
+    margin-right: 2px;
+    font-size: 0.9em;
+}
+
+.recent-item-status {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: 500;
+    margin-left: auto; /* Прижимаем статус вправо, если есть место */
+    white-space: nowrap;
+}
+/* Классы статусов (можно взять из booking-list.css/rentals-management.css) */
+.status-active { background-color: #e6f9f0; color: #27ae60; }
+.status-cancelled { background-color: #fdeded; color: #e74c3c; }
+.status-hold { background-color: #fff8e1; color: #f39c12; }
+.status-other { background-color: #f8f9fa; color: #6c757d; }
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr; /* Один виджет в ряд */
+    }
+    .widget-value {
+        font-size: 1.8rem; /* Уменьшаем значение */
+    }
+    .widget-recent-list li {
+        flex-direction: column; /* Элементы списка друг под другом */
+        align-items: flex-start;
+        gap: 5px;
+    }
+    .recent-item-status {
+        margin-left: 0; /* Убираем прижатие вправо */
+        margin-top: 5px;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-widget {
+        flex-direction: column; /* Иконка над контентом */
+        align-items: center; /* Центрируем все */
+        text-align: center;
+        padding: 20px;
+    }
+    .widget-icon {
+        margin-bottom: 15px; /* Отступ под иконкой */
+    }
+    .widget-content {
+        width: 100%; /* Контент на всю ширину */
+    }
+}
+
+/* Дополнительные стили для флеш-сообщений, если они нужны на этой странице */
+.flash-message {
+    padding: 12px 20px; margin-bottom: 20px; border-radius: 6px;
+    border: 1px solid transparent; position: relative; font-size: 0.95rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+ }
+ .flash-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
+ .flash-error { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
+ .flash-info { color: #055160; background-color: #cff4fc; border-color: #b6effb; }
+ .flash-message .close-flash {
+    position: absolute; top: 50%; right: 15px; transform: translateY(-50%);
+    background: none; border: none; font-size: 1.5rem; line-height: 1;
+    color: inherit; opacity: 0.6; cursor: pointer; padding: 0 5px;
+  }
+  .flash-message .close-flash:hover { opacity: 0.9; }

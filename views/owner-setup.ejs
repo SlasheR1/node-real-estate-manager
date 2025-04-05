@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/forms.css"> <!-- Используем стили форм -->
+     <!-- Подключаем Font Awesome для спиннера -->
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* Дополнительные стили для страницы настройки */
+        .setup-container { max-width: 700px; margin: 40px auto; }
+        .setup-form { margin-top: 20px; }
+        .form-grid { /* Используем grid для удобства */
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Две колонки */
+            gap: 20px 30px;
+        }
+        .form-group-full { grid-column: 1 / -1; } /* Поле на всю ширину */
+
+        /* Стили для логотипа */
+        .logo-upload-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
+        .current-logo-display img {
+             max-width: 120px; max-height: 120px; /* Чуть больше для лого */
+             border-radius: 8px; /* Небольшое скругление */
+             margin-bottom: 10px; display: block; object-fit: contain; /* contain, чтобы лого не обрезался */
+             border: 1px solid #eee; background-color: #f8f9fa; padding: 5px;
+         }
+        .logo-upload-section input[type="file"] { margin-bottom: 10px; }
+        .logo-preview-container { margin-top: 10px; margin-bottom: 15px; }
+        .logo-preview-container label { font-size: 0.9em; color: #6c757d; display: block; margin-bottom: 5px; }
+        #logoPreview {
+            max-width: 120px; max-height: 120px; border-radius: 8px;
+            object-fit: contain; border: 1px solid #eee; display: none; background-color: #f8f9fa; padding: 5px;
+        }
+        .btn:disabled { opacity: 0.65; cursor: not-allowed; }
+        .form-actions { justify-content: center; /* Центрируем кнопку */ }
+
+         /* Спиннер */
+         .button-spinner { margin-left: 8px; display: none; }
+         button:disabled .button-spinner { display: inline-block; }
+         button .button-text { vertical-align: middle; }
+    </style>
+</head>
+<body>
+    <%# Не включаем стандартный header, т.к. пользователь еще не завершил настройку %>
+    <%# Можно сделать минималистичный хедер или просто лого %>
+
+    <main class="container setup-container form-container">
+        <h1><%= title %></h1>
+        <p>Добро пожаловать! Прежде чем вы сможете добавлять объекты, пожалуйста, заполните информацию о вашей компании.</p>
+
+        <%- include('partials/messages') %> <%# Показываем сообщения об ошибках/успехе %>
+
+        <form id="ownerSetupForm" class="setup-form" action="/owner/setup" method="POST" enctype="multipart/form-data">
+            <div class="form-grid">
+                <div class="form-group form-group-full">
+                    <label for="companyName">Название компании *</label>
+                    <input type="text" id="companyName" name="companyName" value="<%= locals.user && user.companyName ? user.companyName : '' %>" required>
+                </div>
+                <div class="form-group">
+                    <label for="companyContactEmail">Контактный Email</label>
+                    <input type="email" id="companyContactEmail" name="companyContactEmail" value="<%= locals.user && user.companyContactEmail ? user.companyContactEmail : '' %>">
+                </div>
+                <div class="form-group">
+                    <label for="companyContactPhone">Контактный Телефон</label>
+                    <input type="tel" id="companyContactPhone" name="companyContactPhone" value="<%= locals.user && user.companyContactPhone ? user.companyContactPhone : '' %>">
+                </div>
+                <div class="form-group form-group-full">
+                    <label for="companyWebsite">Веб-сайт (если есть)</label>
+                    <input type="url" id="companyWebsite" name="companyWebsite" value="<%= locals.user && user.companyWebsite ? user.companyWebsite : '' %>" placeholder="https://...">
+                </div>
+
+                 <%# Загрузка логотипа %>
+                 <div class="form-group form-group-full logo-upload-section">
+                     <label for="companyLogo">Логотип компании (макс. 1MB, необязательно)</label>
+                    <input type="file" id="companyLogo" name="companyLogo" accept="image/*">
+                     <% if (locals.user && user.companyLogoData) { %>
+                         <div class="current-logo-display">
+                             <p>Текущий логотип:</p>
+                              <% let logoType = 'image/png'; if (user.companyLogoData.startsWith('/9j/')) logoType = 'image/jpeg'; %>
+                             <img src="data:<%= logoType %>;base64,<%= user.companyLogoData %>" alt="Текущий логотип">
+                         </div>
+                     <% } %>
+                     <div class="logo-preview-container">
+                         <label>Предпросмотр нового:</label>
+                         <img id="logoPreview" src="#" alt="Предпросмотр нового логотипа">
+                     </div>
+                 </div>
+
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" id="saveCompanyProfileBtn" class="btn btn-primary">
+                    <span class="button-text">Сохранить и продолжить</span>
+                    <i class="fas fa-spinner fa-spin button-spinner"></i>
+                </button>
+                 <%# Можно добавить кнопку выхода, если админ создал аккаунт, но владелец не хочет продолжать %>
+                 <!-- <a href="/logout" class="btn btn-secondary">Выйти</a> -->
+            </div>
+        </form>
+    </main>
+
+    <%- include('partials/footer') %>
+
+    <script>
+        // Предпросмотр логотипа
+        const logoInput = document.getElementById('companyLogo');
+        const logoPreview = document.getElementById('logoPreview');
+        if (logoInput && logoPreview) {
+            logoInput.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    // Проверка размера файла (1MB = 1024 * 1024 bytes)
+                    if (file.size > 1 * 1024 * 1024) {
+                         alert('Файл логотипа слишком большой. Максимальный размер - 1MB.');
+                         event.target.value = null; // Очищаем поле
+                         logoPreview.src = '#';
+                         logoPreview.style.display = 'none';
+                         return;
+                     }
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        logoPreview.src = e.target.result;
+                        logoPreview.style.display = 'block';
+                    }
+                    reader.readAsDataURL(file);
+                } else {
+                    logoPreview.src = '#';
+                    logoPreview.style.display = 'none';
+                    if (file) { // Если файл выбран, но не картинка
+                         event.target.value = null;
+                         alert('Пожалуйста, выберите файл изображения для логотипа.');
+                    }
+                }
+            });
+        }
+
+         // Блокировка кнопки отправки
+         const setupForm = document.getElementById('ownerSetupForm');
+         const saveButton = document.getElementById('saveCompanyProfileBtn');
+         const saveButtonText = saveButton.querySelector('.button-text');
+         const originalSaveButtonText = saveButtonText.textContent;
+
+         if (setupForm && saveButton) {
+             setupForm.addEventListener('submit', () => {
+                 // Проверяем валидность стандартными средствами HTML5
+                 if (setupForm.checkValidity()) {
+                     saveButton.disabled = true;
+                     saveButtonText.textContent = 'Сохранение...';
+                 } else {
+                      saveButton.disabled = false; // На случай если браузерная валидация не прошла
+                      saveButtonText.textContent = originalSaveButtonText;
+                 }
+             });
+         }
+    </script>
+
+</body>
+</html>

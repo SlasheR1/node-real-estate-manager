@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/forms.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/pikaday/css/pikaday.css">
+    <style>
+        /* Стили для формы бронирования */
+        .booking-form-container { max-width: 600px; }
+        .dates-row { display: flex; gap: 20px; margin-bottom: 20px; }
+        .dates-row .form-group { flex: 1; }
+        .price-calculation { margin: 20px 0; padding: 15px; background-color: #eef2ff; border: 1px solid #c7d2fe; border-radius: 6px; text-align: center; }
+        .price-calculation p { margin-bottom: 5px; font-size: 0.95rem; color: #4338ca; }
+        .price-calculation .total-cost { font-size: 1.25rem; font-weight: bold; color: #198754; margin-top: 8px;}
+        .balance-info { text-align: center; margin-bottom: 20px; color: #4a5568; background-color: #f8f9fa; padding: 8px; border-radius: 4px;}
+        .balance-info strong { color: #198754;}
+        /* Стили для календаря Pikaday */
+        .pika-single { z-index: 9999; display: block; position: relative; background: white; border-radius: 6px; box-shadow: 0 3px 10px rgba(0,0,0,0.15); border: 1px solid #ddd; width: 280px; box-sizing: border-box; }
+        .pika-lendar { /* ... */ }
+        .pika-table th { font-weight: 500; color: #495057;}
+        .pika-button { border-radius: 4px; background: transparent; border: none;}
+        .pika-button:hover { background-color: #eef2ff; color: #4f46e5; }
+        .is-today .pika-button { font-weight: bold; color: #4f46e5; border: 1px solid #a5b4fc;}
+        .is-selected .pika-button { background: #6366f1 !important; box-shadow: none; color: white !important;}
+        .is-disabled .pika-button { color: #adb5bd !important; background: #f8f9fa !important; cursor: not-allowed; text-decoration: none; }
+        .is-booked .pika-button { background-color: #fecaca !important; color: #dc2626 !important; text-decoration: line-through; border-radius: 4px !important; cursor: not-allowed; font-weight: normal; }
+        .is-booked.is-today .pika-button { font-weight: normal; border: none; }
+        .btn:disabled { opacity: 0.65; cursor: not-allowed; }
+        #bookingMessages .flash-message { margin-bottom: 15px; }
+        /* Полные стили flash-сообщений */
+        .flash-message { padding: 12px 20px; margin: 15px 0; border-radius: 6px; border: 1px solid transparent; position: relative; font-size: 0.95rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .flash-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
+        .flash-error { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
+        .flash-warning { color: #664d03; background-color: #fff3cd; border-color: #ffecb5; }
+        .flash-info { color: #055160; background-color: #cff4fc; border-color: #b6effb; }
+        .flash-message .close-flash { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); background: none; border: none; font-size: 1.5rem; line-height: 1; color: inherit; opacity: 0.6; cursor: pointer; padding: 0 5px; }
+        .flash-message .close-flash:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <main class="container form-container booking-form-container">
+        <h1><%= title %></h1>
+
+        <!-- *** НАЧАЛО ИЗМЕНЕНИЙ *** -->
+        <!-- Контейнер для сообщений сессии и JS -->
+        <div id="bookingMessages">
+            <%- include('partials/messages') %> <%# Вывод сообщений из сессии %>
+        </div>
+        <!-- *** КОНЕЦ ИЗМЕНЕНИЙ *** -->
+
+
+        <% if (typeof property !== 'undefined') { %>
+            <p>Объект: <a href="/properties/<%= property.Id %>"><strong><%= property.Title %></strong></a></p>
+            <p class="balance-info">Ваш текущий баланс: <strong><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(currentBalance || 0) %></strong></p>
+
+            <!-- Форма остается без изменений -->
+            <form action="/bookings/new" method="POST" id="bookingForm">
+                 <input type="hidden" name="propertyId" value="<%= property.Id %>">
+                 <div class="dates-row">
+                     <div class="form-group"> <label for="startDate">Дата заезда *</label> <input type="text" id="startDate" name="startDate" value="<%= typeof startDateValue !== 'undefined' ? startDateValue : '' %>" required autocomplete="off" placeholder="гггг-мм-дд"> </div>
+                     <div class="form-group"> <label for="endDate">Дата выезда *</label> <input type="text" id="endDate" name="endDate" value="<%= typeof endDateValue !== 'undefined' ? endDateValue : '' %>" required autocomplete="off" placeholder="гггг-мм-дд"> </div>
+                 </div>
+                 <div class="price-calculation" id="priceCalculationBlock" style="display: none;">
+                     <p>Продолжительность: <strong id="durationDays">0</strong> дн.</p>
+                     <p>Цена за сутки: <strong><%= property.CalculatedDailyPrice ? new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(property.CalculatedDailyPrice) : '?' %></strong></p>
+                     <p class="total-cost">Итого: <strong id="totalCost">0 ₽</strong></p>
+                 </div>
+                 <div class="form-actions">
+                      <button type="submit" class="btn btn-primary" id="submitBookingBtn">Забронировать</button>
+                      <a href="/properties/<%= property.Id %>" class="btn btn-secondary">Отмена</a>
+                 </div>
+            </form>
+         <% } else { %>
+            <%# Сообщение будет выведено через partials/messages, если оно есть %>
+            <% if (!locals.message) { %>
+                 <p class="error-message">Информация об объекте недвижимости недоступна.</p>
+            <% } %>
+             <a href="/properties" class="btn btn-secondary">К списку объектов</a>
+         <% } %>
+    </main>
+
+    <%- include('partials/footer') %>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/locale/ru.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pikaday/pikaday.js"></script>
+    <script id="busyPeriodsData" type="application/json"> <%- busyPeriods || '[]' %> </script>
+    <script>
+        // Код инициализации Pikaday и расчета стоимости (без изменений)
+        const dailyPrice = parseFloat("<%= typeof property !== 'undefined' ? (property.CalculatedDailyPrice || 0) : 0 %>"); let busyPeriodsRaw = []; try { const el = document.getElementById('busyPeriodsData'); if(el) busyPeriodsRaw = JSON.parse(el.textContent || '[]'); } catch(e) { console.error("Err parsing busyPeriods:", e); } const disabledDates = []; busyPeriodsRaw.forEach(p => { let c = moment(p.start).startOf('day'); const e = moment(p.end).startOf('day'); while(c.isBefore(e)){ disabledDates.push(c.toDate()); c.add(1,'d'); } }); const today = moment().startOf('day').toDate(); const maxDate = moment().add(3,'months').toDate(); const i18n_opts = { previousMonth : 'Пред. месяц', nextMonth : 'След. месяц', months : ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'], weekdays : ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'], weekdaysShort : ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'] }; function isDateDisabled(d){ const t = moment(d).startOf('day').toDate().getTime(); return disabledDates.some(dis => dis.getTime()===t); } function drawBookedDates(p){ if(!p || !p.el) return; const ds=p.el.querySelectorAll('.pika-button'); ds.forEach(d=>{ try{const dt=moment(d.dataset.pikaYear + '-' + ('0'+(parseInt(d.dataset.pikaMonth)+1)).slice(-2) + '-' + ('0'+d.dataset.pikaDay).slice(-2)).startOf('day').toDate(); d.parentNode.classList.remove('is-booked'); if(isDateDisabled(dt)){d.parentNode.classList.add('is-booked');}}catch(e){}}); } let startPicker, endPicker;
+        startPicker = new Pikaday({ field: document.getElementById('startDate'), format: 'YYYY-MM-DD', toString(d,f){ return moment(d).format(f); }, parse(s,f){const m=moment(s,f); return m.isValid()?m.toDate():null;}, minDate: today, maxDate: maxDate, disableDayFn: isDateDisabled, i18n: i18n_opts, onDraw: function(){drawBookedDates(this);}, onSelect: function(d){ const next = moment(d).add(1,'d').toDate(); if(endPicker){ endPicker.setMinDate(next); if(endPicker.getDate()<next){ endPicker.setDate(null); }} calculateCost(); } });
+        endPicker = new Pikaday({ field: document.getElementById('endDate'), format: 'YYYY-MM-DD', toString(d,f){ return moment(d).format(f); }, parse(s,f){const m=moment(s,f); return m.isValid()?m.toDate():null;}, minDate: startPicker.getDate()?moment(startPicker.getDate()).add(1,'d').toDate():moment(today).add(1,'d').toDate(), maxDate: maxDate, disableDayFn: isDateDisabled, i18n: i18n_opts, onDraw: function(){drawBookedDates(this);}, onSelect: function(d){ if(startPicker.getDate()&&d<=startPicker.getDate()){ endPicker.setDate(null); alert("Дата выезда д.б. позже даты заезда."); } calculateCost(); } });
+        const durEl=document.getElementById('durationDays'), costEl=document.getElementById('totalCost'), priceBlock=document.getElementById('priceCalculationBlock'), submitBtn=document.getElementById('submitBookingBtn');
+        function calculateCost() { const start = startPicker.getDate(); const end = endPicker.getDate(); let isValid = false; priceBlock.style.display='none'; if(submitBtn) submitBtn.disabled=true; if(start&&end&&dailyPrice>0){ const sM=moment(start).startOf('day'); const eM=moment(end).startOf('day'); if(eM.isAfter(sM)){ let curr=sM.clone(); let free=true; while(curr.isBefore(eM)){ if(isDateDisabled(curr.toDate())){ free=false; break; } curr.add(1,'d'); } if(free){ const dur=eM.diff(sM,'days'); if(dur>0&&dur<=90){ const total=dur*dailyPrice; durEl.textContent=dur; costEl.textContent=new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB',minimumFractionDigits:0,maximumFractionDigits:2}).format(total); priceBlock.style.display='block'; isValid=true; }}}} if(submitBtn) submitBtn.disabled=!isValid; } window.addEventListener('DOMContentLoaded', calculateCost);
+        // Блокировка кнопки при отправке
+        const bookingForm = document.getElementById('bookingForm'); const bookingSubmitBtn = document.getElementById('submitBookingBtn'); if (bookingForm && bookingSubmitBtn) { bookingForm.addEventListener('submit', () => { if (!bookingSubmitBtn.disabled) { bookingSubmitBtn.disabled = true; bookingSubmitBtn.textContent = 'Бронирование...'; } }); }
+    </script>
+
+</body>
+</html>

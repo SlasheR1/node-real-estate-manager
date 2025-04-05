@@ -1,0 +1,177 @@
+/* public/css/tables.css */
+
+.table-responsive {
+    overflow-x: auto; /* Позволяет таблице скроллиться горизонтально на маленьких экранах */
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    padding: 5px; /* Небольшой паддинг вокруг */
+    margin-top: 20px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse; /* Убираем двойные рамки */
+    font-size: 0.9rem;
+    color: #343a40;
+}
+
+.data-table thead {
+    background-color: #f8f9fa; /* Светлый фон для шапки */
+    border-bottom: 2px solid #dee2e6; /* Линия под шапкой */
+}
+
+.data-table th,
+.data-table td {
+    padding: 12px 15px; /* Внутренние отступы ячеек */
+    text-align: left;
+    border-bottom: 1px solid #e9ecef; /* Линия между строками */
+    white-space: nowrap; /* Предотвращаем перенос в ячейках по умолчанию */
+}
+
+/* Выравнивание для некоторых колонок */
+.data-table th:nth-child(4), /* Сумма */
+.data-table td:nth-child(4),
+.data-table th:last-child, /* Действия */
+.data-table td:last-child {
+    text-align: right;
+}
+
+
+.data-table tbody tr:hover {
+    background-color: #f1f5f9; /* Подсветка строки при наведении */
+}
+
+.data-table td a {
+    color: #0d6efd;
+    font-weight: 500;
+}
+.data-table td a:hover {
+    text-decoration: underline;
+}
+
+/* Стили для маленьких кнопок в таблице */
+.btn-small {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+}
+.btn-cancel {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+}
+ .btn-cancel:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+ }
+
+ .data-table td:last-child span { /* Если нет кнопки действия */
+     color: #6c757d;
+     font-style: italic;
+ }
+
+ .btn-warning { /* Стиль для кнопки Аннулировать */
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+}
+ .btn-warning:hover {
+    background-color: #ffca2c;
+    border-color: #ffc720;
+ }
+ .pagination-container {
+    margin-top: 25px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: center; /* Центрируем элементы пагинации */
+    align-items: center;
+    gap: 15px; /* Отступ между элементами */
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px; /* Отступ между кнопками страниц */
+}
+
+.pagination-controls button {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    border: 1px solid #dee2e6;
+    background-color: #fff;
+    color: #0d6efd;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.pagination-controls button:hover:not(:disabled) {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.pagination-controls button:disabled {
+    color: #6c757d;
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.pagination-controls button.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
+    cursor: default;
+    font-weight: 500;
+}
+
+.pagination-info {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.pagination-info select {
+    padding: 5px 8px;
+    margin-left: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    vertical-align: middle; /* Выравнивание по вертикали */
+}
+
+/* Класс для скрытых строк таблицы */
+.data-table tbody tr.hidden-row {
+    display: none;
+}
+
+/* Добавить в существующий tables.css или новый rentals.css */
+
+/* ... (существующие стили статусов) ... */
+
+.status-pending { background-color: #fff8e1; color: #f39c12; } /* Желтый */
+.status-rejected { background-color: #fbeee6; color: #d35400; } /* Оранжевый */
+.status-annulled { background-color: #eaeded; color: #7f8c8d; } /* Серый */
+
+/* Кнопки действий в rentals-management */
+.btn-confirm { background-color: #27ae60; border-color: #229954; color: white; }
+.btn-confirm:hover:not(:disabled) { background-color: #229954; border-color: #1e8449; }
+.btn-reject { background-color: #e74c3c; border-color: #cb4335; color: white; }
+.btn-reject:hover:not(:disabled) { background-color: #cb4335; border-color: #b03a2e; }
+
+/* Стили для разделения таблиц в rentals-management */
+.rentals-section { margin-bottom: 40px; }
+.rentals-section h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    color: #34495e;
+    display: flex; align-items: center; gap: 10px;
+}
+.rentals-section h2 i { color: #95a5a6; font-size: 0.9em; }
+.no-bookings-message { text-align: center; color: #7f8c8d; margin-top: 20px; }
+
+/* Анимация появления таблиц */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { animation: fadeIn 0.5s ease-out forwards; }

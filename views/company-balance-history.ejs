@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/tables.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .amount-positive { color: #27ae60; font-weight: 500; }
+        .amount-negative { color: #e74c3c; font-weight: 500; }
+        .balance-cell { text-align: right; font-weight: 500;}
+        .description-cell { font-size: 0.9em; color: #555; max-width: 300px; white-space: normal; }
+        .date-cell { white-space: nowrap; }
+        .type-cell { font-style: italic; color: #7f8c8d;}
+
+        /* Стиль для пустого списка */
+        .no-history { text-align: center; margin-top: 30px; color: #7f8c8d; }
+    </style>
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <main class="container">
+        <div class="page-header">
+            <h1><%= title %></h1>
+            <%# Ссылка назад на управление компанией %>
+            <a href="/company/manage<%= currentUser.role === 'Admin' ? '?id='+companyId : '' %>" class="btn btn-secondary">
+                <i class="fas fa-arrow-left" style="margin-right: 5px;"></i> Назад к управлению
+            </a>
+        </div>
+
+        <%- include('partials/messages') %> <%# На всякий случай %>
+
+        <% if (locals.history && history.length > 0) { %>
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th class="date-cell">Дата и время</th>
+                            <th>Тип операции</th>
+                            <th>Описание</th>
+                            <th style="text-align: right;">Сумма</th>
+                            <th class="balance-cell">Баланс после</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% history.forEach(op => { %>
+                            <tr>
+                                <td class="date-cell"><%= op.DateFormatted %></td>
+                                <td class="type-cell"><%= op.OperationType %></td>
+                                <td class="description-cell"><%= op.Description %></td>
+                                <td style="text-align: right;" class="<%= op.Amount >= 0 ? 'amount-positive' : 'amount-negative' %>">
+                                    <%= op.AmountFormatted %>
+                                </td>
+                                <td class="balance-cell"><%= op.NewBalanceFormatted %></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        <% } else { %>
+            <p class="no-history">История операций по балансу компании пуста.</p>
+        <% } %>
+
+    </main>
+
+    <%- include('partials/footer') %>
+
+</body>
+</html>

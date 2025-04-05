@@ -1,0 +1,73 @@
+<!-- views/login.ejs -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/auth.css">
+    <!-- Font Awesome для спиннера -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .ajax-message { padding: 10px 15px; margin-bottom: 15px; margin-top: 15px; border-radius: 5px; text-align: center; display: none; }
+        .ajax-error { color: #842029; background-color: #f8d7da; border: 1px solid #f5c2c7; }
+        #loginForm button[type="submit"]:disabled { opacity: 0.65; cursor: not-allowed; }
+        /* Стили для спиннера внутри кнопки */
+        .button-spinner { margin-left: 8px; display: none; /* Скрыт по умолчанию */ }
+        button:disabled .button-spinner { display: inline-block; /* Показываем при disabled */ }
+        button .button-text { vertical-align: middle; } /* Выравнивание текста */
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <h1>Вход</h1>
+        <%- include('partials/messages') %>
+        <div id="loginError" class="ajax-message ajax-error"></div>
+
+        <form id="loginForm" action="/login" method="POST">
+            <div class="form-group"> <label for="username">Логин:</label> <input type="text" id="username" name="username" required autocomplete="username"> </div>
+            <div class="form-group"> <label for="password">Пароль:</label> <input type="password" id="password" name="password" required autocomplete="current-password"> </div>
+            <div id="loginError" class="ajax-message ajax-error"></div>
+
+            <button type="submit">
+                <span class="button-text">Войти</span>
+                <i class="fas fa-spinner fa-spin button-spinner"></i> <%# Спиннер %>
+            </button>
+        </form>
+        <p>Нет аккаунта? <a href="/register">Зарегистрироваться</a></p>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const errorDiv = document.getElementById('loginError');
+        const submitButton = loginForm.querySelector('button[type="submit"]');
+        const buttonText = submitButton.querySelector('.button-text'); // Находим текст кнопки
+        const originalButtonText = buttonText.textContent; // Сохраняем исходный текст
+
+        loginForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+            submitButton.disabled = true;
+            buttonText.textContent = 'Вход...'; // Меняем текст
+
+            const username = usernameInput.value;
+            const password = passwordInput.value;
+
+            try {
+                const response = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json', }, body: JSON.stringify({ username, password }) });
+                const data = await response.json();
+                if (response.ok && data.success) { window.location.href = data.redirectUrl || '/'; }
+                else { errorDiv.textContent = data.error || 'Произошла неизвестная ошибка.'; errorDiv.style.display = 'block'; }
+            } catch (err) { console.error('Login fetch error:', err); errorDiv.textContent = 'Не удалось подключиться к серверу.'; errorDiv.style.display = 'block';
+            } finally {
+                 submitButton.disabled = false;
+                 buttonText.textContent = originalButtonText; // Возвращаем исходный текст
+            }
+        });
+    </script>
+</body>
+</html>

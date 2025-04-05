@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/forms.css">
+    <style>
+        /* --- Полные стили --- */
+        .current-image img { max-width: 150px; max-height: 150px; border-radius: 4px; border: 1px solid #eee; margin-top: 5px; display: block; object-fit: cover; }
+        .current-image p { font-size: 0.9em; color: #6c757d; margin-bottom: 5px;}
+        .btn:disabled, form button:disabled { opacity: 0.65; cursor: not-allowed; }
+        .flash-message, #js-messages .flash-message {
+           padding: 12px 20px; margin-bottom: 20px; border-radius: 6px;
+           border: 1px solid transparent; position: relative; font-size: 0.95rem;
+           box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .flash-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
+        .flash-error { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
+        .flash-warning { color: #664d03; background-color: #fff3cd; border-color: #ffecb5; }
+        .flash-info { color: #055160; background-color: #cff4fc; border-color: #b6effb; }
+        .flash-message .close-flash {
+           position: absolute; top: 50%; right: 15px; transform: translateY(-50%);
+           background: none; border: none; font-size: 1.5rem; line-height: 1;
+           color: inherit; opacity: 0.6; cursor: pointer; padding: 0 5px;
+        }
+        .flash-message .close-flash:hover { opacity: 0.9; }
+        #js-messages .flash-message { margin-bottom: 15px; }
+        .image-previews { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px; }
+        .img-preview-item { position: relative; border: 1px solid #eee; border-radius: 4px; padding: 5px; background-color: #f8f9fa; cursor: pointer; transition: border-color 0.2s ease, opacity 0.2s ease; }
+        .img-preview-item img { display: block; width: 80px; height: 80px; object-fit: cover; border-radius: 3px; }
+        .img-preview-item .delete-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(220, 53, 69, 0.6); color: white; display: flex; justify-content: center; align-items: center; font-size: 2rem; font-weight: bold; border-radius: 3px; opacity: 0; transition: opacity 0.2s ease; pointer-events: none; }
+        .img-preview-item.marked-for-deletion { border-color: #dc3545; opacity: 0.6; }
+        .img-preview-item.marked-for-deletion .delete-overlay { opacity: 1; }
+        #imagesToDeleteContainer { display: none; }
+        .current-additional-images { margin-top: 15px; }
+        .current-additional-images p { font-size: 0.9rem; color: #6c757d; margin-bottom: 10px; font-weight: 500;}
+        .current-image .btn-delete-img-main {
+           margin-left: 10px; padding: 4px 8px; font-size: 0.8rem; background-color: #dc3545;
+           border-color: #dc3545; color: white; cursor: pointer;
+           transition: background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+        }
+        .current-image .btn-delete-img-main:hover:not(:disabled) { background-color: #c82333; border-color: #bd2130; }
+        .current-image .btn-delete-img-main:disabled { opacity: 0.65; cursor: not-allowed; }
+        .hidden { display: none !important; }
+        .preview-container { margin-top: 15px; }
+        .preview-container label { font-size: 0.9em; color: #6c757d; display: block; margin-bottom: 5px;}
+        #mainImagePreview {
+            max-width: 150px; max-height: 150px; border-radius: 4px;
+            border: 1px solid #eee; display: none; object-fit: cover; margin-top: 5px;
+        }
+       #additionalImagesPreviewContainer { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px; }
+       #additionalImagesPreviewContainer img { width: 80px; height: 80px; object-fit: cover; border-radius: 3px; border: 1px solid #eee; }
+        .form-group label[for="propertyImage"],
+        .form-group label[for="additionalImages"] { margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <main class="container form-container">
+        <h1><%= title %></h1>
+        <%- include('partials/messages') %>
+        <div id="js-messages"></div>
+
+        <% const isEditMode = locals.isEditMode || false; %>
+        <% const property = locals.property || { AdditionalImages: [] }; %>
+
+        <form id="propertyForm"
+              action="<%= isEditMode ? '/properties/edit/' + property.Id : '/properties/add' %>"
+              method="POST"
+              enctype="multipart/form-data"
+              data-is-edit-mode="<%= isEditMode %>">
+            <div class="form-grid">
+
+                <%# Поля Объекта ... %>
+                 <div class="form-group form-group-full"> <label for="Title">Название объекта</label> <input type="text" id="Title" name="Title" value="<%= property.Title || '' %>" required> </div>
+                 <div class="form-group"> <label for="Type">Тип недвижимости</label> <select id="Type" name="Type" required> <option value="" disabled <%= !property.Type ? 'selected' : '' %>>-- Выберите тип --</option> <option value="Квартира" <%= property.Type === 'Квартира' ? 'selected' : '' %>>Квартира</option> <option value="Дом" <%= property.Type === 'Дом' ? 'selected' : '' %>>Дом</option> <option value="Коммерческая недвижимость" <%= property.Type === 'Коммерческая недвижимость' ? 'selected' : '' %>>Коммерческая</option> </select> </div>
+                 <div class="form-group"> <label for="Price">Цена (за месяц, RUB)</label> <input type="number" id="Price" name="Price" value="<%= property.Price || '' %>" min="0.01" step="0.01" required> </div>
+                 <div class="form-group form-group-full"> <label for="Address">Адрес</label> <input type="text" id="Address" name="Address" value="<%= property.Address || '' %>" required> </div>
+                 <div class="form-group"> <label for="Area">Площадь (м²)</label> <input type="number" id="Area" name="Area" value="<%= property.Area || '' %>" min="0.01" step="0.01" required> </div>
+                 <div class="form-group"> <label for="Bedrooms">Кол-во спален</label> <input type="number" id="Bedrooms" name="Bedrooms" value="<%= property.Bedrooms || 0 %>" min="0"> </div>
+                 <div class="form-group"> <label for="Bathrooms">Кол-во ванных комнат</label> <input type="number" id="Bathrooms" name="Bathrooms" value="<%= property.Bathrooms || 0 %>" min="0"> </div>
+                 <fieldset class="form-group form-group-full amenities-fieldset"> <legend>Удобства</legend> <div class="checkbox-group"> <input type="checkbox" id="HasParking" name="HasParking" <%= property.HasParking ? 'checked' : '' %>> <label for="HasParking">Парковка</label> </div> <div class="checkbox-group"> <input type="checkbox" id="HasWifi" name="HasWifi" <%= property.HasWifi ? 'checked' : '' %>> <label for="HasWifi">Wi-Fi</label> </div> <div class="checkbox-group"> <input type="checkbox" id="HasBalcony" name="HasBalcony" <%= property.HasBalcony ? 'checked' : '' %>> <label for="HasBalcony">Балкон</label> </div> <div class="checkbox-group"> <input type="checkbox" id="IsFurnished" name="IsFurnished" <%= property.IsFurnished ? 'checked' : '' %>> <label for="IsFurnished">Мебель</label> </div> <div class="checkbox-group"> <input type="checkbox" id="IsAirConditioned" name="IsAirConditioned" <%= property.IsAirConditioned ? 'checked' : '' %>> <label for="IsAirConditioned">Кондиционер</label> </div> </fieldset>
+                 <% if (isEditMode) { %> <div class="form-group form-group-full availability-checkbox"> <div class="checkbox-group"> <input type="checkbox" id="IsAvailable" name="IsAvailable" value="on" <%= property.IsAvailable ? 'checked' : '' %>> <label for="IsAvailable">Объект доступен для бронирования</label> </div> </div> <% } %>
+                 <div class="form-group form-group-full"> <label for="Description">Описание</label> <textarea id="Description" name="Description" rows="6"><%= property.Description || '' %></textarea> </div>
+
+                <%# --- Основное изображение --- %>
+                <div class="form-group form-group-full">
+                    <label for="propertyImage">Основное изображение (макс. 10MB)</label>
+                    <input type="file" id="propertyImage" name="propertyImage" accept="image/*">
+                    <% if (isEditMode && property.ImageData) { %>
+                        <div class="current-image" id="currentMainImageContainer">
+                            <p>Текущее:</p>
+                            <div style="display: flex; align-items: flex-start; gap: 10px;">
+                                <img id="mainPreviewImageExisting" src="<%= property.DisplayImageSrc %>" alt="Текущее изображение">
+                                <button type="button" id="deleteMainImageBtn" class="btn btn-delete-img-main" onclick="deleteMainImage('<%= property.Id %>', this)"> Удалить </button>
+                            </div>
+                        </div>
+                    <% } %>
+                     <div class="preview-container">
+                        <label for="mainImagePreview">Предпросмотр нового:</label>
+                        <img id="mainImagePreview" src="#" alt="Предпросмотр нового основного фото">
+                    </div>
+                </div>
+
+                <%# --- Дополнительные изображения --- %>
+                <div class="form-group form-group-full">
+                    <label for="additionalImages">Дополнительные изображения (макс. 10 шт. по 10MB)</label>
+                    <input type="file" id="additionalImages" name="additionalImages" accept="image/*" multiple>
+                    <small>Можно выбрать несколько файлов.</small>
+                     <% if (isEditMode && property.AdditionalImages && property.AdditionalImages.length > 0) { %>
+                         <div class="current-additional-images">
+                             <p>Текущие доп. изображения (Кликните для пометки на удаление):</p>
+                             <div class="image-previews">
+                                 <% property.AdditionalImages.forEach((imgSrc, index) => { %>
+                                     <div class="img-preview-item" id="preview-item-<%= index %>" title="Кликните для удаления" onclick="toggleImageDeletion(this, '<%= index %>')"> <img src="<%= imgSrc %>" alt="Доп. фото <%= index + 1 %>"> <span class="delete-overlay">×</span> </div>
+                                 <% }) %>
+                             </div> <div id="imagesToDeleteContainer"></div>
+                         </div>
+                     <% } %>
+                      <div class="preview-container">
+                        <label>Предпросмотр новых:</label>
+                        <div id="additionalImagesPreviewContainer"></div>
+                    </div>
+                </div>
+
+            </div> <!-- Конец form-grid -->
+
+            <div class="form-actions">
+                 <button type="submit" id="savePropertyBtn" class="btn btn-primary"> <%= isEditMode ? 'Сохранить изменения' : 'Добавить объект' %> </button>
+                 <a href="<%= isEditMode ? '/properties/' + property.Id : '/properties' %>" class="btn btn-secondary">Отмена</a>
+            </div>
+        </form>
+    </main>
+
+    <%- include('partials/footer') %>
+
+    <script>
+        // --- Блокировка кнопки ---
+         function disableFormButton(formId, buttonId, loadingText = 'Сохранение...') {
+             const form = document.getElementById(formId);
+             const button = document.getElementById(buttonId);
+             if (form && button) {
+                 form.addEventListener('submit', (event) => {
+                      if (event.submitter && event.submitter.type === 'button') { return; }
+                     if (form.id === 'propertyForm' && !form.checkValidity()) {
+                          button.disabled = false; return;
+                     }
+                      button.disabled = true; button.textContent = loadingText;
+                 });
+             }
+         }
+         const propertyFormElement = document.getElementById('propertyForm');
+         // Читаем data-атрибут в JS
+         const isPropertyEditModeJS = propertyFormElement ? (propertyFormElement.dataset.isEditMode === 'true') : false;
+         disableFormButton('propertyForm', 'savePropertyBtn', isPropertyEditModeJS ? 'Сохранение...' : 'Добавление...');
+
+
+         // --- Функции удаления изображений (будут работать только если элементы найдены) ---
+
+         // Функция для JS сообщений
+         function showJsMessage(type, text) {
+            const container = document.getElementById('js-messages'); // Используем ID контейнера
+            if (!container) return;
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flash-message flash-${type}`;
+            messageDiv.innerHTML = `${text} <button type="button" class="close-flash" onclick="this.parentElement.remove()">×</button>`;
+            //container.innerHTML = ''; // Очищаем старые
+            container.appendChild(messageDiv);
+            setTimeout(() => { if(messageDiv) messageDiv.remove(); }, 5000);
+         }
+
+
+        function toggleImageDeletion(element, index) {
+             // Эта функция будет вызвана только если элемент .img-preview-item существует (т.е. isEditMode=true)
+             const container = document.getElementById('imagesToDeleteContainer');
+             const inputId = 'deleteImageIndex-' + index;
+             const existingInput = document.getElementById(inputId);
+             element.classList.toggle('marked-for-deletion');
+             if (element.classList.contains('marked-for-deletion')) {
+                 if (!existingInput) {
+                     const hiddenInput = document.createElement('input');
+                     hiddenInput.type = 'hidden'; hiddenInput.name = 'deleteImageIndices[]';
+                     hiddenInput.value = index; hiddenInput.id = inputId;
+                     container.appendChild(hiddenInput); console.log('Marked add img index:', index);
+                 }
+             } else { if (existingInput) { container.removeChild(existingInput); console.log('Unmarked add img index:', index); } }
+         }
+
+         async function deleteMainImage(propertyId, buttonElement) {
+             // Эта функция будет вызвана только если кнопка #deleteMainImageBtn существует (т.е. isEditMode=true и есть фото)
+              if (!confirm('Вы уверены, что хотите удалить основное изображение?')) return;
+              buttonElement.disabled = true; buttonElement.textContent = 'Удаление...';
+              const jsMessagesDiv = document.getElementById('js-messages'); jsMessagesDiv.innerHTML = '';
+              try {
+                  const response = await fetch(`/properties/${propertyId}/image/main`, { method: 'DELETE', headers: { 'Accept': 'application/json' } });
+                  const result = await response.json();
+                  if (response.ok && result.success) {
+                      const container = document.getElementById('currentMainImageContainer'); if (container) container.remove();
+                      const fileInput = document.getElementById('propertyImage'); if(fileInput) fileInput.value = '';
+                       showJsMessage('success', result.message || 'Основное изображение удалено.'); // Используем общую функцию
+                       const previewImg = document.getElementById('mainImagePreview');
+                       if(previewImg) { previewImg.style.display = 'none'; previewImg.src = '#'; }
+                  } else { throw new Error(result.message || 'Не удалось удалить изображение.'); }
+              } catch (error) {
+                  console.error('Ошибка удаления основного изображения:', error);
+                   showJsMessage('error', `Ошибка: ${error.message}`); // Используем общую функцию
+                  buttonElement.disabled = false; buttonElement.textContent = 'Удалить';
+              }
+         }
+
+
+         // --- Предпросмотр изображений (код выполняется всегда, но найдет элементы только если они есть) ---
+         const mainImageInput = document.getElementById('propertyImage');
+         const mainImagePreview = document.getElementById('mainImagePreview');
+         if (mainImageInput && mainImagePreview) {
+             mainImageInput.addEventListener('change', function(event) {
+                 const file = event.target.files[0];
+                 if (file && file.type.startsWith('image/')) {
+                     const reader = new FileReader();
+                     reader.onload = function(e) { mainImagePreview.src = e.target.result; mainImagePreview.style.display = 'block'; }
+                     reader.readAsDataURL(file);
+                 } else {
+                    mainImagePreview.src = '#'; mainImagePreview.style.display = 'none';
+                    if(file) { event.target.value = null; alert('Выберите файл изображения.');}
+                 }
+             });
+         }
+
+         const additionalImagesInput = document.getElementById('additionalImages');
+         const additionalPreviewContainer = document.getElementById('additionalImagesPreviewContainer');
+         if (additionalImagesInput && additionalPreviewContainer) {
+             additionalImagesInput.addEventListener('change', function(event) {
+                 additionalPreviewContainer.innerHTML = '';
+                 const files = event.target.files;
+                 if (files && files.length > 0) {
+                     const filesToPreview = Array.from(files).slice(0, 10);
+                     filesToPreview.forEach(file => {
+                         if (file.type.startsWith('image/')) {
+                             const reader = new FileReader();
+                             reader.onload = function(e) {
+                                 const imgElement = document.createElement('img');
+                                 imgElement.src = e.target.result; imgElement.alt = 'Предпросмотр доп. фото';
+                                 additionalPreviewContainer.appendChild(imgElement);
+                             }
+                             reader.readAsDataURL(file);
+                         } else { console.warn(`Пропущен файл ${file.name}, т.к. это не изображение.`); }
+                     });
+                      const allInvalid = Array.from(files).every(f => !f.type.startsWith('image/'));
+                      if (allInvalid && files.length > 0) {
+                          event.target.value = null;
+                          alert('Ни один из выбранных файлов не является изображением.');
+                      }
+                 }
+             });
+         }
+    </script>
+
+</body>
+</html>

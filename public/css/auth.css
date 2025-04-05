@@ -1,0 +1,103 @@
+/* public/css/auth.css */
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh; /* Занимает всю высоту экрана */
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* Приятный градиент */
+    margin: 0;
+}
+
+.auth-container {
+    background-color: white;
+    padding: 30px 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px; /* Ограничиваем ширину контейнера */
+    text-align: center;
+}
+
+.auth-container h1 {
+    margin-bottom: 25px;
+    color: #333;
+    font-weight: 600;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    text-align: left; /* Выравниваем лейблы и инпуты по левому краю */
+}
+
+.form-group label {
+    display: block; /* Лейбл над полем ввода */
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #555;
+}
+
+.form-group input[type="text"],
+.form-group input[type="password"],
+.form-group input[type="email"],
+.form-group input[type="tel"] {
+    width: 100%; /* Поля ввода на всю ширину контейнера */
+    padding: 12px 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box; /* Учитываем padding и border в ширине */
+    font-size: 1rem;
+    transition: border-color 0.2s ease;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #764ba2; /* Подсветка при фокусе */
+}
+
+button[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+button[type="submit"]:hover {
+    opacity: 0.9;
+}
+
+.error-message {
+    color: #e74c3c; /* Красный цвет для ошибок */
+    background-color: #fdd; /* Бледно-красный фон */
+    border: 1px solid #e74c3c;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+.auth-container p {
+    margin-top: 20px;
+    color: #555;
+}
+
+.auth-container a {
+    color: #667eea;
+    font-weight: 500;
+}
+
+/* Добавь это в конец файла public/css/auth.css */
+.error-message {
+    color: #e74c3c; /* Красный цвет для ошибок */
+    background-color: #fdd; /* Бледно-красный фон */
+    border: 1px solid #e74c3c;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 15px; /* Увеличили отступ снизу */
+    margin-top: -5px; /* Небольшой отрицательный отступ сверху, чтобы чуть подвинуть к полям */
+    text-align: center; /* Выровняем текст по центру */
+}

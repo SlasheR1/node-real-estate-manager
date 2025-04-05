@@ -1,0 +1,8 @@
+<!-- views/partials/messages.ejs (остается БЕЗ изменений) -->
+<!-- Этот файл теперь будет показывать ТОЛЬКО сообщения, пришедшие после редиректа -->
+<% if (typeof message !== 'undefined' && message) { %>
+    <div class="flash-message flash-<%= message.type || 'info' %>">
+        <%= message.text %>
+         <button type="button" class="close-flash" onclick="this.parentElement.style.display='none'">×</button>
+    </div>
+<% } %>

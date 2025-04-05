@@ -1,0 +1,234 @@
+/* public/css/property-details.css - Обновленный дизайн */
+
+/* --- Общий контейнер --- */
+.property-details-container {
+    padding-bottom: 40px; /* Больше места снизу */
+}
+
+/* --- Заголовок и адрес --- */
+.property-details-container h1 {
+    font-size: 2.2rem; /* Крупнее */
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #1f2937; /* Темнее */
+    line-height: 1.3;
+}
+
+.property-details-container .address {
+    font-size: 1rem;
+    color: #6b7280; /* Светлее серый */
+    margin-bottom: 30px; /* Больше отступ */
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.property-details-container .address i { /* Добавим иконку адреса */
+    color: #9ca3af;
+    margin-top: -2px; /* Небольшая корректировка */
+}
+
+
+/* --- Галерея (стили Swiper без изменений) --- */
+.gallery-container { margin-bottom: 35px; position: relative; overflow: hidden; border-radius: 12px; /* Скругление контейнера галереи */ box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07);}
+.image-gallery { width: 100%; height: 480px; /* Чуть выше */ border-radius: 12px; background-color: #f8f9fa; }
+.swiper-slide { display: flex; justify-content: center; align-items: center; background-color: #f8f9fa; height: 100%; overflow: hidden; }
+.swiper-slide img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.swiper-pagination { position: absolute; bottom: 15px !important; left: 50% !important; transform: translateX(-50%) !important; width: auto !important; z-index: 10; }
+.swiper-pagination-bullet { background-color: rgba(255, 255, 255, 0.7); width: 10px; height: 10px; opacity: 1; margin: 0 5px !important; transition: background-color 0.2s ease; }
+.swiper-pagination-bullet-active { background-color: #ffffff; }
+.swiper-button-next, .swiper-button-prev { display: none !important; } /* Скрываем стандартные */
+.custom-swiper-button { /* Стили кастомных кнопок */ position: absolute; top: 50%; transform: translateY(-50%); z-index: 10; background-color: rgba(0, 0, 0, 0.35); color: white; border: none; border-radius: 50%; width: 44px; height: 44px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: background-color 0.2s ease; font-size: 1.8rem; line-height: 1;}
+.custom-swiper-button:hover { background-color: rgba(0, 0, 0, 0.55); }
+.custom-swiper-button-prev { left: 15px; }
+.custom-swiper-button-next { right: 15px; }
+
+
+/* --- Сетка для деталей --- */
+.details-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* 2/3 : 1/3 */
+    gap: 35px; /* Больше отступ */
+}
+
+/* --- Основная информация --- */
+.main-info {
+    background-color: #fff;
+    padding: 25px 30px; /* Больше паддинг */
+    border-radius: 12px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e5e7eb;
+}
+
+.main-info h2, .side-info h2 { /* Общие стили заголовков секций */
+    font-size: 1.6rem; /* Крупнее */
+    font-weight: 600;
+    margin-top: 0;
+    margin-bottom: 25px;
+    padding-bottom: 12px; /* Отступ под линией */
+    border-bottom: 1px solid #e5e7eb;
+    color: #1f2937;
+}
+
+/* Сетка для вывода информации в .main-info */
+.info-grid {
+    display: grid;
+    grid-template-columns: auto 1fr; /* Колонка для лейбла и колонка для значения */
+    gap: 12px 15px; /* Отступы между строками и колонками */
+    margin-bottom: 25px; /* Отступ после основной инфо */
+}
+
+.info-label {
+    font-weight: 500;
+    color: #4b5563; /* Темно-серый */
+    font-size: 0.9rem;
+    white-space: nowrap; /* Не переносим лейбл */
+}
+
+.info-value {
+    color: #1f2937; /* Основной цвет текста */
+    font-size: 0.95rem;
+}
+
+/* Выделяем статус */
+.info-value .status {
+    padding: 4px 10px;
+    border-radius: 6px;
+    display: inline-block;
+    font-weight: 500;
+    font-size: 0.85rem; /* Чуть меньше */
+    line-height: 1.2;
+ }
+ .info-value .status.available { background-color: #d1fae5; color: #065f46; } /* Светло-зеленый */
+ .info-value .status.unavailable { background-color: #fee2e2; color: #991b1b; } /* Светло-красный */
+
+ /* --- Блок Цен --- */
+ .price-box {
+     background-color: #f8fafc; /* Легкий фон */
+     border: 1px solid #e5e7eb;
+     border-radius: 8px;
+     padding: 18px 22px;
+     margin: 25px 0; /* Отступы до/после */
+ }
+  .price-box p { margin: 6px 0; display: flex; justify-content: space-between; align-items: baseline; }
+  .price-box span:first-child { /* Лейбл (Месяц/Сутки) */
+      color: #4b5563;
+      font-size: 0.95rem;
+  }
+  .price-box span:last-child { /* Значение цены */
+     font-weight: 600;
+  }
+  .price-monthly span:last-child { color: #10b981; font-size: 1.2rem; } /* Зеленый, крупнее */
+  .price-daily span:last-child { color: #3b82f6; font-size: 1.05rem; } /* Синий */
+
+
+ /* --- Действия --- */
+ .details-actions {
+    margin-top: 30px; /* Отступ сверху */
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+ }
+  /* Используем общие стили кнопок из style.css, но можно переопределить размеры */
+ .details-actions .btn {
+    font-size: 0.9rem;
+    padding: 9px 18px;
+ }
+ .details-actions .btn-book { /* Акцент на кнопке бронирования */
+     background-color: #10b981; border-color: #10b981; color: white;
+  }
+ .details-actions .btn-book:hover { background-color: #059669; border-color: #059669; }
+
+
+/* --- Боковая информация --- */
+.side-info section {
+    background-color: #fff;
+    padding: 25px 30px;
+    border-radius: 12px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e5e7eb;
+    margin-bottom: 30px; /* Отступ между секциями */
+}
+.side-info section:last-child { margin-bottom: 0; }
+
+ /* --- Удобства --- */
+ .amenities-details ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+ .amenities-details li { display: flex; align-items: center; gap: 10px; /* Отступ иконка-текст */ color: #374151; font-size: 0.95rem; }
+ /* Используем иконки Font Awesome */
+ .amenities-details li i {
+     width: 20px; /* Фиксируем ширину для выравнивания */
+     text-align: center;
+     font-size: 1rem;
+     margin-top: -1px; /* Коррекция */
+ }
+  .amenities-details li.yes i { color: #10b981; /* Зеленый */ }
+  .amenities-details li.no i { color: #ef4444; /* Красный */ }
+
+ /* --- Описание --- */
+ .description-details p { color: #4b5563; line-height: 1.7; white-space: pre-wrap; }
+
+
+/* --- Отзывы (Стили из предыдущего шага, оставляем как есть) --- */
+.reviews-section { margin-top: 40px; padding-top: 30px; border-top: 1px solid #e2e8f0; }
+.reviews-section h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 25px; color: #334155; }
+.review-item { background-color: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.review-item:last-child { margin-bottom: 0; }
+.review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px; }
+.review-header-right { display: flex; align-items: center; }
+.review-author { font-weight: 600; color: #475569; }
+.review-date { font-size: 0.85em; color: #64748b; }
+.review-rating { margin-bottom: 12px; }
+.review-rating .star { color: #facc15; font-size: 1.1rem; margin-right: 2px; }
+.review-rating .star-empty { color: #d1d5db; }
+.review-comment { color: #475569; line-height: 1.7; white-space: pre-wrap; }
+.review-delete-btn { background-color: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 0.8rem; padding: 2px 5px; opacity: 0.7; transition: opacity 0.2s, color 0.2s; vertical-align: middle; margin-left: 10px; }
+.review-delete-btn:hover { opacity: 1; color: #dc2626; }
+.review-delete-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+#js-review-messages .flash-message { padding: 10px 15px; margin-bottom: 15px; border-radius: 5px; font-size: 0.9rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid transparent; position: relative; }
+#js-review-messages .flash-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
+#js-review-messages .flash-error { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
+#js-review-messages .flash-message .close-flash { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); float: right; background: none; border: none; font-size: 1.3rem; line-height: 1; color: inherit; opacity: 0.6; cursor: pointer; padding: 0 5px; margin-left: 10px; }
+#noReviewsMessage { text-align: center; color: #64748b; margin-top: 15px; }
+
+/* Форма добавления отзыва (стили из предыдущего шага) */
+.add-review-section { margin-top: 30px; padding: 25px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
+.add-review-section h3 { font-size: 1.3rem; font-weight: 600; margin-top: 0; margin-bottom: 20px; color: #334155;}
+.add-review-form .form-group { margin-bottom: 15px; }
+.add-review-form label { display: block; font-weight: 500; margin-bottom: 6px; color: #475569; }
+.add-review-form textarea { box-sizing: border-box; width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 5px; font-size: 0.95rem; min-height: 100px; resize: vertical; }
+.add-review-form textarea:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2); }
+.add-review-form .btn-primary { margin-top: 10px; }
+.star-rating-input { display: flex; flex-direction: row-reverse; justify-content: flex-end; margin-bottom: 15px; width: fit-content; }
+.star-rating-input input[type="radio"] { display: none; }
+.star-rating-input label { font-size: 1.8rem; color: #d1d5db; cursor: pointer; transition: color 0.2s; padding: 0 2px; }
+.star-rating-input:not(:hover) input[type="radio"]:checked ~ label { color: #facc15; }
+.star-rating-input:hover label { color: #fde047; }
+.star-rating-input label:hover ~ label { color: #d1d5db; }
+.star-rating-input:hover input[type="radio"]:checked ~ label { color: #facc15; }
+.already-reviewed-message { background-color: #eef2ff; border-left: 4px solid #6366f1; padding: 12px 15px; color: #4338ca; font-size: 0.95rem; margin-top: 20px; border-radius: 4px; }
+form button:disabled { opacity: 0.65; cursor: not-allowed; }
+
+
+/* --- Адаптивность --- */
+ @media (max-width: 992px) {
+    .details-grid {
+        grid-template-columns: 1fr; /* Одна колонка */
+    }
+     .side-info {
+        margin-top: 30px;
+     }
+      .property-details-container h1 { font-size: 1.8rem; }
+      .main-info h2, .side-info h2 { font-size: 1.4rem; }
+      .image-gallery { height: 380px; } /* Уменьшаем галерею */
+ }
+  @media (max-width: 576px) {
+      .property-details-container h1 { font-size: 1.6rem; }
+      .main-info h2, .side-info h2 { font-size: 1.3rem; }
+      .main-info, .side-info section { padding: 20px; } /* Уменьшаем паддинги */
+      .details-grid { gap: 25px; }
+      .image-gallery { height: 280px; } /* Еще уменьшаем галерею */
+      .info-grid { grid-template-columns: auto 1fr; gap: 10px; } /* Возможно, стоит сделать 1 колонку */
+      .details-actions { flex-direction: column; } /* Кнопки друг под другом */
+       .details-actions .btn, .details-actions form { width: 100%; }
+  }

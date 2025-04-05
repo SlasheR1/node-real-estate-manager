@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/tables.css">
+    <!-- Font Awesome для спиннера -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* Стили, специфичные для этой страницы */
+        .user-avatar-small { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 10px; }
+        .actions-cell form { margin-left: 5px; display: inline-block;}
+        .actions-cell .btn:disabled, .actions-cell form button:disabled { opacity: 0.65; cursor: not-allowed; }
+        .page-actions { margin-bottom: 20px; }
+
+        /* Стили модалки баланса */
+        #adjustBalanceModal { display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); padding-top: 60px; }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 25px; border: 1px solid #888; width: 80%; max-width: 400px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .close-modal { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 1; }
+        .close-modal:hover, .close-modal:focus { color: black; text-decoration: none; }
+        .modal-content h2 { margin-top: 0; margin-bottom: 20px; font-size: 1.4rem; font-weight: 600;}
+        .modal-content p { margin-bottom: 15px; font-size: 1rem;}
+        .modal-content .form-group { margin-bottom: 15px; }
+        .modal-content .form-group label { display: block; margin-bottom: 6px; font-weight: 500;}
+        .modal-content input[type="number"].form-control { width: 100%; padding: 10px 12px; border: 1px solid #ced4da; border-radius: 5px; font-size: 1rem; line-height: 1.5; box-sizing: border-box; }
+        .modal-content input[type="number"].form-control:focus { border-color: #80bdff; outline: 0; box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); }
+        .modal-content .btn-primary { margin-top: 5px; margin-right: 5px; }
+        .modal-content .btn:disabled { opacity: 0.65; cursor: not-allowed; }
+
+        /* Стили JS сообщений */
+        #js-messages-user-list .flash-message { padding: 12px 20px; margin-bottom: 15px; border-radius: 6px; border: 1px solid transparent; position: relative; font-size: 0.95rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #js-messages-user-list .flash-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
+        #js-messages-user-list .flash-error { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
+        #js-messages-user-list .flash-info { color: #055160; background-color: #cff4fc; border-color: #b6effb; }
+        #js-messages-user-list .flash-message .close-flash { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); background: none; border: none; font-size: 1.5rem; line-height: 1; color: inherit; opacity: 0.6; cursor: pointer; padding: 0 5px; }
+        #js-messages-user-list .flash-message .close-flash:hover { opacity: 0.9; }
+
+        /* Стили пагинации (из tables.css, но дублируем для полноты) */
+        .pagination-container { margin-top: 25px; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; gap: 15px; }
+        .pagination-controls { display: flex; align-items: center; gap: 5px; }
+        .pagination-controls button { padding: 6px 12px; font-size: 0.9rem; border: 1px solid #dee2e6; background-color: #fff; color: #0d6efd; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease, color 0.2s ease; min-width: 36px; text-align: center; }
+        .pagination-controls button:hover:not(:disabled) { background-color: #e9ecef; border-color: #adb5bd; }
+        .pagination-controls button:disabled { color: #6c757d; background-color: #f8f9fa; cursor: not-allowed; opacity: 0.7; }
+        .pagination-controls button.active { background-color: #0d6efd; border-color: #0d6efd; color: #fff; cursor: default; font-weight: 500; }
+        .pagination-info { font-size: 0.9rem; color: #6c757d; display: flex; align-items: center; gap: 8px; }
+        .pagination-info select { padding: 5px 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 0.9rem; vertical-align: middle; }
+        .pagination-info label { margin-bottom: 0; }
+        .hidden-row { display: none; } /* Класс для скрытия строк пагинацией */
+
+        /* Стили для спиннера внутри кнопки */
+        .button-spinner { margin-left: 5px; display: none; font-size: 0.9em; }
+        button:disabled .button-spinner { display: inline-block; }
+        button .button-text { vertical-align: middle; }
+        /* Выравнивание кнопок в таблице */
+        .actions-cell button, .actions-cell a { vertical-align: middle; }
+
+    </style>
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <main class="container">
+        <h1><%= title %></h1>
+
+        <div class="page-actions">
+             <a href="/users/add" class="btn btn-primary">Добавить пользователя</a>
+        </div>
+
+        <%- include('partials/messages') %>
+        <div id="js-messages-user-list"></div>
+
+        <div class="table-responsive">
+            <table class="data-table" id="usersTable">
+                <thead>
+                    <tr> <th></th> <th>Логин</th> <th>ФИО</th> <th>Роль</th> <th>Баланс</th> <th>Действия</th> </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <% if (users && users.length > 0) { %>
+                        <% users.forEach(user => { %>
+                            <tr id="user-row-<%= user.Username %>">
+                                <td><img src="<%= user.DisplayAvatarSrc %>" alt="avatar" class="user-avatar-small"></td>
+                                <td><%= user.Username %></td>
+                                <td><%= user.FullName %></td>
+                                <td><%= user.Role %></td>
+                                <td><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(user.Balance || 0) %></td>
+                                <td class="actions-cell">
+                                    <!-- *** ИЗМЕНЕНИЕ ЗДЕСЬ: Добавляем disabled для кнопки Баланс *** -->
+                                    <button
+                                        class="btn btn-small btn-secondary"
+                                        onclick="openAdjustBalanceModal('<%= user.Username %>', '<%= user.Balance || 0 %>')"
+                                        <%= user.Role !== 'Tenant' ? 'disabled title="Баланс есть только у арендаторов"' : 'title="Изменить баланс"' %> <%# Добавляем disabled и title %>
+                                        >Баланс</button>
+                                    <a href="/users/edit/<%= user.Username %>" class="btn btn-small btn-edit">Редакт.</a>
+                                    <% if (currentUser.username !== user.Username) { %>
+                                        <button type="button" class="btn btn-small btn-warning set-temp-password-btn" data-username="<%= user.Username %>">
+                                            <span class="button-text">Сброс пароля</span>
+                                            <i class="fas fa-spinner fa-spin button-spinner"></i>
+                                        </button>
+                                        <form class="delete-user-form" data-username="<%= user.Username %>" action="/users/delete/<%= user.Username %>" method="POST">
+                                            <button type="submit" class="btn btn-small btn-delete">
+                                                <span class="button-text">Удалить</span>
+                                                 <i class="fas fa-spinner fa-spin button-spinner"></i>
+                                            </button>
+                                        </form>
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr> <td colspan="6" style="text-align: center;">Пользователи не найдены.</td> </tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination-container" id="paginationContainer">
+            <div class="pagination-info">
+                 <span id="paginationInfo"></span>
+                <select id="itemsPerPageSelect">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                </select>
+                <label for="itemsPerPageSelect" style="margin-left: 5px;">на странице</label>
+            </div>
+             <div class="pagination-controls" id="paginationControls">
+                <%# Кнопки будут генерироваться JS %>
+             </div>
+        </div>
+    </main>
+
+    <div id="adjustBalanceModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeAdjustBalanceModal()">×</span>
+            <h2>Изменить баланс для <span id="modalUsername"></span></h2>
+             <p>Текущий баланс: <strong id="modalCurrentBalance"></strong></p>
+            <form id="adjustBalanceForm">
+                 <input type="hidden" id="modalUsernameInput" name="username">
+                 <div class="form-group">
+                     <label for="newBalanceInput">Новый баланс:</label>
+                    <input type="number" step="0.01" id="newBalanceInput" name="newBalance" required class="form-control">
+                </div>
+                 <p id="modalError" style="color: red; display: none;"></p>
+                 <button type="submit" id="adjustBalanceSubmitBtn" class="btn btn-primary">
+                     <span class="button-text">Применить</span>
+                     <i class="fas fa-spinner fa-spin button-spinner"></i>
+                 </button>
+                 <button type="button" class="btn btn-secondary" onclick="closeAdjustBalanceModal()">Отмена</button>
+             </form>
+         </div>
+    </div>
+
+    <%- include('partials/footer') %>
+
+     <script>
+        // --- JS для модалки баланса (с индикатором) ---
+        const modal = document.getElementById('adjustBalanceModal');
+        const modalUsernameSpan = document.getElementById('modalUsername');
+        const modalCurrentBalanceSpan = document.getElementById('modalCurrentBalance');
+        const modalUsernameInput = document.getElementById('modalUsernameInput');
+        const newBalanceInput = document.getElementById('newBalanceInput');
+        const modalError = document.getElementById('modalError');
+        const adjustBalanceForm = document.getElementById('adjustBalanceForm');
+        const adjustBalanceSubmitBtn = document.getElementById('adjustBalanceSubmitBtn');
+        const adjustBtnText = adjustBalanceSubmitBtn.querySelector('.button-text'); // Находим текст кнопки в модалке
+        const originalAdjustBtnText = adjustBtnText.textContent; // Сохраняем исходный текст
+
+        function openAdjustBalanceModal(username, currentBalance) {
+             modalUsernameSpan.textContent = username;
+             modalCurrentBalanceSpan.textContent = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(currentBalance);
+             modalUsernameInput.value = username;
+             newBalanceInput.value = parseFloat(currentBalance).toFixed(2);
+             modalError.style.display = 'none';
+             adjustBalanceSubmitBtn.disabled = false; // Сбрасываем блокировку
+             adjustBtnText.textContent = originalAdjustBtnText; // Восстанавливаем текст
+             modal.style.display = 'block';
+             newBalanceInput.focus();
+        }
+        function closeAdjustBalanceModal() { modal.style.display = 'none'; }
+        window.onclick = function(event) { if (event.target == modal) { closeAdjustBalanceModal(); } }
+
+        adjustBalanceForm.addEventListener('submit', async (event) => {
+            event.preventDefault(); modalError.style.display = 'none';
+            adjustBalanceSubmitBtn.disabled = true;
+            adjustBtnText.textContent = 'Примен...'; // Меняем текст
+
+            const username = modalUsernameInput.value; const newBalance = newBalanceInput.value;
+            try {
+                const response = await fetch(`/users/adjust-balance/${username}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newBalance: newBalance }) });
+                const result = await response.json();
+                if (!response.ok) { throw new Error(result.error || `Ошибка ${response.status}`); }
+                closeAdjustBalanceModal();
+                // Обновляем значение в таблице
+                const userRow = document.getElementById(`user-row-${username}`);
+                if (userRow) {
+                     const balanceCell = userRow.cells[4]; // 5-я ячейка
+                     if(balanceCell) balanceCell.textContent = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(result.newBalance);
+                }
+                showUserListJsMessage('success', result.message || 'Баланс успешно изменен.');
+            } catch (error) {
+                console.error('Ошибка формы изменения баланса:', error); modalError.textContent = error.message || 'Ошибка.'; modalError.style.display = 'block';
+                adjustBalanceSubmitBtn.disabled = false; adjustBtnText.textContent = originalAdjustBtnText; // Возвращаем текст при ошибке
+            }
+        });
+
+        // --- JS для AJAX удаления (с индикатором) ---
+        function showUserListJsMessage(type, text, allowHtml = false) {
+             const container = document.getElementById('js-messages-user-list'); if (!container) return;
+             const messageDiv = document.createElement('div'); messageDiv.className = `flash-message flash-${type}`;
+             if (allowHtml) { messageDiv.innerHTML = text; } else { messageDiv.textContent = text; }
+             if (!messageDiv.querySelector('.close-flash')) { const closeButton = document.createElement('button'); closeButton.type = 'button'; closeButton.className = 'close-flash'; closeButton.innerHTML = '×'; closeButton.onclick = () => messageDiv.remove(); messageDiv.appendChild(closeButton); }
+             container.innerHTML = ''; container.appendChild(messageDiv);
+             // Убираем сообщение через 5 секунд, кроме сообщения с паролем
+             if (!allowHtml || !messageDiv.querySelector('strong[id^="temp-pass-"]')) {
+                 setTimeout(() => { if(messageDiv) messageDiv.remove(); }, 5000);
+             }
+        }
+
+        // --- Функции Копирования (без изменений) ---
+        function copyToClipboard(textToCopy, buttonElement) { if (!navigator.clipboard) { fallbackCopyToClipboard(textToCopy, buttonElement); return; } navigator.clipboard.writeText(textToCopy).then(() => { const originalText = buttonElement.textContent; buttonElement.textContent = 'Скопировано!'; buttonElement.disabled = true; setTimeout(() => { if (buttonElement) { buttonElement.textContent = originalText; buttonElement.disabled = false; } }, 2000); }).catch(err => { console.error('Clipboard API copy error:', err); fallbackCopyToClipboard(textToCopy, buttonElement); }); }
+        function fallbackCopyToClipboard(text, buttonElement) { const textArea = document.createElement("textarea"); textArea.value = text; textArea.style.position = 'fixed'; textArea.style.top = '-9999px'; textArea.style.left = '-9999px'; document.body.appendChild(textArea); textArea.focus(); textArea.select(); let success = false; try { success = document.execCommand('copy'); } catch (err) { success = false; } document.body.removeChild(textArea); if (success && buttonElement) { const originalText = buttonElement.textContent; buttonElement.textContent = 'Скопировано!'; buttonElement.disabled = true; setTimeout(() => { if (buttonElement) { buttonElement.textContent = originalText; buttonElement.disabled = false; } }, 2000); } else { alert('Не удалось скопировать.'); } }
+
+        // --- JS для пагинации (без изменений) ---
+        const tableBodyForPagination = document.getElementById('usersTableBody');
+        const paginationContainer = document.getElementById('paginationContainer');
+        const paginationControls = document.getElementById('paginationControls');
+        const paginationInfo = document.getElementById('paginationInfo');
+        const itemsPerPageSelect = document.getElementById('itemsPerPageSelect');
+        const allRows = tableBodyForPagination ? Array.from(tableBodyForPagination.querySelectorAll('tr')) : [];
+        let currentPage = 1; let itemsPerPage = parseInt(itemsPerPageSelect.value);
+        function displayPage(page) { if (!tableBodyForPagination) return; currentPage = page; const start = (page - 1) * itemsPerPage; const end = start + itemsPerPage; allRows.forEach((row, index) => { row.classList.add('hidden-row'); if (index >= start && index < end) { row.classList.remove('hidden-row'); } }); renderPaginationControls(); updatePaginationInfo(); }
+        function renderPaginationControls() { const currentRowsInDOM = tableBodyForPagination ? tableBodyForPagination.querySelectorAll('tr:not(.hidden-row)') : []; const totalVisibleRows = currentRowsInDOM.length; /* NB: We actually need total rows available for filtering, not just visible on current page */ const totalRowsOverall = allRows.length; if (!paginationControls || totalRowsOverall === 0) { if(paginationContainer) paginationContainer.style.display = 'none'; return; } if(paginationContainer) paginationContainer.style.display = 'flex'; paginationControls.innerHTML = ''; const pageCount = Math.ceil(totalRowsOverall / itemsPerPage); if (pageCount <= 1) { paginationControls.innerHTML = ''; return; } const prevButton = document.createElement('button'); prevButton.textContent = '‹'; prevButton.disabled = currentPage === 1; prevButton.addEventListener('click', () => { if (currentPage > 1) displayPage(currentPage - 1); }); paginationControls.appendChild(prevButton); for (let i = 1; i <= pageCount; i++) { const pageButton = document.createElement('button'); pageButton.textContent = i; if (i === currentPage) { pageButton.classList.add('active'); pageButton.disabled = true; } pageButton.addEventListener('click', () => displayPage(i)); paginationControls.appendChild(pageButton); } const nextButton = document.createElement('button'); nextButton.textContent = '›'; nextButton.disabled = currentPage === pageCount; nextButton.addEventListener('click', () => { if (currentPage < pageCount) displayPage(currentPage + 1); }); paginationControls.appendChild(nextButton); }
+        function updatePaginationInfo() { const currentRowsInDOM = tableBodyForPagination ? tableBodyForPagination.querySelectorAll('tr:not(.hidden-row)') : []; const totalRowsOverall = allRows.length; if (!paginationInfo || totalRowsOverall === 0) { paginationInfo.textContent = ''; return; } const pageCount = Math.ceil(totalRowsOverall / itemsPerPage); paginationInfo.textContent = `Стр. ${currentPage} из ${pageCount} (Всего: ${totalRowsOverall})`; }
+        function updatePaginationAfterDelete() { const currentLiveRows = tableBodyForPagination ? Array.from(tableBodyForPagination.querySelectorAll('tr')) : []; // Получаем актуальные строки из DOM
+             // Обновляем исходный массив `allRows` для дальнейшей работы пагинации
+             allRows.length = 0; // Очищаем старый массив
+             allRows.push(...currentLiveRows); // Заполняем актуальными строками
+             const totalRowsNow = allRows.length; const newPageCount = Math.ceil(totalRowsNow / itemsPerPage); if (currentPage > newPageCount && newPageCount > 0) { currentPage = newPageCount; } else if (newPageCount === 0) { currentPage = 1; } displayPage(currentPage); } // Перерисовываем
+        itemsPerPageSelect.addEventListener('change', (event) => { itemsPerPage = parseInt(event.target.value); displayPage(1); });
+        // Инициализация пагинации при загрузке
+        if (allRows.length > 0) { displayPage(1); } else { if (paginationContainer) paginationContainer.style.display = 'none'; }
+
+
+        // --- JS для Сброса пароля (с индикатором) ---
+        const tempPasswordButtons = document.querySelectorAll('.set-temp-password-btn');
+        tempPasswordButtons.forEach(button => {
+            const buttonText = button.querySelector('.button-text'); // Находим текст
+            const originalText = buttonText.textContent; // Сохраняем
+
+            button.addEventListener('click', async (event) => {
+                const username = button.dataset.username;
+                if (!confirm(`Сбросить пароль для ${username}?`)) return;
+
+                button.disabled = true;
+                buttonText.textContent = 'Сброс...'; // Меняем текст
+                const jsMsgContainer = document.getElementById('js-messages-user-list'); if(jsMsgContainer) jsMsgContainer.innerHTML = '';
+
+                try {
+                    const response = await fetch(`/users/set-temporary-password/${username}`, { method: 'POST', headers: { 'Accept': 'application/json' } });
+                    const result = await response.json();
+                    if (response.ok && result.success) {
+                         const messageHtml = ` Временный пароль для <strong>${username}</strong>: <strong id="temp-pass-${username}" style="background-color: #eee; padding: 2px 5px; border-radius: 3px; margin: 0 5px; user-select: all;">${result.tempPassword}</strong> <button type="button" class="btn btn-secondary btn-small" style="margin-left: 10px;" onclick="copyToClipboard('${result.tempPassword.replace(/'/g, "\\'")}', this)"> Копировать </button> <br><small>Сообщите пароль пользователю. Он должен будет сменить его при входе.</small>`;
+                         showUserListJsMessage('success', messageHtml, true); // Разрешаем HTML
+                    } else { throw new Error(result.error || 'Не удалось сбросить пароль.'); }
+                } catch (error) {
+                     console.error(`Error setting temp password for ${username}:`, error);
+                     showUserListJsMessage('error', error.message || 'Ошибка.');
+                } finally {
+                    button.disabled = false;
+                    buttonText.textContent = originalText; // Возвращаем текст
+                }
+            });
+        });
+
+        // --- JS для AJAX удаления (с индикатором) ---
+        const userTableBodyForDelete = document.querySelector('#usersTableBody');
+         if (userTableBodyForDelete) {
+             userTableBodyForDelete.addEventListener('submit', async (event) => {
+                 if (event.target && event.target.classList.contains('delete-user-form')) {
+                     event.preventDefault();
+                     const form = event.target;
+                     const username = form.dataset.username;
+                     const deleteButton = form.querySelector('button[type="submit"]');
+                     const buttonText = deleteButton.querySelector('.button-text'); // Находим текст
+                     const originalText = buttonText.textContent; // Сохраняем
+
+                     if (!username || !deleteButton || !buttonText) { /*...*/ return; }
+                     if (!confirm(`Удалить ${username}?`)) return;
+
+                     deleteButton.disabled = true;
+                     buttonText.textContent = 'Удал...'; // Меняем текст
+                     document.getElementById('js-messages-user-list').innerHTML = '';
+
+                     try {
+                         const response = await fetch(form.action, { method: 'POST', headers: { 'Accept': 'application/json' } });
+                         const result = await response.json();
+                         if (response.ok && result.success) {
+                             const row = document.getElementById(`user-row-${username}`);
+                             if (row) { row.remove(); }
+                             showUserListJsMessage('success', result.message || `Пользователь ${username} удален.`);
+                             updatePaginationAfterDelete(); // Обновляем пагинацию после удаления строки
+                         } else { throw new Error(result.error || 'Не удалось удалить.'); }
+                     } catch (error) {
+                         console.error(`Error deleting ${username}:`, error);
+                         showUserListJsMessage('error', error.message || 'Ошибка удаления.');
+                         // Разблокируем кнопку и возвращаем текст при ошибке
+                         deleteButton.disabled = false;
+                         buttonText.textContent = originalText;
+                     }
+                      // При успехе строка удалена, кнопку восстанавливать не нужно
+                 }
+             });
+         }
+     </script>
+
+</body>
+</html>

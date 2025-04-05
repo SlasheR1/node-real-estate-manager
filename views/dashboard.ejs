@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <main class="container dashboard-container">
+        <h1>Привет, <%= currentUser.fullName || currentUser.username %>!</h1>
+        <p class="dashboard-subtitle">Обзор вашей активности:</p>
+
+        <%- include('partials/messages') %>
+        <% if (locals.dashboardData && dashboardData.error) { %>
+            <div class="flash-message flash-error"><%= dashboardData.error %></div>
+        <% } %>
+
+        <div class="dashboard-grid">
+
+            <%# === Виджеты для Арендатора (Tenant) === %>
+            <% if (currentUser.role === 'Tenant' && locals.dashboardData && !dashboardData.error) { %>
+                <div class="dashboard-widget widget-tenant animate-slide-up">
+                    <div class="widget-icon"><i class="fas fa-wallet"></i></div>
+                    <div class="widget-content">
+                        <h3 class="widget-title">Текущий баланс</h3>
+                        <p class="widget-value"><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(dashboardData.balance ?? 0) %></p>
+                        <a href="/profile/balance-history" class="widget-link">История операций →</a>
+                    </div>
+                </div>
+                <div class="dashboard-widget widget-tenant animate-slide-up" style="animation-delay: 0.1s;">
+                    <div class="widget-icon"><i class="fas fa-calendar-check"></i></div>
+                    <div class="widget-content">
+                        <h3 class="widget-title">Активные бронирования</h3>
+                        <p class="widget-value"><%= dashboardData.activeBookingsCount ?? 0 %></p>
+                        <a href="/bookings" class="widget-link">Все бронирования →</a>
+                    </div>
+                </div>
+                 <% if (dashboardData.recentActiveBookings && dashboardData.recentActiveBookings.length > 0) { %>
+                    <div class="dashboard-widget widget-full-width widget-list animate-slide-up" style="animation-delay: 0.2s;">
+                         <h3 class="widget-title"><i class="fas fa-history"></i> Недавние активные брони</h3>
+                         <ul class="widget-recent-list">
+                             <% dashboardData.recentActiveBookings.forEach(booking => { %>
+                                 <li> <a href="/properties/<%= booking.PropertyId %>" class="recent-item-title"><%= booking.PropertyTitle %></a> <span class="recent-item-details"> <i class="far fa-calendar-alt"></i> <%= booking.StartDateFormatted %> - <%= booking.EndDateFormatted %> </span> <span class="recent-item-status status-active">Активна</span> </li>
+                             <% }) %>
+                         </ul>
+                    </div>
+                 <% } %>
+            <% } %>
+
+            <%# === Виджеты для Владельца/Персонала (Owner/Staff) === %>
+            <% if ((currentUser.role === 'Owner' || currentUser.role === 'Staff') && locals.dashboardData && !dashboardData.error) { %>
+                <%# Виджет Баланса Компании %>
+                <div class="dashboard-widget widget-owner animate-slide-up">
+                    <div class="widget-icon"><i class="fas fa-wallet"></i></div>
+                    <div class="widget-content">
+                        <h3 class="widget-title">Баланс Компании</h3>
+                        <p class="widget-value"><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(dashboardData.companyBalance ?? 0) %></p>
+                        <p class="widget-description"><%= dashboardData.companyName || 'Название не указано' %></p>
+                        <!-- <a href="/company/balance-history?id=<%= currentUser.companyId %>" class="widget-link">История →</a> -->
+                    </div>
+                </div>
+                 <%# Виджет Мои Объекты %>
+                 <div class="dashboard-widget widget-owner animate-slide-up" style="animation-delay: 0.05s;">
+                    <div class="widget-icon"><i class="fas fa-home"></i></div>
+                    <div class="widget-content">
+                        <h3 class="widget-title">Мои объекты</h3>
+                        <p class="widget-value"><%= dashboardData.totalProperties ?? 0 %></p>
+                        <p class="widget-description"><%= dashboardData.availableProperties ?? 0 %> доступно</p>
+                        <a href="/properties" class="widget-link">Управлять объектами →</a>
+                    </div>
+                </div>
+                 <%# Виджет Аренды %>
+                 <div class="dashboard-widget widget-owner animate-slide-up" style="animation-delay: 0.1s;">
+                    <div class="widget-icon"><i class="fas fa-key"></i></div>
+                    <div class="widget-content">
+                        <h3 class="widget-title">Активные аренды</h3>
+                        <p class="widget-value"><%= dashboardData.activeRentalsCount ?? 0 %></p>
+                        <p class="widget-description">Всего <%= dashboardData.totalRentalsCount ?? 0 %> бронирований</p>
+                        <a href="/rentals" class="widget-link">Управлять арендами →</a>
+                    </div>
+                </div>
+
+                 <%# Список недавних бронирований %>
+                 <% if (dashboardData.recentBookings && dashboardData.recentBookings.length > 0) { %>
+                     <div class="dashboard-widget widget-full-width widget-list animate-slide-up" style="animation-delay: 0.15s;">
+                          <h3 class="widget-title"><i class="fas fa-history"></i> Недавние бронирования</h3>
+                          <ul class="widget-recent-list">
+                              <% dashboardData.recentBookings.forEach(booking => { %>
+                                <% let statusClass = 'status-other'; if (booking.Status === 'Активна') statusClass = 'status-active'; else if (booking.Status === 'Отменена' || booking.Status === 'Аннулирована') statusClass = 'status-cancelled'; %>
+                                <li> <span class="recent-item-details"> <i class="far fa-user"></i> <%= booking.TenantName %> </span> <span class="recent-item-title" title="<%= booking.PropertyTitle %>"> → <%= booking.PropertyTitle.substring(0, 30) %><% if(booking.PropertyTitle.length > 30) { %>...<% } %></span> <span class="recent-item-details"> <i class="far fa-calendar-alt"></i> <%= booking.StartDateFormatted %> </span> <span class="recent-item-status <%= statusClass %>"><%= booking.Status %></span> </li>
+                             <% }) %>
+                          </ul>
+                          <a href="/rentals" class="widget-link" style="margin-top: 10px; display: block; text-align: right;">Все аренды →</a>
+                     </div>
+                 <% } %>
+            <% } %>
+
+            <%# === Виджеты для Администратора (Admin) === %>
+            <% if (currentUser.role === 'Admin' && locals.dashboardData && !dashboardData.error) { %>
+                 <div class="dashboard-widget widget-admin animate-slide-up">
+                    <div class="widget-icon"><i class="fas fa-users"></i></div>
+                    <div class="widget-content">
+                        <h3 class="widget-title">Пользователи</h3>
+                        <p class="widget-value"><%= dashboardData.totalUsers ?? 0 %></p>
+                        <a href="/users" class="widget-link">Управление →</a>
+                    </div>
+                </div>
+                 <div class="dashboard-widget widget-admin animate-slide-up" style="animation-delay: 0.05s;">
+                    <div class="widget-icon"><i class="fas fa-city"></i></div>
+                    <div class="widget-content">
+                        <h3 class="widget-title">Объекты</h3>
+                        <p class="widget-value"><%= dashboardData.totalProperties ?? 0 %></p>
+                        <a href="/properties" class="widget-link">Все объекты →</a>
+                    </div>
+                </div>
+                 <div class="dashboard-widget widget-admin animate-slide-up" style="animation-delay: 0.1s;">
+                    <div class="widget-icon"><i class="fas fa-file-signature"></i></div>
+                    <div class="widget-content">
+                         <h3 class="widget-title">Бронирования</h3>
+                        <p class="widget-value"><%= dashboardData.totalBookings ?? 0 %></p>
+                        <p class="widget-description"><%= dashboardData.activeBookings ?? 0 %> активно</p>
+                        <a href="/rentals" class="widget-link">Управление →</a>
+                    </div>
+                </div>
+                <%# Здесь БЫЛ проблемный комментарий - УДАЛЕН %>
+            <% } %>
+
+        </div> <!-- /.dashboard-grid -->
+
+    </main>
+
+    <%- include('partials/footer') %>
+</body>
+</html>

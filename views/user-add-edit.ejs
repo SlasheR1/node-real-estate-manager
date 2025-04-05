@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/forms.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* Общие стили и стили форм из forms.css */
+
+        /* Стили аватара */
+        .current-image img { max-width: 100px; max-height: 100px; border-radius: 50%; border: 1px solid #eee; margin-top: 5px; display: block; object-fit: cover;}
+        .current-image p { font-size: 0.9em; color: #6c757d; margin-bottom: 5px;}
+        .avatar-admin-section { display: flex; align-items: flex-start; gap: 15px; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; }
+        .avatar-admin-section .current-image { margin-top: 0; }
+        .avatar-admin-section .reset-button-container { margin-top: 28px; /* Примерное выравнивание кнопки */ }
+
+        /* Стили для Select компании */
+        .company-select-group { display: none; grid-column: 1 / -1; margin-top: -10px; padding-left: 5px; padding-right: 5px; }
+        #userForm[data-role="Staff"] .company-select-group { display: block; }
+        .company-select-group select { width: 100%; padding: 10px 12px; border: 1px solid #ced4da; border-radius: 5px; font-size: 0.95rem; line-height: 1.5; background-color: #fff; font-family: inherit; }
+        .company-select-group select:focus { outline: none; border-color: #80bdff; box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); }
+
+        /* Стили для группы баланса */
+        .balance-group.hidden { display: none; } /* Скрытие группы баланса */
+        .balance-group { grid-column: 1 / -1; /* Растягиваем на всю ширину, когда видно */ }
+
+        /* Стили для JS сообщений */
+        #js-messages-user-form .flash-message { /* ... стили как раньше ... */ }
+
+        /* Спиннер */
+        .button-spinner { margin-left: 8px; display: none; }
+        button:disabled .button-spinner { display: inline-block; }
+        button .button-text { vertical-align: middle; }
+
+        /* Общие */
+        .btn:disabled, form button:disabled { opacity: 0.65; cursor: not-allowed; }
+        .hidden { display: none !important; }
+        hr { border: none; border-top: 1px solid #eee; margin: 20px 0;}
+
+    </style>
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <main class="container form-container">
+        <h1><%= title %></h1>
+        <%- include('partials/messages') %>
+        <% if (locals.localError) { %> <div class="flash-message flash-error"><%= localError %></div> <% } %>
+        <div id="js-messages-user-form"></div>
+
+        <% const isEditMode = locals.isEditMode || false; %>
+        <% const userToEdit = locals.userToEdit || {}; %>
+        <% const currentRole = userToEdit.Role || ''; %>
+
+        <form id="userForm"
+              action="<%= isEditMode ? '/users/edit/' + userToEdit.Username : '/users/add' %>"
+              method="POST"
+              data-is-edit-mode="<%= isEditMode %>"
+              data-role="<%= currentRole %>">
+            <div class="form-grid">
+
+                <div class="form-group form-group-full"> <label for="username">Логин</label> <input type="text" id="username" name="username" value="<%= userToEdit.Username || '' %>" <%= isEditMode ? 'readonly' : 'required' %>> <% if (isEditMode) { %><small>Логин изменить нельзя.</small><% } %> </div>
+                <div class="form-group form-group-full"> <label for="fullName">ФИО</label> <input type="text" id="fullName" name="fullName" value="<%= userToEdit.FullName || '' %>" required> </div>
+                <div class="form-group"> <label for="email">Email</label> <input type="email" id="email" name="email" value="<%= userToEdit.Email || '' %>"> </div>
+                <div class="form-group"> <label for="phone">Телефон</label> <input type="tel" id="phone" name="phone" value="<%= userToEdit.Phone || '' %>" required> </div>
+
+                <%# Выбор Роли %>
+                <div class="form-group">
+                    <label for="role">Роль</label>
+                    <select id="role" name="role" required>
+                         <option value="" disabled <%= !userToEdit.Role ? 'selected' : '' %>>-- Выберите роль --</option>
+                         <% if (locals.availableRoles && Array.isArray(availableRoles)) { %>
+                             <% availableRoles.forEach(role => { %>
+                                 <%# Админ не может сменить роль Owner на другую (из-за привязки компании к username) %>
+                                 <% let disabledOption = false; %>
+                                 <% if (isEditMode && userToEdit.Role === 'Owner' && role !== 'Owner') disabledOption = true; %>
+                                 <option value="<%= role %>" <%= (userToEdit.Role === role) ? 'selected' : '' %> <%= disabledOption ? 'disabled' : '' %>>
+                                     <%= role %> <% if(disabledOption){ %> (нельзя изменить)<% } %>
+                                 </option>
+                             <% }) %>
+                         <% } %>
+                    </select>
+                </div>
+
+                 <%# Селект Компании (для Staff) %>
+                 <div class="form-group company-select-group">
+                     <label for="companyId">Компания (для Staff) *</label> <%# Добавили звездочку %>
+                     <select id="companyId" name="companyId">
+                          <option value="">-- Выберите компанию --</option>
+                          <% if (locals.companiesList && Array.isArray(companiesList) && companiesList.length > 0) { %>
+                              <% companiesList.forEach(company => { %>
+                                  <option value="<%= company.id %>" <%= (userToEdit.companyId === company.id) ? 'selected' : '' %>>
+                                      <%= company.name %> <% if(company.id){ %>(ID: <%= company.id %>)<% } %>
+                                  </option>
+                              <% }) %>
+                          <% } else { %>
+                               <option value="" disabled>Компании не найдены</option>
+                          <% } %>
+                     </select>
+                     <small>Обязательно для роли 'Staff'.</small>
+                 </div>
+
+                 <%# Поле Баланса (только для Tenant) %>
+                 <div class="form-group balance-group <%= (userToEdit.Role !== 'Tenant') ? 'hidden' : '' %>">
+                    <label for="balance">Баланс (только для Tenant)</label>
+                    <%# Если роль не Tenant, поле не будет отправлено т.к. скрыто, на сервере ставим null %>
+                    <input type="number" id="balance" name="balance" value="<%= userToEdit.Balance ?? 0 %>" step="0.01">
+                 </div>
+
+                 <%# Поле Пароля %>
+                 <div class="form-group form-group-full">
+                     <hr>
+                     <label for="password">Пароль</label>
+                     <input type="password" id="password" name="<%= isEditMode ? 'newPassword' : 'password' %>" placeholder="<%= isEditMode ? 'Оставьте пустым, чтобы не менять' : 'Минимум 6 символов' %>" <%= isEditMode ? '' : 'required' %> minlength="6">
+                     <% if (isEditMode) { %> <small>Введите новый пароль, чтобы изменить его.</small> <% } %>
+                 </div>
+
+                 <%# Отображение и сброс аватара (только при редактировании) %>
+                 <% if (isEditMode) { %>
+                    <div class="form-group form-group-full avatar-admin-section">
+                        <div id="currentAvatarContainer" class="<%= userToEdit.ImageData ? '' : 'hidden' %>">
+                            <div class="current-image"> <p>Текущий аватар:</p> <img id="currentAvatarImg" src="<%= userToEdit.DisplayAvatarSrc %>" alt="Текущий аватар"> </div>
+                            <div class="reset-button-container"> <button type="button" id="resetAvatarBtn" class="btn btn-warning btn-small" data-username="<%= userToEdit.Username %>" onclick="resetAvatarClick(this)"> <span class="button-text">Сбросить</span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button> </div>
+                        </div>
+                        <div id="noAvatarMessage" class="<%= userToEdit.ImageData ? 'hidden' : '' %>"> <p>Аватар не установлен.</p> </div>
+                    </div>
+                 <% } %>
+
+            </div> <!-- Конец form-grid -->
+
+            <div class="form-actions">
+                 <button type="submit" id="saveUserBtn" class="btn btn-primary"> <span class="button-text"><%= isEditMode ? 'Сохранить' : 'Добавить' %></span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button>
+                 <a href="/users" class="btn btn-secondary">Отмена</a>
+            </div>
+        </form>
+    </main>
+
+    <%- include('partials/footer') %>
+
+    <script>
+        // --- JS для управления видимостью полей и спиннерами ---
+        const roleSelect = document.getElementById('role');
+        const companySelectGroup = document.querySelector('.company-select-group');
+        const balanceGroup = document.querySelector('.balance-group');
+        const userForm = document.getElementById('userForm');
+        const companySelect = document.getElementById('companyId'); // Получаем селект компании
+        const balanceInput = document.getElementById('balance'); // Получаем инпут баланса
+
+        function toggleFieldsBasedOnRole() {
+            const selectedRole = roleSelect.value;
+            userForm.dataset.role = selectedRole; // Обновляем data-атрибут для CSS
+
+            // Выбор компании
+            const showCompanySelect = (selectedRole === 'Staff');
+            if (companySelectGroup) { companySelectGroup.style.display = showCompanySelect ? 'block' : 'none'; }
+            if (companySelect) { companySelect.required = showCompanySelect; } // Обязательно для Staff
+
+            // Поле баланса
+            const showBalance = (selectedRole === 'Tenant');
+            if (balanceGroup) { balanceGroup.classList.toggle('hidden', !showBalance); }
+            if (balanceInput) {
+                balanceInput.required = showBalance; // Обязательно для Tenant
+                balanceInput.disabled = !showBalance; // Блокируем для других ролей
+                if(!showBalance) balanceInput.value = ''; // Очищаем, если не Tenant
+            }
+        }
+
+        if (roleSelect) { roleSelect.addEventListener('change', toggleFieldsBasedOnRole); }
+        document.addEventListener('DOMContentLoaded', toggleFieldsBasedOnRole);
+
+         // --- Блокировка кнопок отправки ---
+         function setupFormSpinner(formId, buttonId, loadingText = 'Сохранение...') {
+             const form = document.getElementById(formId);
+             const button = document.getElementById(buttonId);
+             if (form && button) {
+                 const buttonTextSpan = button.querySelector('.button-text');
+                 const originalText = buttonTextSpan.textContent;
+                 form.addEventListener('submit', (event) => {
+                      if (event.submitter && event.submitter.type === 'button') { return; }
+                      if (form.checkValidity()) { button.disabled = true; buttonTextSpan.textContent = loadingText; }
+                      else { button.disabled = false; buttonTextSpan.textContent = originalText; }
+                 });
+             }
+         }
+         const isUserEditModeJS = userForm ? (userForm.dataset.isEditMode === 'true') : false;
+         setupFormSpinner('userForm', 'saveUserBtn', isUserEditModeJS ? 'Сохранение...' : 'Добавление...');
+
+         // --- AJAX для сброса аватара (с индикатором) ---
+         function showUserFormJsMessage(type, text) {
+             const container = document.getElementById('js-messages-user-form'); if (!container) return;
+             const messageDiv = document.createElement('div'); messageDiv.className = `flash-message flash-${type}`; messageDiv.innerHTML = `${text} <button type="button" class="close-flash" onclick="this.parentElement.remove()">×</button>`; container.innerHTML = ''; container.appendChild(messageDiv); setTimeout(() => { if(messageDiv) messageDiv.remove(); }, 5000);
+         }
+         async function resetAvatarClick(buttonElement) {
+             const username = buttonElement.dataset.username;
+             if (!username || !confirm(`Сбросить аватар для ${username}?`)) return;
+             const buttonTextSpan = buttonElement.querySelector('.button-text');
+             const originalText = buttonTextSpan.textContent;
+             buttonElement.disabled = true; buttonTextSpan.textContent = 'Сброс...';
+             document.getElementById('js-messages-user-form').innerHTML = '';
+             try {
+                 const response = await fetch(`/users/reset-avatar/${username}`, { method: 'POST', headers: { 'Accept': 'application/json' } });
+                 const result = await response.json();
+                 if (response.ok && result.success) {
+                     showUserFormJsMessage(result.avatarRemoved ? 'success' : 'info', result.message);
+                     if (result.avatarRemoved) {
+                         document.getElementById('currentAvatarContainer')?.classList.add('hidden');
+                         document.getElementById('noAvatarMessage')?.classList.remove('hidden');
+                         const img = document.getElementById('currentAvatarImg'); if(img) img.src = '/images/placeholder-avatar.png';
+                     } else { // Если аватар уже был удален
+                         buttonElement.disabled = false; buttonTextSpan.textContent = originalText;
+                     }
+                 } else { throw new Error(result.error || 'Не удалось сбросить.'); }
+             } catch (error) {
+                 console.error(`Error resetting avatar for ${username}:`, error);
+                 showUserFormJsMessage('error', error.message || 'Ошибка.');
+                 buttonElement.disabled = false; buttonTextSpan.textContent = originalText;
+             }
+         }
+    </script>
+
+</body>
+</html>

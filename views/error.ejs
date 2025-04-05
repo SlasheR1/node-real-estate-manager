@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title || 'Ошибка' %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .error-container { text-align: center; margin-top: 50px; }
+        .error-container h1 { color: #e74c3c; margin-bottom: 15px; }
+        .error-container p { font-size: 1.1rem; color: #555; }
+        .error-container a { margin-top: 20px; display: inline-block; }
+    </style>
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <main class="container error-container">
+        <h1><%= title || 'Произошла ошибка' %></h1>
+        <p><%= message %></p>
+        <br>
+        <a href="/" class="btn">На главную</a>
+         <% if (currentUser) { %>
+             <a href="/properties" class="btn">К списку объектов</a>
+         <% } else { %>
+             <a href="/login" class="btn">Войти</a>
+         <% } %>
+    </main>
+
+    <%- include('partials/footer') %>
+</body>
+</html>

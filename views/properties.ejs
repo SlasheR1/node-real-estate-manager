@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <!-- === Font Awesome ПЕРВЫМ === -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- ===================================== -->
+    <link rel="stylesheet" href="/css/properties.css">
+
+    <!-- === Yandex Maps API === -->
+    <script src="https://api-maps.yandex.ru/2.1/?apikey=b6b8d3fa-9cbf-4d16-aed5-fb890a397c59&lang=ru_RU" type="text/javascript"></script>
+    <!-- ======================== -->
+
+    <style>
+        /* --- Стили Фильтров --- */
+        .filters-container { background-color: #ffffff; padding: 20px 25px; border-radius: 8px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08); border: 1px solid #e2e8f0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px 22px; align-items: end; }
+        .filter-group { display: flex; flex-direction: column; }
+        .filter-group label, .filter-group-amenities legend { font-size: 0.8rem; color: #475569; margin-bottom: 6px; font-weight: 500; display: block; }
+        .filter-group input[type="text"], .filter-group input[type="number"], .filter-group select { padding: 9px 12px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 0.9rem; line-height: 1.5; box-sizing: border-box; width: 100%; background-color: #f8fafc; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+        .filter-group input::placeholder { color: #94a3b8; opacity: 1; }
+        .filter-group input[type="number"]::-webkit-outer-spin-button, .filter-group input[type="number"]::-webkit-inner-spin-button { margin: 0; -webkit-appearance: none; }
+        .filter-group input[type="number"] { -moz-appearance: textfield; }
+        .filter-group input:focus, .filter-group select:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15); background-color: #fff; }
+        .filter-group-amenities { grid-column: 1 / -1; border: none; padding: 0; margin: 5px 0 0 0; }
+        .filter-group-amenities legend { margin-bottom: 8px; }
+        .amenities-checkboxes { display: flex; flex-wrap: wrap; gap: 10px 20px; }
+        .amenity-checkbox-item { display: flex; align-items: center; gap: 6px; }
+        .amenity-checkbox-item label { font-size: 0.875rem; color: #334155; margin-bottom: 0; font-weight: normal; cursor: pointer;}
+        .amenity-checkbox-item input[type="checkbox"] { margin: 0; cursor: pointer; width: 16px; height: 16px; accent-color: #4f46e5; }
+        .filter-buttons { grid-column: 1 / -1; text-align: right; margin-top: 5px; }
+        #resetFilters { padding: 8px 16px; font-size: 0.85rem; }
+        @media (max-width: 992px) { .filters-container { grid-template-columns: repeat(2, 1fr); } .filter-buttons { grid-column: span 2; } }
+        @media (max-width: 576px) { .filters-container { grid-template-columns: 1fr; padding: 15px; } .filter-buttons { grid-column: 1 / -1; text-align: center; margin-top: 15px; } .filter-buttons button { width: 100%; } .amenity-checkbox-item label { font-size: 0.9rem; } }
+
+        /* --- Стили Карточек --- */
+        .properties-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; margin-top: 20px; }
+        .property-card { background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06); overflow: hidden; display: flex; flex-direction: column; transition: transform 0.3s ease, box-shadow 0.3s ease; border: 1px solid #e5e7eb; }
+        .property-card:hover { transform: translateY(-8px); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); }
+        .card-image-container { position: relative; width: 100%; height: 220px; overflow: hidden; background-color: #f3f4f6; }
+        .card-image-container img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
+        .property-card:hover .card-image-container img { transform: scale(1.08); }
+        .card-content { padding: 18px 20px 20px 20px; flex-grow: 1; display: flex; flex-direction: column; border-top: 1px solid #f3f4f6; }
+        .card-content h2 { font-size: 1.3rem; font-weight: 600; margin-top: 0; margin-bottom: 6px; color: #1f2937; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .card-content .address { font-size: 0.875rem; color: #6b7280; margin-bottom: 12px; display: flex; align-items: center; gap: 5px; }
+        .card-content .address i { color: #9ca3af; font-size: 0.9em; }
+        .property-meta { display: flex; gap: 15px; font-size: 0.875rem; color: #4b5563; margin-bottom: 16px; flex-wrap: wrap; }
+        .property-meta span { display: inline-flex; align-items: center; gap: 5px; }
+        /* Добавил CompanyName в .property-meta span */
+        .property-meta span.company-name { color: #3498db; font-weight: 500;}
+        .property-meta i, .amenity-item i, .card-content .address i { font-family: "Font Awesome 6 Free", "FontAwesome", sans-serif !important; font-weight: 900; font-style: normal; speak: none; display: inline-block; text-rendering: auto; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        .card-rating { display: flex; align-items: center; gap: 6px; margin-bottom: 14px; color: #6b7280; font-size: 0.85rem; }
+        .card-rating .stars { color: #facc15; font-size: 0.95rem; line-height: 1; }
+        .card-rating .stars .star-empty { color: #e5e7eb; }
+        .card-rating .rating-value { font-weight: 600; font-size: 0.9rem; color: #374151; }
+        .card-rating .no-reviews { font-style: italic; color: #6b7280; }
+        .card-price { margin-top: auto; margin-bottom: 16px; padding-top: 12px; border-top: 1px dashed #e5e7eb; }
+        .card-price p { margin: 4px 0; font-weight: 500; display: flex; justify-content: space-between; align-items: center; }
+        .card-price .price-label { color: #4b5563; font-size: 0.9rem;}
+        .card-price .price-value { font-weight: 600; }
+        .price-monthly .price-value { color: #10b981; font-size: 1.1rem; }
+        .price-daily .price-value { color: #3b82f6; font-size: 0.95rem; }
+        .card-amenities { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; padding-top: 10px; border-top: 1px dashed #e5e7eb; }
+        .amenity-item { display: inline-flex; align-items: center; gap: 6px; background-color: #f3f4f6; color: #4b5563; padding: 4px 8px; border-radius: 5px; font-size: 0.8rem; cursor: default; position: relative; }
+        .amenity-item i { color: #6b7280; font-size: 0.9em; width: 14px; text-align: center; }
+        .amenity-item::after { content: attr(data-tooltip); position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.75); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.2s ease, visibility 0.2s ease; z-index: 10; pointer-events: none; }
+        .amenity-item:hover::after { opacity: 1; visibility: visible; }
+        .card-actions { margin-top: auto; padding-top: 15px; border-top: 1px solid #e5e7eb; display: flex; flex-wrap: wrap; gap: 10px; }
+        .card-actions .btn { padding: 8px 14px; font-size: 0.85rem; border-radius: 6px; text-decoration: none; text-align: center; cursor: pointer; border: 1px solid transparent; font-weight: 500; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.15s ease; flex-grow: 1; }
+        .card-actions .btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .card-actions .btn-details { background-color: #3b82f6; color: white; border-color: #3b82f6;} .card-actions .btn-details:hover { background-color: #2563eb; border-color: #2563eb; }
+        .card-actions .btn-book { background-color: #10b981; color: white; border-color: #10b981; } .card-actions .btn-book:hover { background-color: #059669; border-color: #059669;}
+        .card-actions .btn-edit { background-color: #f59e0b; color: white; border-color: #f59e0b; } .card-actions .btn-edit:hover { background-color: #d97706; border-color: #d97706;}
+        .card-actions .btn-delete { background-color: #ef4444; color: white; border-color: #ef4444;} .card-actions .btn-delete:hover:not(:disabled) { background-color: #dc2626; border-color: #dc2626;}
+        .card-actions form { flex-grow: 1; display: flex; }
+        .card-actions form button { width: 100%; }
+        /* Стили для спиннера внутри кнопки */
+        .button-spinner { margin-left: 5px; display: none; font-size: 0.9em; }
+        button:disabled .button-spinner { display: inline-block; }
+        button .button-text { vertical-align: middle; }
+
+        /* --- Стили скрытия, пагинации, сообщений --- */
+        .property-card.hidden-filter, .property-card.hidden-card { display: none !important; }
+        .btn:disabled, button:disabled { opacity: 0.65; cursor: not-allowed; }
+        #noPropertiesMessage { display: none; text-align: center; margin-top: 20px; }
+        #noFilterResultsMessage { display: none; text-align: center; margin-top: 20px; }
+        .pagination-container { margin-top: 30px; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .pagination-controls { display: flex; align-items: center; gap: 5px; }
+        .pagination-controls button { padding: 6px 12px; font-size: 0.9rem; border: 1px solid #dee2e6; background-color: #fff; color: #0d6efd; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; min-width: 36px; text-align: center; }
+        .pagination-controls button:hover:not(:disabled) { background-color: #e9ecef; border-color: #adb5bd; }
+        .pagination-controls button:disabled { color: #6c757d; background-color: #f8f9fa; cursor: not-allowed; opacity: 0.7; }
+        .pagination-controls button.active { background-color: #0d6efd; border-color: #0d6efd; color: #fff; cursor: default; font-weight: 500; }
+        .pagination-info { font-size: 0.9rem; color: #6c757d; display: flex; align-items: center; gap: 8px; }
+        .pagination-info select { padding: 5px 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 0.9rem; vertical-align: middle; background-color: #f8fafc; }
+        .pagination-info label { margin-bottom: 0; font-size: 0.9rem; color: #6c757d; }
+        .pagination-container.hidden { display: none; }
+
+        /* === СТИЛИ ДЛЯ КАРТЫ === */
+        .map-view-container { margin-bottom: 30px; position: relative; }
+        #propertiesMap { width: 100%; height: 500px; border-radius: 8px; border: 1px solid #e2e8f0; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center; color: #6b7280; font-style: italic; }
+        /* Стили для балуна */
+        .custom-balloon-content { font-family: 'Inter', sans-serif; padding: 5px; min-width: 200px; }
+        .custom-balloon-content h3 { font-size: 1rem; font-weight: 600; margin: 0 0 5px 0; color: #1f2937; }
+        .custom-balloon-content p { font-size: 0.85rem; margin: 3px 0; color: #4b5563; }
+        .custom-balloon-content .price { font-weight: 500; color: #10b981; }
+        .custom-balloon-content a { display: inline-block; margin-top: 8px; font-size: 0.8rem; color: #3b82f6; text-decoration: none; font-weight: 500; }
+        .custom-balloon-content a:hover { text-decoration: underline; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <main class="container">
+        <h1><%= title %></h1>
+         <%- include('partials/messages') %>
+
+        <!-- Фильтры (HTML без изменений) -->
+        <div class="filters-container">
+             <div class="filter-group"> <label for="filterSearch">Поиск</label> <input type="text" id="filterSearch" placeholder="Название, адрес, компания..."> </div> <%# Расширен плейсхолдер %>
+             <div class="filter-group"> <label for="filterType">Тип</label> <select id="filterType"> <option value="">Все типы</option> <option value="Квартира">Квартира</option> <option value="Дом">Дом</option> <option value="Коммерческая недвижимость">Коммерческая</option> </select> </div>
+             <div class="filter-group"> <label for="filterAvailable">Статус</label> <select id="filterAvailable"> <option value="">Все</option> <option value="available">Доступные</option> <option value="unavailable">Недоступные</option> </select> </div>
+             <div class="filter-group"> <label for="filterPriceMin">Цена от</label> <input type="number" id="filterPriceMin" placeholder="Мин. (₽/мес)" min="0" step="100"> </div>
+             <div class="filter-group"> <label for="filterPriceMax">Цена до</label> <input type="number" id="filterPriceMax" placeholder="Макс. (₽/мес)" min="0" step="100"> </div>
+             <div class="filter-group"> <label for="filterAreaMin">Площадь от</label> <input type="number" id="filterAreaMin" placeholder="Мин. (м²)" min="0" step="1"> </div>
+             <div class="filter-group"> <label for="filterAreaMax">Площадь до</label> <input type="number" id="filterAreaMax" placeholder="Макс. (м²)" min="0" step="1"> </div>
+             <fieldset class="filter-group filter-group-amenities"> <legend>Удобства</legend> <div class="amenities-checkboxes"> <div class="amenity-checkbox-item"> <input type="checkbox" id="filterAmenityParking" name="amenity" value="HasParking"><label for="filterAmenityParking">Парковка</label> </div> <div class="amenity-checkbox-item"> <input type="checkbox" id="filterAmenityWifi" name="amenity" value="HasWifi"><label for="filterAmenityWifi">Wi-Fi</label> </div> <div class="amenity-checkbox-item"> <input type="checkbox" id="filterAmenityBalcony" name="amenity" value="HasBalcony"><label for="filterAmenityBalcony">Балкон</label> </div> <div class="amenity-checkbox-item"> <input type="checkbox" id="filterAmenityFurnished" name="amenity" value="IsFurnished"><label for="filterAmenityFurnished">Мебель</label> </div> <div class="amenity-checkbox-item"> <input type="checkbox" id="filterAmenityAirConditioned" name="amenity" value="IsAirConditioned"><label for="filterAmenityAirConditioned">Кондиционер</label> </div> </div> </fieldset>
+            <div class="filter-buttons"> <button type="button" class="btn btn-secondary btn-small" id="resetFilters">Сбросить все</button> </div>
+        </div>
+
+        <!-- === Карта === -->
+        <div class="map-view-container">
+            <div id="propertiesMap">Загрузка карты...</div>
+        </div>
+        <!-- ============ -->
+
+        <!-- Сетка Объектов -->
+        <div class="properties-grid" id="propertiesGrid">
+            <% let propertiesExist = typeof properties !== 'undefined' && Array.isArray(properties) && properties.length > 0; %>
+            <% if (propertiesExist) { %>
+                <% properties.forEach((property, index) => { %>
+                    <% if (property && property.Id) { %>
+                        <div class="property-card"
+                             data-id="<%= property.Id %>"
+                             data-title="<%= property.Title ? property.Title.toLowerCase() : '' %>"
+                             data-address="<%= property.Address ? property.Address.toLowerCase() : '' %>"
+                             data-company="<%= property.CompanyName ? property.CompanyName.toLowerCase() : '' %>" <%# Добавлен data-атрибут для компании %>
+                             data-type="<%= property.Type || '' %>"
+                             data-available="<%= property.IsAvailable ? 'available' : 'unavailable' %>"
+                             data-price="<%= typeof property.Price === 'number' ? property.Price : '' %>"
+                             data-area="<%= typeof property.Area === 'number' ? property.Area : '' %>"
+                             data-has-parking="<%= property.HasParking ? 'true' : 'false' %>"
+                             data-has-wifi="<%= property.HasWifi ? 'true' : 'false' %>"
+                             data-has-balcony="<%= property.HasBalcony ? 'true' : 'false' %>"
+                             data-is-furnished="<%= property.IsFurnished ? 'true' : 'false' %>"
+                             data-is-air-conditioned="<%= property.IsAirConditioned ? 'true' : 'false' %>"
+                        >
+                            <div class="card-image-container"> <img src="<%= property.DisplayImageSrc || '/images/placeholder.png' %>" loading="lazy" alt="<%= property.Title || 'Объект' %>"> </div>
+                            <div class="card-content">
+                                <h2><%= property.Title || 'Без названия' %></h2>
+                                <p class="address"> <i class="fas fa-map-marker-alt"></i> <span><%= property.Address || 'Адрес не указан' %></span> </p>
+                                <div class="property-meta">
+                                    <span><i class="fas fa-building"></i><%= property.Type || 'Не указ.' %></span>
+                                    <span><i class="fas fa-ruler-combined"></i><%= property.Area || '?' %> м²</span>
+                                    <%# Отображение компании %>
+                                    <span class="company-name"><i class="fas fa-briefcase"></i><%= property.CompanyName || property.OwnerUsername || 'Частное лицо' %></span>
+                                    <% if (property.Bedrooms && property.Bedrooms > 0) { %> <span><i class="fas fa-bed"></i><%= property.Bedrooms %> сп.</span> <% } %>
+                                    <% if (property.Bathrooms && property.Bathrooms > 0) { %> <span><i class="fas fa-bath"></i><%= property.Bathrooms %> ван.</span> <% } %>
+                                </div>
+                                <div class="card-rating"> <% if (property.NumberOfReviews && property.NumberOfReviews > 0 && typeof property.Rating === 'number') { const ratingValue = property.Rating; const reviewCount = property.NumberOfReviews; const reviewWord = reviewCount === 1 ? 'отзыв' : (reviewCount % 10 > 1 && reviewCount % 10 < 5 && (reviewCount < 10 || reviewCount > 20) ? 'отзыва' : 'отзывов'); %> <span class="stars"> <% for(let i = 1; i <= 5; i++) { %> <i class="<%= i <= ratingValue ? 'fas' : 'far' %> fa-star"></i> <% } %> </span> <span class="rating-value"><%= ratingValue.toFixed(1) %></span> <span class="review-count">(<%= reviewCount %> <%= reviewWord %>)</span> <% } else { %> <span class="no-reviews">Нет отзывов</span> <% } %> </div>
+                                <div class="card-price"> <p> <span class="price-label">Месяц:</span> <span class="price-value price-monthly"><% if (property.Price && !isNaN(parseFloat(property.Price))) { %><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(parseFloat(property.Price)) %><% } else { %>-<% } %></span> </p> <p> <span class="price-label">Сутки: ≈</span> <span class="price-value price-daily"><% if (property.CalculatedDailyPrice && property.CalculatedDailyPrice > 0) { %><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(property.CalculatedDailyPrice) %><% } else { %>-<% } %></span> </p> </div>
+                                <div class="card-amenities"> <% if (property.HasParking) { %><div class="amenity-item" data-tooltip="Парковка"><i class="fas fa-parking"></i></div><% } %> <% if (property.HasWifi) { %><div class="amenity-item" data-tooltip="Wi-Fi"><i class="fas fa-wifi"></i></div><% } %> <% if (property.HasBalcony) { %><div class="amenity-item" data-tooltip="Балкон"><i class="fas fa-door-open"></i></div><% } %> <% if (property.IsFurnished) { %><div class="amenity-item" data-tooltip="Мебель"><i class="fas fa-couch"></i></div><% } %> <% if (property.IsAirConditioned) { %><div class="amenity-item" data-tooltip="Кондиционер"><i class="fas fa-snowflake"></i></div><% } %> </div>
+                                <div class="card-actions">
+                                    <a href="/properties/<%= property.Id %>" class="btn btn-details">Подробнее</a>
+                                    <% if (currentUser && currentUser.role === 'Tenant' && property.IsAvailable) { %> <a href="/bookings/new?propertyId=<%= property.Id %>" class="btn btn-book">Бронь</a> <% } %>
+                                    <% if (currentUser && (currentUser.role === 'Admin' || (currentUser.role === 'Owner' && currentUser.username === property.OwnerUsername))) { %>
+                                        <a href="/properties/edit/<%= property.Id %>" class="btn btn-edit">Правка</a>
+                                        <form class="delete-property-form" action="/properties/delete/<%= property.Id %>" method="POST" style="display: flex; flex-grow: 1;">
+                                            <button type="button" class="btn btn-delete" onclick="confirmAndDeleteProperty(this, '<%= property.Id %>', '<%= JSON.stringify(property.Title || property.Id) %>')">
+                                                 <span class="button-text">Удалить</span>
+                                                 <i class="fas fa-spinner fa-spin button-spinner"></i>
+                                            </button>
+                                         </form>
+                                    <% } %>
+                                </div>
+                            </div>
+                        </div>
+                    <% } %>
+                <% }) %>
+            <% } %>
+        </div>
+
+        <p id="noPropertiesMessage" class="<%= propertiesExist ? 'hidden' : '' %>">Объекты недвижимости не найдены.</p>
+        <% if (!propertiesExist && currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Owner')) { %> <p style="text-align: center;"><a href="/properties/add" class="btn btn-primary">Добавить первый объект</a></p> <% } %>
+        <p id="noFilterResultsMessage" style="display: none;">Объекты, соответствующие вашему запросу, не найдены.</p>
+
+        <div class="pagination-container hidden" id="paginationContainer">
+            <div class="pagination-info"> <span id="paginationInfo"></span> <select id="itemsPerPageSelect"> <option value="6">6</option> <option value="9">9</option> <option value="12" selected>12</option> <option value="24">24</option> </select> <label for="itemsPerPageSelect" style="margin-left: 5px;">на странице</label> </div>
+            <div class="pagination-controls" id="paginationControls"></div>
+        </div>
+    </main>
+
+     <%- include('partials/footer') %>
+
+     <script id="propertiesData" type="application/json">
+        <%- JSON.stringify((properties || []).map(p => ({
+            id: p.Id,
+            title: p.Title,
+            address: p.Address,
+            price: p.Price,
+            company: p.CompanyName || p.OwnerUsername // <<< Передаем компанию для балуна
+        }))) %>
+     </script>
+
+     <script>
+        // --- JavaScript Фильтрации и Пагинации ---
+        const searchInput = document.getElementById('filterSearch');
+        const typeSelect = document.getElementById('filterType');
+        const availableSelect = document.getElementById('filterAvailable');
+        const priceMinInput = document.getElementById('filterPriceMin');
+        const priceMaxInput = document.getElementById('filterPriceMax');
+        const areaMinInput = document.getElementById('filterAreaMin');
+        const areaMaxInput = document.getElementById('filterAreaMax');
+        const amenityCheckboxes = document.querySelectorAll('.amenities-checkboxes input[name="amenity"]');
+        const resetButton = document.getElementById('resetFilters');
+        const propertiesGridElement = document.getElementById('propertiesGrid');
+        const noFilterResultsMessage = document.getElementById('noFilterResultsMessage');
+        const noPropertiesMessage = document.getElementById('noPropertiesMessage');
+        const paginationContainer = document.getElementById('paginationContainer');
+        const paginationControls = document.getElementById('paginationControls');
+        const paginationInfo = document.getElementById('paginationInfo');
+        const itemsPerPageSelect = document.getElementById('itemsPerPageSelect');
+        const allCards = propertiesGridElement ? Array.from(propertiesGridElement.querySelectorAll('.property-card')) : [];
+        let currentPage = 1;
+        let itemsPerPage = parseInt(itemsPerPageSelect.value);
+
+        // Глобальные переменные для карты
+        let propertiesMapInstance = null;
+        let objectManager = null;
+        let propertiesDataForMap = [];
+
+        function applyFilters() {
+             const searchTerm = searchInput.value.toLowerCase().trim();
+             const selectedType = typeSelect.value;
+             const selectedAvailability = availableSelect.value;
+             const minPrice = priceMinInput.value ? parseFloat(priceMinInput.value) : null;
+             const maxPrice = priceMaxInput.value ? parseFloat(priceMaxInput.value) : null;
+             const minArea = areaMinInput.value ? parseFloat(areaMinInput.value) : null;
+             const maxArea = areaMaxInput.value ? parseFloat(areaMaxInput.value) : null;
+             const requiredAmenities = Array.from(amenityCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
+             let visibleCardIds = [];
+
+             allCards.forEach(card => {
+                 const title = card.dataset.title || '';
+                 const address = card.dataset.address || '';
+                 const company = card.dataset.company || ''; // << Получаем компанию
+                 const type = card.dataset.type || '';
+                 const availability = card.dataset.available || '';
+                 const cardPrice = card.dataset.price ? parseFloat(card.dataset.price) : null;
+                 const cardArea = card.dataset.area ? parseFloat(card.dataset.area) : null;
+
+                 // Обновляем проверку поиска, включая компанию
+                 const searchMatch = searchTerm === '' || title.includes(searchTerm) || address.includes(searchTerm) || company.includes(searchTerm);
+                 const typeMatch = selectedType === '' || type === selectedType;
+                 const availabilityMatch = selectedAvailability === '' || availability === selectedAvailability;
+                 const priceMatch = (cardPrice !== null) && (minPrice === null || isNaN(minPrice) || cardPrice >= minPrice) && (maxPrice === null || isNaN(maxPrice) || cardPrice <= maxPrice);
+                 const areaMatch = (cardArea !== null) && (minArea === null || isNaN(minArea) || cardArea >= minArea) && (maxArea === null || isNaN(maxArea) || cardArea <= maxArea);
+                 let amenitiesMatch = true;
+                 if (requiredAmenities.length > 0) { amenitiesMatch = requiredAmenities.every(amenityKey => card.getAttribute(`data-${amenityKey.replace(/([A-Z])/g, '-$1').toLowerCase()}`) === 'true'); }
+
+                 if (searchMatch && typeMatch && availabilityMatch && priceMatch && areaMatch && amenitiesMatch) {
+                     card.classList.remove('hidden-filter'); visibleCardIds.push(card.dataset.id);
+                 } else { card.classList.add('hidden-filter'); }
+             });
+
+             const visibleCount = visibleCardIds.length;
+             if (noFilterResultsMessage) { noFilterResultsMessage.style.display = (visibleCount === 0 && allCards.length > 0) ? 'block' : 'none'; }
+             if (noPropertiesMessage) { const isAnyFilterActive = searchTerm || selectedType || selectedAvailability || minPrice || maxPrice || minArea || maxArea || requiredAmenities.length > 0; noPropertiesMessage.style.display = (visibleCount === 0 && allCards.length === 0 && !isAnyFilterActive) ? 'block' : 'none'; }
+
+             updateMapMarkers(visibleCardIds);
+             displayPage(1);
+         }
+
+        function displayPage(page) {
+             if (!propertiesGridElement || !paginationContainer) return; currentPage = page;
+             const visibleCards = allCards.filter(card => !card.classList.contains('hidden-filter'));
+             const totalVisibleCards = visibleCards.length;
+             if (totalVisibleCards > itemsPerPage) { paginationContainer.classList.remove('hidden'); } else { paginationContainer.classList.add('hidden'); }
+             if (totalVisibleCards === 0) { renderPaginationControls(totalVisibleCards); updatePaginationInfo(totalVisibleCards); allCards.forEach(card => card.classList.add('hidden-card')); return; }
+             const start = (page - 1) * itemsPerPage; const end = start + itemsPerPage;
+             allCards.forEach(card => card.classList.add('hidden-card'));
+             visibleCards.slice(start, end).forEach(card => { card.classList.remove('hidden-card'); });
+             renderPaginationControls(totalVisibleCards); updatePaginationInfo(totalVisibleCards);
+         }
+
+        function renderPaginationControls(totalItems) {
+             if (!paginationControls) return; paginationControls.innerHTML = ''; if (totalItems === 0) return;
+             const pageCount = Math.ceil(totalItems / itemsPerPage); if (pageCount <= 1) return;
+             const prevButton = document.createElement('button'); prevButton.innerHTML = '‹'; prevButton.disabled = currentPage === 1; prevButton.addEventListener('click', () => { if (currentPage > 1) displayPage(currentPage - 1); }); paginationControls.appendChild(prevButton);
+             const maxButtons = 5; let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2)); let endPage = Math.min(pageCount, startPage + maxButtons - 1); if (endPage - startPage + 1 < maxButtons) { startPage = Math.max(1, endPage - maxButtons + 1); }
+             if (startPage > 1) { const firstButton = document.createElement('button'); firstButton.textContent = 1; firstButton.addEventListener('click', () => displayPage(1)); paginationControls.appendChild(firstButton); if (startPage > 2) { const dots = document.createElement('span'); dots.textContent = '...'; dots.style.padding = '0 5px'; paginationControls.appendChild(dots); } }
+             for (let i = startPage; i <= endPage; i++) { const pageButton = document.createElement('button'); pageButton.textContent = i; if (i === currentPage) { pageButton.classList.add('active'); pageButton.disabled = true; } pageButton.addEventListener('click', () => displayPage(i)); paginationControls.appendChild(pageButton); }
+             if (endPage < pageCount) { if (endPage < pageCount - 1) { const dots = document.createElement('span'); dots.textContent = '...'; dots.style.padding = '0 5px'; paginationControls.appendChild(dots); } const lastButton = document.createElement('button'); lastButton.textContent = pageCount; lastButton.addEventListener('click', () => displayPage(pageCount)); paginationControls.appendChild(lastButton); }
+             const nextButton = document.createElement('button'); nextButton.innerHTML = '›'; nextButton.disabled = currentPage === pageCount; nextButton.addEventListener('click', () => { if (currentPage < pageCount) displayPage(currentPage + 1); }); paginationControls.appendChild(nextButton);
+         }
+
+        function updatePaginationInfo(totalItems) {
+             if (!paginationInfo) return; if (totalItems === 0) { paginationInfo.textContent = ''; return; }
+             const pageCount = Math.ceil(totalItems / itemsPerPage); const startItem = Math.min((currentPage - 1) * itemsPerPage + 1, totalItems); const endItem = Math.min(startItem + itemsPerPage - 1, totalItems);
+             paginationInfo.textContent = `Объекты ${startItem}-${endItem} из ${totalItems}`;
+         }
+
+        function confirmAndDeleteProperty(buttonElement, propertyId, propertyTitleJSON) {
+             try {
+                 const propertyTitle = JSON.parse(propertyTitleJSON);
+                 if (confirm(`Удалить объект '${propertyTitle}'?`)) {
+                     const form = buttonElement.closest('.delete-property-form');
+                     if (form) {
+                         const buttonText = buttonElement.querySelector('.button-text');
+                         const originalText = buttonText.textContent;
+                         buttonElement.disabled = true;
+                         buttonText.textContent = 'Удал...';
+                         form.submit();
+                     }
+                 }
+             } catch (e) { console.error("Error parsing title:", e); if (confirm(`Удалить объект ID ${propertyId}?`)){ const form = buttonElement.closest('form'); if(form) form.submit(); } }
+         }
+
+        // --- Логика для КАРТЫ ---
+        function initPropertiesMap() {
+            console.log("Initializing properties map...");
+            const mapContainer = document.getElementById('propertiesMap');
+            if (!mapContainer) { console.error("Map container #propertiesMap not found."); return; }
+            mapContainer.textContent = '';
+            propertiesMapInstance = new ymaps.Map(mapContainer, { center: [55.75, 37.62], zoom: 9, controls: ['zoomControl', 'fullscreenControl', 'searchControl', 'typeSelector'] });
+            objectManager = new ymaps.ObjectManager({ clusterize: true, gridSize: 64, clusterDisableClickZoom: true });
+            propertiesMapInstance.geoObjects.add(objectManager);
+            let objectsToAdd = [];
+            let geocodePromises = propertiesDataForMap.map((property) => {
+                if (!property.address) { return Promise.resolve(); }
+                return ymaps.geocode(property.address, { results: 1 })
+                    .then(res => {
+                        const geoObject = res.geoObjects.get(0);
+                        if (geoObject) {
+                            const coords = geoObject.geometry.getCoordinates();
+                            const priceFormatted = property.price ? new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(property.price) : 'Цена не указ.';
+                            objectsToAdd.push({
+                                type: 'Feature', id: property.id, geometry: { type: 'Point', coordinates: coords },
+                                properties: {
+                                     balloonContentBody: `<div class="custom-balloon-content"><h3>${property.title||''}</h3><p>${property.address||''}</p><p><strong>Компания:</strong> ${property.company || 'Не указана'}</p><p class="price">${priceFormatted} / мес.</p><a href="/properties/${property.id}" target="_blank">Подробнее</a></div>`, // Добавлена компания
+                                     hintContent: `${property.title||'Объект'}<br>${property.company || ''}<br>${priceFormatted}` // Добавлена компания
+                                 },
+                                options: { preset: 'islands#blueDotIcon' }
+                            });
+                        } else { console.warn(`Geocode failed: ${property.address}`); }
+                    }).catch(err => console.error(`Geocode error for ${property.address}:`, err));
+            });
+
+            Promise.all(geocodePromises).then(() => {
+                console.log(`Adding ${objectsToAdd.length} objects to ObjectManager.`);
+                objectManager.add(objectsToAdd);
+                if (objectsToAdd.length > 0) {
+                    setTimeout(() => { try { const bounds = objectManager.getBounds(); if (bounds) { propertiesMapInstance.setBounds(bounds, { checkZoomRange: true, duration: 300 }); console.log("Map bounds set."); } else { console.warn("Could not get bounds from object manager."); } } catch(e) { console.error("Error setting bounds:", e); } }, 500);
+                } else if (propertiesDataForMap.length > 0) { mapContainer.textContent = 'Не удалось определить координаты.'; }
+                else { mapContainer.textContent = 'Нет объектов для карты.'; }
+                applyFilters();
+            });
+        }
+
+        function updateMapMarkers(visibleIds) {
+            if (!objectManager) return;
+            console.log(`Updating map markers. Visible IDs: ${visibleIds.length}`);
+            objectManager.setFilter(object => visibleIds.includes(String(object.id)));
+        }
+
+        // --- Инициализация при загрузке ---
+        document.addEventListener('DOMContentLoaded', () => {
+            try { const jsonData = document.getElementById('propertiesData')?.textContent; if (jsonData) { propertiesDataForMap = JSON.parse(jsonData || '[]'); } } catch (e) { console.error("Error parsing properties data:", e); }
+            if (typeof ymaps !== 'undefined') { ymaps.ready(initPropertiesMap); }
+            else { console.error("Yandex Maps API not loaded yet."); const mapContainer = document.getElementById('propertiesMap'); if (mapContainer) mapContainer.textContent = 'Ошибка: API Яндекс.Карт не загружен.'; }
+            if (allCards.length > 0) { applyFilters(); }
+            else { if (paginationContainer) paginationContainer.classList.add('hidden'); if (noPropertiesMessage) noPropertiesMessage.style.display = 'block'; }
+            // Слушатели событий
+            if (searchInput) searchInput.addEventListener('input', applyFilters);
+            if (typeSelect) typeSelect.addEventListener('change', applyFilters);
+            if (availableSelect) availableSelect.addEventListener('change', applyFilters);
+            if (priceMinInput) priceMinInput.addEventListener('input', applyFilters);
+            if (priceMaxInput) priceMaxInput.addEventListener('input', applyFilters);
+            if (areaMinInput) areaMinInput.addEventListener('input', applyFilters);
+            if (areaMaxInput) areaMaxInput.addEventListener('input', applyFilters);
+            amenityCheckboxes.forEach(checkbox => checkbox.addEventListener('change', applyFilters));
+            if (resetButton) { resetButton.addEventListener('click', () => { if (searchInput) searchInput.value = ''; if (typeSelect) typeSelect.value = ''; if (availableSelect) availableSelect.value = ''; if (priceMinInput) priceMinInput.value = ''; if (priceMaxInput) priceMaxInput.value = ''; if (areaMinInput) areaMinInput.value = ''; if (areaMaxInput) areaMaxInput.value = ''; amenityCheckboxes.forEach(checkbox => checkbox.checked = false); applyFilters(); }); }
+            if (itemsPerPageSelect) itemsPerPageSelect.addEventListener('change', (event) => { itemsPerPage = parseInt(event.target.value); displayPage(1); });
+        });
+
+     </script>
+
+</body>
+</html>

@@ -1,0 +1,242 @@
+/* public/css/forms.css */
+
+.form-container {
+    max-width: 800px; /* Форма может быть шире, чем форма входа */
+    background-color: #fff;
+    padding: 30px 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07);
+    margin: 30px auto; /* Отступы сверху/снизу */
+}
+
+.form-container h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #343a40;
+    font-weight: 600;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Две колонки */
+    gap: 20px 30px; /* Отступы между строками и колонками */
+    margin-bottom: 30px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column; /* Лейбл над полем */
+}
+
+/* Поля, занимающие всю ширину сетки */
+.form-group-full {
+    grid-column: 1 / -1; /* Растягиваем на все колонки */
+}
+
+.form-group label {
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #495057;
+    font-size: 0.9rem;
+}
+.form-group label:after { /* Звездочка для обязательных полей */
+    content: ' *';
+    color: #dc3545;
+}
+/* Убираем звездочку у необязательных */
+ label[for="Description"]:after,
+ label[for="propertyImage"]:after,
+ label[for="Bedrooms"]:after,
+ label[for="Bathrooms"]:after,
+ .amenities-fieldset legend:after {
+    content: '';
+ }
+
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="email"],
+.form-group input[type="tel"],
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    background-color: #fff;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    font-family: inherit; /* Наследуем шрифт */
+}
+
+.form-group select {
+    height: calc(1.5em + 0.75rem + 10px); /* Подгоняем высоту select */
+}
+
+.form-group textarea {
+    resize: vertical; /* Разрешаем менять высоту textarea */
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Стили для чекбоксов удобств */
+.amenities-fieldset {
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    padding: 15px;
+    margin-top: 5px; /* Небольшой отступ */
+}
+ .amenities-fieldset legend {
+    font-weight: 500;
+    color: #495057;
+    font-size: 0.9rem;
+    padding: 0 10px;
+    margin-left: 5px; /* Небольшой отступ от края */
+ }
+ .checkbox-group {
+     display: flex;
+     align-items: center;
+     margin-bottom: 10px;
+ }
+  .checkbox-group:last-child {
+     margin-bottom: 0;
+  }
+  .checkbox-group input[type="checkbox"] {
+     margin-right: 10px;
+     width: 18px;
+     height: 18px;
+     cursor: pointer;
+  }
+  .checkbox-group label {
+     margin-bottom: 0; /* Убираем стандартный отступ у лейбла чекбокса */
+     font-weight: normal;
+     cursor: pointer;
+  }
+
+ /* Стили для загрузки файла */
+ .form-group input[type="file"] {
+     padding: 8px; /* Меньший padding для input file */
+ }
+  .form-group input[type="file"]::file-selector-button {
+      padding: 6px 12px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      background-color: #e9ecef;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      margin-right: 10px;
+  }
+   .form-group input[type="file"]::file-selector-button:hover {
+      background-color: #dee2e6;
+   }
+ .current-image {
+     margin-top: 10px;
+     font-size: 0.85rem;
+     color: #6c757d;
+ }
+  .current-image img {
+     margin-top: 5px;
+     max-width: 150px;
+     max-height: 150px;
+     border-radius: 4px;
+     border: 1px solid #eee;
+  }
+
+
+/* Кнопки формы */
+.form-actions {
+    grid-column: 1 / -1; /* Занимают всю ширину */
+    display: flex;
+    justify-content: flex-end; /* Кнопки справа */
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+/* Используем общие стили .btn, добавляем специфичные */
+.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: white;
+}
+.btn-primary:hover { background-color: #0b5ed7; border-color: #0a58ca; }
+
+.btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: white;
+}
+.btn-secondary:hover { background-color: #5c636a; border-color: #565e64; }
+
+/* Стили для чекбокса доступности */
+.availability-checkbox {
+    background-color: #f8f9fa; /* Слегка выделить фон */
+    padding: 15px;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    margin-top: 15px; /* Отступ */
+}
+ .availability-checkbox .checkbox-group {
+    margin-bottom: 0; /* Убрать нижний отступ у единственного чекбокса */
+ }
+  .availability-checkbox .checkbox-group label {
+     font-weight: 500; /* Сделать лейбл жирнее */
+     color: #212529;
+  }
+
+  /* Стили для доп. изображений в форме редактирования */
+.current-additional-images {
+    margin-top: 15px;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+.current-additional-images p { margin-bottom: 10px; font-weight: 500;}
+.image-previews {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.img-preview-item {
+    position: relative;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    padding: 5px;
+    background-color: #f8f9fa;
+}
+.img-preview-item img {
+    display: block;
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 3px;
+}
+
+
+/* Стили для кнопки удаления (пока закомментировано)
+.btn-delete-img {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background-color: rgba(220, 53, 69, 0.8);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    line-height: 18px;
+    text-align: center;
+    font-weight: bold;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+.btn-delete-img:hover { opacity: 1; }
+*/

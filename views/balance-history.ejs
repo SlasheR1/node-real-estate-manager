@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/tables.css"> <!-- Используем стили таблиц -->
+    <style>
+        .amount-positive { color: #198754; /* Зеленый */ font-weight: 500;}
+        .amount-negative { color: #dc3545; /* Красный */ font-weight: 500;}
+        .description-cell { white-space: normal !important; /* Разрешить перенос в описании */ max-width: 400px; } /* Ограничить ширину */
+    </style>
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <main class="container">
+        <h1><%= title %></h1>
+
+        <% if (typeof history !== 'undefined' && history.length > 0) { %>
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Дата и время</th>
+                            <th>Тип операции</th>
+                            <th style="text-align: right;">Сумма</th>
+                            <th class="description-cell">Описание</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% history.forEach(op => { %>
+                            <tr>
+                                <td><%= op.DateFormatted %></td>
+                                <td><%= op.OperationType || '-' %></td>
+                                <td style="text-align: right;">
+                                    <%# Добавляем класс в зависимости от знака суммы %>
+                                    <span class="<%= op.Amount >= 0 ? 'amount-positive' : 'amount-negative' %>">
+                                        <%= op.AmountFormatted %>
+                                    </span>
+                                </td>
+                                <td class="description-cell"><%= op.Description || '-' %></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        <% } else { %>
+            <p>История операций с балансом пуста.</p>
+        <% } %>
+
+        <div style="margin-top: 20px;">
+            <a href="/profile" class="btn btn-secondary">Назад в профиль</a>
+        </div>
+
+    </main>
+
+    <%- include('partials/footer') %>
+</body>
+</html>

@@ -1,0 +1,81 @@
+{
+  "name": "node-real-estate-manager",
+  "version": "1.0.1",
+  "description": "Приложение для управления недвижимостью",
+  "main": "main.js",
+  "author": "SlasheR1",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --publish always",
+    "dist:win": "electron-builder --win --publish always",
+    "dist:mac": "electron-builder --mac --publish always",
+    "dist:linux": "electron-builder --linux --publish always"
+  },
+  "dependencies": {
+    "@socket.io/redis-adapter": "^8.3.0",
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.2",
+    "ejs": "^3.1.10",
+    "electron-log": "^5.3.3",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "firebase-admin": "^12.3.0",
+    "multer": "^1.4.5-lts.2",
+    "node-fetch": "^2.7.0",
+    "redis": "^4.7.0",
+    "socket.io": "^4.8.1",
+    "electron-updater": "^6.6.2"
+  },
+  "devDependencies": {
+    "electron": "^31.2.1",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.github.slasher1.noderealestatemanager",
+    "productName": "Real Estate Manager",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "server.js",
+      "package.json",
+      "serviceAccountKey.json",
+      "views/**/*",
+      "public/**/*",
+      "middleware/**/*",
+      "routes/**/*",
+      "services/**/*",
+      "!node_modules/electron-builder${/*}"
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "SlasheR1",
+      "repo": "node-real-estate-manager"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "build/icon.icns",
+      "category": "public.app-category.business"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build/icons",
+      "category": "Utility"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
