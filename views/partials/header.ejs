@@ -15,7 +15,7 @@
                 <% if (currentUser) { %>
                     <%# Для Арендатора %>
                     <% if (currentUser.role === 'Tenant') { %>
-                        <a href="/bookings">Мои бронирования</a> <%# Ты добавил 111, я оставил %>
+                        <a href="/bookings">Мои бронирования111</a> <%# Ты добавил 111, я оставил %>
                     <% } %>
 
                     <%# Управление Арендами (для всех кроме Tenant) %>
@@ -95,20 +95,35 @@
         <%# Кнопка мобильного меню (стилями скрыта/показана) %>
         <button class="mobile-nav-toggle" aria-label="Открыть меню" style="display: none;">☰</button>
     </nav>
-    <!-- ===== БЛОК УВЕДОМЛЕНИЯ ОБ ОБНОВЛЕНИИ ===== -->
-    <div id="updateNotificationBanner" style="display: none; background-color: #888; color: white; padding: 10px 25px; text-align: center; font-size: 0.9rem; position: sticky; top: 65px; /* Сразу под шапкой */ z-index: 999; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: background-color 0.3s ease;">
-        <span id="updateMessage" style="margin-right: 15px; vertical-align: middle;">Сообщение об обновлении</span>
-        <button id="updateRestartButton" style="display: none; margin-left: 15px; padding: 4px 12px; background-color: #fff; color: #3498db; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; vertical-align: middle; transition: background-color 0.2s ease, color 0.2s ease;">Перезапустить и установить</button>
-        <span id="updateDismiss" style="float: right; cursor: pointer; font-weight: bold; margin-left: 15px; line-height: 1.5; font-size: 1.2rem; vertical-align: middle;" title="Скрыть">×</span>
+    <!-- ===== МОДАЛЬНОЕ ОКНО ОБНОВЛЕНИЯ ===== -->
+    <div id="updateModalOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); z-index: 1050; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease;">
+        <div id="updateModalContent" style="background-color: #fff; padding: 30px 40px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15); width: 90%; max-width: 550px; text-align: center; opacity: 0; transform: scale(0.95) translateY(-10px); transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s; border-top: 5px solid #5bc0de;">
+            <h2 id="updateModalTitle" style="margin-top: 0; margin-bottom: 15px; color: #2c3e50; font-size: 1.7rem; font-weight: 600;">Обновление Приложения</h2>
+            <p id="updateModalMessage" style="color: #555; margin-bottom: 25px; line-height: 1.6; font-size: 1.05rem;">Проверяем наличие обновлений...</p>
+
+            <!-- Прогресс бар -->
+            <div id="updateProgressContainer" style="display: none; margin-bottom: 25px; background-color: #e9ecef; border-radius: 5px; overflow: hidden; height: 12px; border: 1px solid #dee2e6;">
+                <div id="updateProgressBar" style="width: 0%; height: 100%; background-color: #5cb85c; background-image: linear-gradient(45deg, rgba(255, 255, 255, .15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, transparent 75%, transparent); background-size: 1rem 1rem; border-radius: 4px; transition: width 0.2s linear; animation: progress-bar-stripes 1s linear infinite;"></div>
+            </div>
+            <style> @keyframes progress-bar-stripes{from{background-position:1rem 0}to{background-position:0 0}} </style>
+
+
+            <!-- Кнопка установки/закрытия -->
+            <div id="updateModalActions">
+                 <button id="updateModalRestartButton" class="btn btn-primary" style="display: none; padding: 12px 30px; font-size: 1rem; margin: 5px; min-width: 150px;">Перезапустить и установить</button>
+                 <button id="updateModalCloseButton" class="btn btn-secondary" style="display: none; padding: 12px 20px; font-size: 1rem; margin: 5px;">Закрыть</button>
+            </div>
+             <small id="updateErrorDetails" style="display: none; color: #dc3545; margin-top: 15px; display: block; font-size: 0.9em; line-height: 1.5; word-wrap: break-word;"></small>
+        </div>
     </div>
-    <!-- ============================================= -->
+    <!-- ===================================== -->
 </header>
 
 <%# --- Подключение и логика Socket.IO клиента И AutoUpdater --- %>
 <% if (currentUser) { %>
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        // Функция для показа красивых JS-уведомлений (оставляем твою)
+        // Функция для показа красивых JS-уведомлений (твоя функция)
         function showJsNotification(type, text, duration = 7000, playSound = true) {
             const container = document.getElementById('js-messages-rentals') || document.getElementById('js-messages-container') || document.getElementById('js-review-messages') || document.getElementById('js-messages-user-list') || document.getElementById('js-messages-user-form') || document.getElementById('js-messages') || document.getElementById('js-company-messages') || document.body.querySelector('main.container') || document.body;
             if (!container) { console.warn("No suitable container found for JS notification."); return; }
@@ -124,20 +139,20 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            // --- Инициализация Socket.IO (Твой существующий код) ---
+            // --- Инициализация Socket.IO ---
             try {
                 console.log('[Socket.IO Client] Initializing...');
                 const socket = io({ reconnectionAttempts: 5, reconnectionDelay: 3000 });
                 let currentUsername = null;
                 try { currentUsername = decodeURIComponent("<%= encodeURIComponent(currentUser.username) %>"); } catch(e) { console.error("Could not get username from EJS:", e); }
 
-                if (!currentUsername) { console.error("[Socket.IO Client] Username missing."); /* Не прерываем, чтобы код апдейтера выполнился */ }
+                if (!currentUsername) { console.error("[Socket.IO Client] Username missing."); }
                 else {
                   socket.on('connect', () => { console.log(`[Socket.IO Client] Connected: ${socket.id}. Registering: ${currentUsername}`); socket.emit('register_user', currentUsername); });
                   socket.on('disconnect', (reason) => { console.warn(`[Socket.IO Client] Disconnected. Reason: ${reason}`); });
                   socket.on('connect_error', (err) => { console.error(`[Socket.IO Client] Connection Error: ${err.message}`); });
 
-                  // --- Обработчики событий Socket.IO (Твои существующие) ---
+                  // --- Обработчики событий Socket.IO ---
                   socket.on('balance_updated', (newBalance) => {
                     const userRoleElement = document.getElementById('headerUserRole');
                     const isTenant = userRoleElement && userRoleElement.textContent === 'Tenant';
@@ -145,9 +160,7 @@
                         console.log(`[Socket.IO Client] Event 'balance_updated' received: ${newBalance}`);
                         const balanceEl = document.getElementById('headerUserBalance');
                         if (balanceEl && typeof newBalance === 'number') {
-                             try {
-                                 balanceEl.textContent = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(newBalance);
-                             } catch (e) { console.error("Error formatting balance:", e); balanceEl.textContent = "ERR"; }
+                             try { balanceEl.textContent = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(newBalance); } catch (e) { console.error("Error formatting balance:", e); balanceEl.textContent = "ERR"; }
                         }
                     } else { console.log("[Socket.IO Client] Ignored 'balance_updated' for non-tenant."); }
                   });
@@ -156,16 +169,12 @@
                      console.log(`[Socket.IO Client] Event 'avatar_updated' received for ${currentUsername}.`);
                      const avatarImg = document.getElementById('headerUserAvatar');
                      if (avatarImg) {
-                         if (avatarImg.src.startsWith('data:')) {
-                             console.log("Avatar is data URI, reload page or implement AJAX update.");
-                             showJsNotification('info', 'Ваш аватар обновлен. Обновите страницу.', 5000, false);
-                         } else { avatarImg.src = avatarImg.src.split('?')[0] + '?t=' + new Date().getTime(); }
+                         if (avatarImg.src.startsWith('data:')) { showJsNotification('info', 'Ваш аватар обновлен. Обновите страницу.', 5000, false); }
+                         else { avatarImg.src = avatarImg.src.split('?')[0] + '?t=' + new Date().getTime(); }
                      }
                      const profileAvatar = document.querySelector('.profile-avatar');
                      if (profileAvatar && profileAvatar.src !== avatarImg?.src) {
-                         if (!profileAvatar.src.startsWith('data:')) {
-                              profileAvatar.src = profileAvatar.src.split('?')[0] + '?t=' + new Date().getTime();
-                         }
+                         if (!profileAvatar.src.startsWith('data:')) { profileAvatar.src = profileAvatar.src.split('?')[0] + '?t=' + new Date().getTime(); }
                      }
                   });
 
@@ -180,78 +189,63 @@
                       if (companyContainer) {
                           if (data?.companyName && (data.role === 'Owner' || data.role === 'Staff')) {
                                if (companyTextSpan) companyTextSpan.textContent = data.companyName;
-                               companyContainer.title = data.companyName;
-                               companyContainer.style.display = 'inline-flex';
+                               companyContainer.title = data.companyName; companyContainer.style.display = 'inline-flex';
                           } else { companyContainer.style.display = 'none'; }
-                      } else if (data?.companyName && (data.role === 'Owner' || data.role === 'Staff')) {
-                           console.warn("Header company element not found.");
-                      }
+                      } else if (data?.companyName && (data.role === 'Owner' || data.role === 'Staff')) { console.warn("Header company element not found."); }
                       const addPropertyLink = document.querySelector('.main-nav-links a[href="/properties/add"]');
-                      if (addPropertyLink) {
-                            const canAdd = data?.role === 'Admin' || (data?.role === 'Owner' && data?.companyProfileCompleted === true);
-                            addPropertyLink.style.display = canAdd ? 'inline' : 'none';
-                      }
+                      if (addPropertyLink) { const canAdd = data?.role === 'Admin' || (data?.role === 'Owner' && data?.companyProfileCompleted === true); addPropertyLink.style.display = canAdd ? 'inline' : 'none'; }
                  });
 
                  socket.on('account_deleted', (data) => {
                      console.warn(`[Socket.IO Client] Event 'account_deleted' received:`, data?.message);
                      if(socket.connected) { socket.disconnect(); }
                      alert(data?.message || 'Ваш аккаунт был удален администратором.');
-                     const logoutForm = document.createElement('form');
-                     logoutForm.method = 'POST'; logoutForm.action = '/logout';
+                     const logoutForm = document.createElement('form'); logoutForm.method = 'POST'; logoutForm.action = '/logout';
                      document.body.appendChild(logoutForm); logoutForm.submit();
                  });
 
+                // Обработчики уведомлений о бронированиях (твои существующие)
                 socket.on('booking_confirmed', (data) => {
-                    console.log("[Socket.IO Client] Event 'booking_confirmed':", data);
-                    showJsNotification('success', `✅ Бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>" <strong>подтверждена</strong>!`, 7000, true);
-                    const row = document.getElementById(`booking-row-${data.bookingId}`);
-                    if (row && window.location.pathname === '/bookings') {
-                        const statusCell = row.querySelector('.status-cell .status-label');
-                        const actionsCell = row.querySelector('.actions-cell');
-                        if (statusCell) { statusCell.textContent = 'Активна'; statusCell.className = 'status-label status-active'; statusCell.title = 'Активна'; }
-                         if (actionsCell) { const form = actionsCell.querySelector('form'); if(form) form.dataset.currentStatus = 'Активна'; }
-                    }
-                });
-
-                socket.on('booking_rejected', (data) => {
-                    console.log("[Socket.IO Client] Event 'booking_rejected':", data);
-                    const reasonText = data.reason ? ` Причина: ${data.reason}` : '';
-                    showJsNotification('warning', `❌ Запрос #${data.bookingId?.substring(0,6)} на "<strong>${data.propertyTitle || '?'}</strong>" <strong>отклонен</strong>.${reasonText}`, 10000, true);
+                     console.log("[Socket.IO Client] Event 'booking_confirmed':", data);
+                     showJsNotification('success', `✅ Бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>" <strong>подтверждена</strong>!`, 7000, true);
                      const row = document.getElementById(`booking-row-${data.bookingId}`);
                      if (row && window.location.pathname === '/bookings') {
-                        const statusCell = row.querySelector('.status-cell');
-                        const actionsCell = row.querySelector('.actions-cell');
-                         if (statusCell) {
-                             statusCell.innerHTML = `<span class="status-label status-rejected" title="Отклонена">Отклонена</span>`;
-                             if(data.reason) { statusCell.innerHTML += ` <i class="fas fa-info-circle" title="${data.reason}" style="margin-left: 5px; color: #d35400; cursor: help;"></i>`; }
-                         }
+                         const statusCell = row.querySelector('.status-cell .status-label');
+                         const actionsCell = row.querySelector('.actions-cell');
+                         if (statusCell) { statusCell.textContent = 'Активна'; statusCell.className = 'status-label status-active'; statusCell.title = 'Активна'; }
+                         if (actionsCell) { const form = actionsCell.querySelector('form'); if(form) form.dataset.currentStatus = 'Активна'; }
+                     }
+                 });
+                socket.on('booking_rejected', (data) => {
+                     console.log("[Socket.IO Client] Event 'booking_rejected':", data);
+                     const reasonText = data.reason ? ` Причина: ${data.reason}` : '';
+                     showJsNotification('warning', `❌ Запрос #${data.bookingId?.substring(0,6)} на "<strong>${data.propertyTitle || '?'}</strong>" <strong>отклонен</strong>.${reasonText}`, 10000, true);
+                     const row = document.getElementById(`booking-row-${data.bookingId}`);
+                     if (row && window.location.pathname === '/bookings') {
+                         const statusCell = row.querySelector('.status-cell');
+                         const actionsCell = row.querySelector('.actions-cell');
+                         if (statusCell) { statusCell.innerHTML = `<span class="status-label status-rejected" title="Отклонена">Отклонена</span>`; if(data.reason) { statusCell.innerHTML += ` <i class="fas fa-info-circle" title="${data.reason}" style="margin-left: 5px; color: #d35400; cursor: help;"></i>`; } }
                          if (actionsCell) { actionsCell.innerHTML = '<span>-</span>'; }
                      }
-                });
-
+                 });
                 socket.on('booking_cancelled_by_owner', (data) => {
-                    console.log("[Socket.IO Client] Event 'booking_cancelled_by_owner':", data);
-                    showJsNotification('error', `❗ Бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>" была <strong>аннулирована</strong> администрацией.`, 10000, true);
-                    const row = document.getElementById(`booking-row-${data.bookingId}`);
-                    if (row && window.location.pathname === '/bookings') {
-                        const statusCell = row.querySelector('.status-cell .status-label');
-                        const actionsCell = row.querySelector('.actions-cell');
+                     console.log("[Socket.IO Client] Event 'booking_cancelled_by_owner':", data);
+                     showJsNotification('error', `❗ Бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>" была <strong>аннулирована</strong> администрацией.`, 10000, true);
+                     const row = document.getElementById(`booking-row-${data.bookingId}`);
+                     if (row && window.location.pathname === '/bookings') {
+                         const statusCell = row.querySelector('.status-cell .status-label');
+                         const actionsCell = row.querySelector('.actions-cell');
                          if (statusCell) { statusCell.textContent = 'Аннулирована'; statusCell.className = 'status-label status-annulled'; statusCell.title = 'Аннулирована'; }
                          if (actionsCell) { actionsCell.innerHTML = '<span>-</span>'; }
-                    }
-                });
-
+                     }
+                 });
                 socket.on('new_booking_pending', (data) => {
-                    console.log("[Socket.IO Client] Event 'new_booking_pending':", data);
-                    if (!window.location.pathname.startsWith('/rentals')) {
-                        showJsNotification('info', `📬 Новый запрос на бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>" от ${data.tenantName}. <a href="/rentals" style='color:inherit; font-weight:bold;'>К арендам</a>`, 15000, true);
-                    }
-                });
-
+                     console.log("[Socket.IO Client] Event 'new_booking_pending':", data);
+                     if (!window.location.pathname.startsWith('/rentals')) { showJsNotification('info', `📬 Новый запрос на бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>" от ${data.tenantName}. <a href="/rentals" style='color:inherit; font-weight:bold;'>К арендам</a>`, 15000, true); }
+                 });
                 socket.on('pending_booking_cancelled', (data) => {
-                     console.log("[Socket.IO Client] Event 'pending_booking_cancelled':", data);
-                     showJsNotification('warning', `❌ Арендатор <strong>${data.tenantName}</strong> отменил запрос #${data.bookingId?.substring(0,6)} на "<strong>${data.propertyTitle || '?'}</strong>".`, 7000, true);
+                      console.log("[Socket.IO Client] Event 'pending_booking_cancelled':", data);
+                      showJsNotification('warning', `❌ Арендатор <strong>${data.tenantName}</strong> отменил запрос #${data.bookingId?.substring(0,6)} на "<strong>${data.propertyTitle || '?'}</strong>".`, 7000, true);
                       const row = document.getElementById(`rental-row-${data.bookingId}`);
                       if (row && window.location.pathname.startsWith('/rentals')) {
                           row.remove();
@@ -261,9 +255,8 @@
                           const noPendingMsg = pendingBody?.closest('.rentals-section')?.querySelector('.no-bookings-message');
                           if(pendingBody && noPendingMsg) { noPendingMsg.style.display = pendingBody.rows.length === 0 ? 'block' : 'none'; }
                       }
-                 });
-
-                 socket.on('active_booking_cancelled', (data) => {
+                  });
+                socket.on('active_booking_cancelled', (data) => {
                      console.log("[Socket.IO Client] Event 'active_booking_cancelled':", data);
                      showJsNotification('error', `🚫 Арендатор <strong>${data.tenantName}</strong> отменил активную бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>".`, 10000, true);
                      const row = document.getElementById(`rental-row-${data.bookingId}`);
@@ -276,123 +269,155 @@
                              actionsCell.innerHTML = '';
                              const isAdmin = document.body.querySelector('#pendingBookingsTableBody')?.closest('table')?.parentElement?.dataset?.isAdmin === 'true';
                              if (isAdmin) {
-                                  actionsCell.innerHTML = `
-                                       <form class="rental-action-form" data-action="delete" data-booking-id="${data.bookingId}" action="/rentals/${data.bookingId}/delete" method="POST">
-                                           <button type="submit" class="btn btn-small btn-delete"> <span class="button-text">Удалить</span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button>
-                                       </form>`;
+                                  actionsCell.innerHTML = `<form class="rental-action-form" data-action="delete" data-booking-id="${data.bookingId}" action="/rentals/${data.bookingId}/delete" method="POST"><button type="submit" class="btn btn-small btn-delete"> <span class="button-text">Удалить</span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button></form>`;
                              } else { actionsCell.innerHTML = '<span>-</span>'; }
                          }
                      }
                  });
                  // --- Конец обработчиков Socket.IO ---
-                }
+                } // Конец else для currentUsername
 
             } catch(e) {
                 console.error("[Socket.IO Client] Error setting up listeners:", e);
             }
 
-            // --- КОД ДЛЯ УПРАВЛЕНИЯ БАННЕРОМ ОБНОВЛЕНИЯ ---
-            const updateBanner = document.getElementById('updateNotificationBanner');
-            const updateMessage = document.getElementById('updateMessage');
-            const restartButton = document.getElementById('updateRestartButton');
-            const dismissButton = document.getElementById('updateDismiss');
-            let listeners = {}; // Для хранения функций отписки
+            // --- КОД ДЛЯ УПРАВЛЕНИЯ МОДАЛЬНЫМ ОКНОМ ОБНОВЛЕНИЯ ---
+            const modalOverlay = document.getElementById('updateModalOverlay');
+            const modalContent = document.getElementById('updateModalContent');
+            const modalTitle = document.getElementById('updateModalTitle');
+            const modalMessage = document.getElementById('updateModalMessage');
+            const progressContainer = document.getElementById('updateProgressContainer');
+            const progressBar = document.getElementById('updateProgressBar');
+            const restartButtonModal = document.getElementById('updateModalRestartButton');
+            const closeButtonModal = document.getElementById('updateModalCloseButton');
+            const errorDetails = document.getElementById('updateErrorDetails');
+            let listeners = {}; // Для хранения функций отписки от событий
 
-            // Проверяем наличие API из preload.js и элементов баннера
-            if (window.electronUpdater && updateBanner && updateMessage && restartButton && dismissButton) {
-                console.log('[Renderer Updater] Setting up electronUpdater listeners.');
+            function setModalStatusClass(statusClass) {
+                if (modalContent) {
+                    modalContent.className = 'visible'; // Сначала сбрасываем все классы статуса, оставляем только visible если есть
+                    modalContent.classList.add(`status-${statusClass}`); // Добавляем новый
+                }
+            }
 
-                // Скрыть баннер по крестику
-                dismissButton.onclick = () => {
-                    updateBanner.style.display = 'none';
-                };
+            function showUpdateModal(statusClass = 'info') {
+                if (modalOverlay && modalContent) {
+                    setModalStatusClass(statusClass);
+                    modalOverlay.style.display = 'flex';
+                    setTimeout(() => {
+                        modalOverlay.classList.add('visible');
+                    }, 10); // Задержка для анимации фона
+                }
+            }
 
-                // Кнопка перезапуска и установки
-                restartButton.onclick = () => {
+            function hideUpdateModal() {
+                 if (modalOverlay && modalContent) {
+                    modalOverlay.classList.remove('visible');
+                    // Прячем оверлей после анимации
+                    setTimeout(() => {
+                        modalOverlay.style.display = 'none';
+                        if(progressBar) progressBar.style.width = '0%';
+                        if(progressContainer) progressContainer.style.display = 'none';
+                        if(restartButtonModal) restartButtonModal.style.display = 'none';
+                        if(closeButtonModal) closeButtonModal.style.display = 'none';
+                        if(errorDetails) errorDetails.style.display = 'none';
+                    }, 300); // Длительность анимации opacity для оверлея
+                }
+            }
+
+            if (window.electronUpdater && modalOverlay && modalContent && modalMessage && progressBar && restartButtonModal && closeButtonModal && errorDetails) {
+                console.log('[Renderer Updater] Setting up modal electronUpdater listeners.');
+
+                // Кнопка "Закрыть" в модалке
+                closeButtonModal.onclick = hideUpdateModal;
+                // Кнопка "Перезапустить и установить"
+                restartButtonModal.onclick = () => {
                     console.log('[Renderer Updater] Sending "install-update" to main process.');
-                    restartButton.textContent = 'Перезапуск...';
-                    restartButton.disabled = true;
+                    restartButtonModal.textContent = 'Перезапуск...';
+                    restartButtonModal.disabled = true;
+                    if(closeButtonModal) closeButtonModal.disabled = true;
                     window.electronUpdater.send('install-update');
                 };
 
                 // Обработка статуса проверки
                 const statusListener = (message) => {
-                    if (!message) { updateBanner.style.display = 'none'; return; }
-                    console.log('[Renderer Updater] Received update-status:', message);
-                    updateMessage.textContent = message;
-                    restartButton.style.display = 'none';
-                    updateBanner.style.backgroundColor = '#5bc0de'; // Инфо цвет
-                    updateBanner.style.display = 'block';
+                    if (!message) { hideUpdateModal(); return; }
+                    console.log('[Renderer Updater] Modal status:', message);
+                    modalMessage.textContent = message;
+                    modalTitle.textContent = 'Проверка обновлений';
+                    if(progressContainer) progressContainer.style.display = 'none';
+                    if(restartButtonModal) restartButtonModal.style.display = 'none';
+                    if(closeButtonModal) { closeButtonModal.style.display = 'block'; closeButtonModal.disabled = false; }
+                    if(errorDetails) errorDetails.style.display = 'none';
+                    showUpdateModal('info');
                 };
-                 listeners['update-status'] = window.electronUpdater.on('update-status', statusListener);
+                listeners['update-status'] = window.electronUpdater.on('update-status', statusListener);
 
                 // Обработка ошибки
                 const errorListener = (message) => {
-                    console.error('[Renderer Updater] Received update-error:', message);
-                    updateMessage.textContent = message;
-                    restartButton.style.display = 'none';
-                    updateBanner.style.backgroundColor = '#d9534f'; // Цвет ошибки
-                    updateBanner.style.display = 'block';
+                    console.error('[Renderer Updater] Modal error:', message);
+                    modalTitle.textContent = 'Ошибка обновления';
+                    modalMessage.textContent = 'Не удалось проверить или загрузить обновление.';
+                    if(errorDetails) { errorDetails.textContent = message; errorDetails.style.display = 'block'; }
+                    if(progressContainer) progressContainer.style.display = 'none';
+                    if(restartButtonModal) restartButtonModal.style.display = 'none';
+                    if(closeButtonModal) { closeButtonModal.style.display = 'block'; closeButtonModal.disabled = false; }
+                    showUpdateModal('error');
                 };
-                 listeners['update-error'] = window.electronUpdater.on('update-error', errorListener);
+                listeners['update-error'] = window.electronUpdater.on('update-error', errorListener);
 
                 // Обновление найдено
                 const availableListener = (info) => {
-                    console.log('[Renderer Updater] Received update-available:', info);
-                    updateMessage.textContent = `Найдена новая версия ${info.version}. Загрузка...`;
-                    restartButton.style.display = 'none';
-                    updateBanner.style.backgroundColor = '#f0ad4e'; // Цвет предупреждения
-                    updateBanner.style.display = 'block';
+                    console.log('[Renderer Updater] Modal update available:', info);
+                    modalTitle.textContent = `Доступна версия ${info.version}`;
+                    modalMessage.textContent = 'Начинается автоматическая загрузка...';
+                    if(progressBar) progressBar.style.width = '0%';
+                    if(progressContainer) progressContainer.style.display = 'block';
+                    if(restartButtonModal) restartButtonModal.style.display = 'none';
+                    if(closeButtonModal) { closeButtonModal.style.display = 'block'; closeButtonModal.disabled = false; }
+                    if(errorDetails) errorDetails.style.display = 'none';
+                    showUpdateModal('available');
                 };
-                 listeners['update-available'] = window.electronUpdater.on('update-available', availableListener);
+                listeners['update-available'] = window.electronUpdater.on('update-available', availableListener);
 
                 // Прогресс загрузки
                 const progressListener = (percent) => {
-                    console.log('[Renderer Updater] Received update-progress:', percent);
-                    updateMessage.textContent = `Загрузка обновления: ${percent}%`;
-                    restartButton.style.display = 'none';
-                    updateBanner.style.backgroundColor = '#f0ad4e';
-                    updateBanner.style.display = 'block';
+                    console.log('[Renderer Updater] Modal progress:', percent);
+                    modalTitle.textContent = 'Загрузка обновления';
+                    modalMessage.textContent = `Пожалуйста, подождите... ${percent}%`;
+                    if(progressBar) progressBar.style.width = `${percent}%`;
+                    if(progressContainer) progressContainer.style.display = 'block';
+                    if(restartButtonModal) restartButtonModal.style.display = 'none';
+                    if(closeButtonModal) { closeButtonModal.style.display = 'block'; closeButtonModal.disabled = false; }
+                    if(errorDetails) errorDetails.style.display = 'none';
+                    showUpdateModal('downloading');
                 };
-                 listeners['update-progress'] = window.electronUpdater.on('update-progress', progressListener);
+                listeners['update-progress'] = window.electronUpdater.on('update-progress', progressListener);
 
                 // Обновление загружено
                 const readyListener = (info) => {
-                    console.log('[Renderer Updater] Received update-ready:', info);
-                    updateMessage.textContent = `Обновление ${info.version} готово к установке!`;
-                    restartButton.textContent = 'Перезапустить и установить';
-                    restartButton.disabled = false;
-                    restartButton.style.display = 'inline-block';
-                    updateBanner.style.backgroundColor = '#5cb85c'; // Цвет успеха
-                    updateBanner.style.display = 'block';
-                    // Можно добавить звук
-                    // showJsNotification('success', `Обновление ${info.version} готово к установке!`, 10000, true);
+                    console.log('[Renderer Updater] Modal update ready:', info);
+                    modalTitle.textContent = `Обновление ${info.version} готово!`;
+                    modalMessage.textContent = 'Нажмите кнопку ниже, чтобы перезапустить приложение и установить обновление.';
+                    if(progressContainer) progressContainer.style.display = 'none';
+                    if(restartButtonModal) {
+                        restartButtonModal.textContent = 'Перезапустить и установить';
+                        restartButtonModal.disabled = false;
+                        restartButtonModal.style.display = 'inline-block';
+                    }
+                    if(closeButtonModal) closeButtonModal.style.display = 'none'; // Прячем "Закрыть"
+                    if(errorDetails) errorDetails.style.display = 'none';
+                    showUpdateModal('ready');
+                    showJsNotification('success', `Обновление ${info.version} готово к установке!`, 10000, true);
                 };
-                 listeners['update-ready'] = window.electronUpdater.on('update-ready', readyListener);
-
-                // Опциональная отписка при выходе (если будет много переходов по страницам)
-                // window.addEventListener('beforeunload', () => {
-                //    console.log('[Renderer Updater] Unsubscribing from update events.');
-                //    if (window.electronUpdater && window.electronUpdater.removeListener) {
-                //         Object.entries(listeners).forEach(([channel, unsubscribeFunc]) => {
-                //             if (unsubscribeFunc && typeof unsubscribeFunc === 'function') {
-                //                  // В preload.js функция on возвращает функцию отписки
-                //                 try { unsubscribeFunc(); } catch(e){console.error("Error unsubscribing:", e);}
-                //             }
-                //         });
-                //    }
-                // });
+                listeners['update-ready'] = window.electronUpdater.on('update-ready', readyListener);
 
             } else {
-                console.warn('[Renderer Updater] electronUpdater API or required banner elements are not available.');
-                if (!window.electronUpdater) {
-                    console.error('[Renderer Updater] window.electronUpdater is undefined. Check preload.js script loading and contextBridge setup.');
-                }
-                 if (!updateBanner || !updateMessage || !restartButton || !dismissButton) {
-                    console.error('[Renderer Updater] One or more banner elements are missing in the DOM.');
-                 }
+                console.warn('[Renderer Updater] electronUpdater API or required modal elements are not available.');
+                if (!window.electronUpdater) console.error('[Renderer Updater] window.electronUpdater is undefined. Check preload.js.');
+                if (!modalOverlay || !modalContent || !modalMessage || !progressBar || !restartButtonModal || !closeButtonModal || !errorDetails) console.error('[Renderer Updater] One or more modal elements are missing.');
             }
-            // --- КОНЕЦ КОДА ДЛЯ ОБНОВЛЕНИЙ ---
+            // --- КОНЕЦ КОДА ДЛЯ МОДАЛЬНОГО ОКНА ---
 
         }); // Конец DOMContentLoaded
     </script>

@@ -304,3 +304,113 @@ main.container {
 .close-flash:hover { opacity: 0.9; }
 
 /* Другие общие стили (если есть) */
+
+#updateModalOverlay {
+    display: none; /* Скрыто по умолчанию */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); /* Полупрозрачный фон */
+    z-index: 1050; /* Поверх других элементов */
+    display: flex; /* Используем flex для центрирования */
+    align-items: center;
+    justify-content: center;
+    opacity: 0; /* Начальная прозрачность для анимации */
+    transition: opacity 0.3s ease; /* Анимация фона */
+  }
+  
+  #updateModalOverlay.visible {
+    opacity: 1; /* Показываем фон */
+  }
+  
+  /* Стили для контента модального окна */
+  #updateModalContent {
+    background-color: #ffffff;
+    padding: 30px 40px;
+    border-radius: 12px; /* Больше скругления */
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    width: 90%;
+    max-width: 550px; /* Чуть шире */
+    text-align: center;
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px); /* Начальное состояние для анимации */
+    transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s; /* Анимация окна с небольшой задержкой */
+    border-top: 5px solid #5bc0de; /* Цветная полоска сверху (инфо по умолчанию) */
+  }
+  
+  #updateModalOverlay.visible #updateModalContent {
+    opacity: 1;
+    transform: scale(1) translateY(0); /* Конечное состояние анимации */
+  }
+  
+  /* Заголовок и сообщение */
+  #updateModalTitle {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #2c3e50; /* Темно-синий */
+    font-size: 1.7rem; /* Крупнее */
+    font-weight: 600;
+  }
+  
+  #updateModalMessage {
+    color: #555;
+    margin-bottom: 25px;
+    line-height: 1.6;
+    font-size: 1.05rem; /* Чуть крупнее текст */
+  }
+  
+  /* Прогресс бар */
+  #updateProgressContainer {
+    display: none; /* Скрыт по умолчанию */
+    margin-bottom: 25px;
+    background-color: #e9ecef;
+    border-radius: 5px;
+    overflow: hidden;
+    height: 12px; /* Чуть толще */
+    border: 1px solid #dee2e6;
+  }
+  
+  #updateProgressBar {
+    width: 0%;
+    height: 100%;
+    background-color: #5cb85c; /* Зеленый */
+    background-image: linear-gradient(45deg, rgba(255, 255, 255, .15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, transparent 75%, transparent);
+      background-size: 1rem 1rem;
+    border-radius: 4px;
+    transition: width 0.2s linear; /* Плавное изменение ширины */
+    animation: progress-bar-stripes 1s linear infinite; /* Анимация полосок */
+  }
+  
+  @keyframes progress-bar-stripes {
+    from { background-position: 1rem 0; }
+    to { background-position: 0 0; }
+  }
+  
+  
+  /* Кнопки */
+  #updateModalActions .btn {
+    padding: 12px 30px; /* Крупнее кнопки */
+    font-size: 1rem;
+    margin: 5px;
+    min-width: 150px;
+  }
+  
+  /* Детали ошибки */
+  #updateErrorDetails {
+      display: none;
+      color: #dc3545; /* Красный */
+      margin-top: 15px;
+      font-size: 0.9em;
+      line-height: 1.5;
+      word-wrap: break-word;
+  }
+  
+  /* Цвета для разных состояний модалки */
+  #updateModalContent.status-checking,
+  #updateModalContent.status-info { border-top-color: #5bc0de; /* Голубой */ }
+  #updateModalContent.status-available,
+  #updateModalContent.status-downloading { border-top-color: #f0ad4e; /* Оранжевый */ }
+  #updateModalContent.status-ready { border-top-color: #5cb85c; /* Зеленый */ }
+  #updateModalContent.status-error { border-top-color: #d9534f; /* Красный */ }
