@@ -15,7 +15,7 @@
                 <% if (currentUser) { %>
                     <%# Для Арендатора %>
                     <% if (currentUser.role === 'Tenant') { %>
-                        <a href="/bookings">Мои бронирования</a>
+                        <a href="/bookings">Мои бронирования</a> <%# Твой текст %>
                     <% } %>
 
                     <%# Управление Арендами (для всех кроме Tenant) %>
@@ -58,41 +58,30 @@
                                 <% } %>
                                 <%# Название компании для Owner/Staff %>
                                 <% if ((currentUser.role === 'Owner' || currentUser.role === 'Staff') && currentUser.companyName) { %>
-                                    <span class="user-company profile-sub-optional" id="headerUserCompany" title="<%= currentUser.companyName %>" style="display: inline-flex; align-items: center; background-color: #e9ecef; padding: 1px 6px; border-radius: 4px; font-size: 0.75rem; color: #4a5568; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    <span class="user-company profile-sub-optional" title="<%= currentUser.companyName %>" style="display: inline-flex; align-items: center; background-color: #e9ecef; padding: 1px 6px; border-radius: 4px; font-size: 0.75rem; color: #4a5568; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                         <i class="fas fa-briefcase" style="font-size: 0.8em; margin-right: 4px; opacity: 0.7;"></i>
-                                        <span id="headerUserCompanyName" style="overflow: hidden; text-overflow: ellipsis;"><%= currentUser.companyName %></span>
+                                        <span style="overflow: hidden; text-overflow: ellipsis;"><%= currentUser.companyName %></span>
                                     </span>
-                                <% } else { %>
-                                    <%# Пустой контейнер для Staff/Owner без компании, чтобы было куда вставить имя при обновлении %>
-                                     <span class="user-company profile-sub-optional" id="headerUserCompany" style="display: none;">
-                                        <i class="fas fa-briefcase" style="font-size: 0.8em; margin-right: 4px; opacity: 0.7;"></i>
-                                        <span id="headerUserCompanyName"></span>
-                                     </span>
                                 <% } %>
                             </div>
                         </div>
                         <div class="avatar-container" id="headerAvatarContainer">
                             <%
                                 let avatarSrc = '/images/placeholder-avatar.png';
-                                let isDataUri = false;
                                 if (currentUser.imageData && typeof currentUser.imageData === 'string') {
-                                    // Проверяем размер перед созданием Data URI
-                                    if (currentUser.imageData.length < 2 * 1024 * 1024) { // Примерный лимит 2MB
+                                    if (currentUser.imageData.length < 2000000) {
                                         try {
                                             let t = currentUser.imageData.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
                                             avatarSrc = `data:${t};base64,${currentUser.imageData}`;
-                                            isDataUri = true;
                                         } catch(e) {
                                             console.error("Error creating avatar data URI in header:", e);
                                         }
                                     } else {
-                                        console.warn("Header avatar skipped: Image data too large for Data URI.");
-                                        // Можно предусмотреть загрузку по URL, если аватары хранятся и так
-                                        // avatarSrc = '/path/to/placeholder/or/fallback';
+                                        console.warn("Header avatar skipped: Image data too large.");
                                     }
                                 }
                             %>
-                            <img src="<%= avatarSrc %>" alt="Avatar" class="user-avatar" id="headerUserAvatar" data-is-data-uri="<%= isDataUri %>">
+                            <img src="<%= avatarSrc %>" alt="Avatar" class="user-avatar" id="headerUserAvatar">
                         </div>
                     </a>
                     <form action="/logout" method="POST" class="logout-form">
@@ -106,15 +95,20 @@
         <%# Кнопка мобильного меню (стилями скрыта/показана) %>
         <button class="mobile-nav-toggle" aria-label="Открыть меню" style="display: none;">☰</button>
     </nav>
-    <!-- ===== МОДАЛЬНОЕ ОКНО ОБНОВЛЕНИЯ (без изменений) ===== -->
+    <!-- ===== МОДАЛЬНОЕ ОКНО ОБНОВЛЕНИЯ ===== -->
     <div id="updateModalOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); z-index: 1050; align-items: center; justify-content: center;">
         <div id="updateModalContent" class="" style="background-color: #fff; padding: 30px 40px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15); width: 90%; max-width: 550px; text-align: center; border-top: 5px solid #5bc0de;">
             <h2 id="updateModalTitle" style="margin-top: 0; margin-bottom: 15px; color: #2c3e50; font-size: 1.7rem; font-weight: 600;">Обновление Приложения</h2>
             <p id="updateModalMessage" style="color: #555; margin-bottom: 25px; line-height: 1.6; font-size: 1.05rem;">Проверяем наличие обновлений...</p>
+
+            <!-- Прогресс бар -->
             <div id="updateProgressContainer" style="display: none; margin-bottom: 25px; background-color: #e9ecef; border-radius: 5px; overflow: hidden; height: 12px; border: 1px solid #dee2e6;">
                 <div id="updateProgressBar" style="width: 0%; height: 100%; background-color: #5cb85c; background-image: linear-gradient(45deg, rgba(255, 255, 255, .15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, transparent 75%, transparent); background-size: 1rem 1rem; border-radius: 4px; transition: width 0.2s linear; animation: progress-bar-stripes 1s linear infinite;"></div>
             </div>
             <style> @keyframes progress-bar-stripes{from{background-position:1rem 0}to{background-position:0 0}} </style>
+
+
+            <!-- Кнопки установки/закрытия (ВОЗВРАЩАЕМ ДВЕ КНОПКИ) -->
             <div id="updateModalActions">
                  <button id="updateModalRestartButton" class="btn btn-primary" style="display: none; padding: 12px 30px; font-size: 1rem; margin: 5px; min-width: 150px;">Перезапустить и установить</button>
                  <button id="updateModalCloseButton" class="btn btn-secondary" style="display: none; padding: 12px 20px; font-size: 1rem; margin: 5px;">Закрыть</button>
@@ -129,56 +123,20 @@
 <% if (currentUser) { %>
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        // Функция для показа JS-уведомлений (без изменений)
+        // Функция для показа красивых JS-уведомлений (твоя функция)
         function showJsNotification(type, text, duration = 7000, playSound = true) {
-            // Ищем контейнер для сообщений. Приоритет: специфичные для страницы, потом общий #js-messages, потом main, потом body.
-            const container = document.getElementById('js-messages-rentals')
-                            || document.getElementById('js-messages-container') // bookings-list
-                            || document.getElementById('js-review-messages')   // property-details (reviews)
-                            || document.getElementById('js-messages-user-list')// users-list
-                            || document.getElementById('js-messages-user-form')// user-add-edit
-                            || document.getElementById('js-messages')          // profile-edit
-                            || document.getElementById('js-company-messages')  // company-management
-                            || document.body.querySelector('main.container')
-                            || document.body; // Fallback
+            const container = document.getElementById('js-messages-rentals') || document.getElementById('js-messages-container') || document.getElementById('js-review-messages') || document.getElementById('js-messages-user-list') || document.getElementById('js-messages-user-form') || document.getElementById('js-messages') || document.getElementById('js-company-messages') || document.body.querySelector('main.container') || document.body;
             if (!container) { console.warn("No suitable container found for JS notification."); return; }
-
-             // Попытка воспроизвести звук
-             if (playSound) { try { const audio = new Audio('/sounds/notification.mp3'); audio.play().catch(e => console.warn("Audio playback failed (likely user interaction required):", e)); } catch (e) { console.error("Error playing sound:", e); } }
-
-             // Создание и добавление уведомления
-             const notifId = 'notif-' + Date.now(); // Уникальный ID
-             const notifDiv = document.createElement('div');
-             notifDiv.id = notifId;
-             notifDiv.className = `flash-message flash-${type}`;
-             // Стили для анимации и позиционирования
-             notifDiv.style.cssText = 'opacity:0; transform:translateY(-10px); transition: opacity 0.5s ease, transform 0.5s ease; margin-top: 10px; cursor: pointer; z-index: 1056; position: relative;';
-             // Добавляем текст и кнопку закрытия
-             notifDiv.innerHTML = `${text} <button type="button" class="close-flash" onclick="event.stopPropagation(); document.getElementById('${notifId}')?.remove();">×</button>`;
-             // Закрытие по клику на все уведомление
-             notifDiv.addEventListener('click', () => notifDiv.remove());
-
-             // Добавляем в начало контейнера
-             if (container.firstChild) { container.insertBefore(notifDiv, container.firstChild); }
-             else { container.appendChild(notifDiv); }
-
-             // Анимация появления
-             requestAnimationFrame(() => { // Используем requestAnimationFrame для плавной анимации
-                 notifDiv.style.opacity = '1';
-                 notifDiv.style.transform = 'translateY(0)';
-             });
-
-             // Автоматическое скрытие через duration
-             setTimeout(() => {
-                 const currentNotif = document.getElementById(notifId);
-                 if (currentNotif) {
-                     currentNotif.style.opacity = '0';
-                     currentNotif.style.transform = 'translateY(-10px)';
-                     // Удаляем из DOM после завершения анимации скрытия
-                     setTimeout(() => currentNotif.remove(), 500);
-                 }
-             }, duration);
-         }
+            if (playSound) { try { const audio = new Audio('/sounds/notification.mp3'); audio.play().catch(e => console.warn("Audio playback failed:", e)); } catch (e) { console.error("Error playing sound:", e); } }
+            const notifDiv = document.createElement('div');
+            notifDiv.className = `flash-message flash-${type}`;
+            notifDiv.style.cssText = 'opacity:0; transform:translateY(-10px); transition: opacity 0.5s ease, transform 0.5s ease; margin-top: 10px; cursor: pointer; z-index: 1056; position: relative;';
+            notifDiv.innerHTML = `${text} <button type="button" class="close-flash" onclick="event.stopPropagation(); this.parentElement.remove()">×</button>`;
+            notifDiv.addEventListener('click', () => notifDiv.remove());
+            if (container.firstChild) { container.insertBefore(notifDiv, container.firstChild); } else { container.appendChild(notifDiv); }
+            setTimeout(() => { notifDiv.style.opacity = '1'; notifDiv.style.transform = 'translateY(0)'; }, 10);
+            setTimeout(() => { notifDiv.style.opacity = '0'; notifDiv.style.transform = 'translateY(-10px)'; setTimeout(() => notifDiv.remove(), 500); }, duration);
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             // --- Инициализация Socket.IO ---
@@ -193,170 +151,128 @@
                   socket.on('connect', () => { console.log(`[Socket.IO Client] Connected: ${socket.id}. Registering: ${currentUsername}`); socket.emit('register_user', currentUsername); });
                   socket.on('disconnect', (reason) => { console.warn(`[Socket.IO Client] Disconnected. Reason: ${reason}`); });
                   socket.on('connect_error', (err) => { console.error(`[Socket.IO Client] Connection Error: ${err.message}`); });
-
-                  // --- ОБНОВЛЕННЫЕ ОБРАБОТЧИКИ СОБЫТИЙ ---
-
-                  // Обновление баланса (только для Tenant)
+                  // --- Обработчики событий Socket.IO ---
                   socket.on('balance_updated', (newBalance) => {
                     const userRoleElement = document.getElementById('headerUserRole');
                     const isTenant = userRoleElement && userRoleElement.textContent === 'Tenant';
                     if (isTenant) {
                         console.log(`[Socket.IO Client] Event 'balance_updated' received: ${newBalance}`);
-                        const balanceEl = document.getElementById('headerUserBalance'); // Баланс в шапке
-                        const profileBalanceEl = document.querySelector('.profile-details .balance strong'); // Баланс на стр. профиля
-                        const formattedBalance = (typeof newBalance === 'number')
-                            ? new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(newBalance)
-                            : 'Ошибка';
-
-                        if (balanceEl) { balanceEl.textContent = formattedBalance; }
-                        if (profileBalanceEl) { profileBalanceEl.textContent = formattedBalance; } // Обновляем и на странице профиля
-
+                        const balanceEl = document.getElementById('headerUserBalance');
+                        if (balanceEl && typeof newBalance === 'number') {
+                             try { balanceEl.textContent = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(newBalance); } catch (e) { console.error("Error formatting balance:", e); balanceEl.textContent = "ERR"; }
+                        }
                     } else { console.log("[Socket.IO Client] Ignored 'balance_updated' for non-tenant."); }
                   });
 
-                  // Обновление аватара
                   socket.on('avatar_updated', () => {
                      console.log(`[Socket.IO Client] Event 'avatar_updated' received for ${currentUsername}.`);
-                     const headerAvatarImg = document.getElementById('headerUserAvatar');
-                     const profileAvatarImg = document.querySelector('.profile-avatar'); // На странице профиля
-
-                     // Обновление аватара в шапке
-                     if (headerAvatarImg) {
-                         // Если аватар был data URI, показываем уведомление о перезагрузке
-                         if (headerAvatarImg.dataset.isDataUri === 'true') {
-                             showJsNotification('info', 'Ваш аватар был обновлен. Пожалуйста, обновите страницу, чтобы увидеть изменения.', 7000, false);
-                             // Можно сбросить на плейсхолдер сразу
-                             headerAvatarImg.src = '/images/placeholder-avatar.png';
-                             headerAvatarImg.dataset.isDataUri = 'false';
-                         } else {
-                             // Если был URL (или плейсхолдер), пытаемся обновить с timestamp
-                             headerAvatarImg.src = headerAvatarImg.src.split('?')[0] + '?t=' + new Date().getTime();
-                         }
+                     const avatarImg = document.getElementById('headerUserAvatar');
+                     if (avatarImg) {
+                         if (avatarImg.src.startsWith('data:')) { showJsNotification('info', 'Ваш аватар обновлен. Обновите страницу.', 5000, false); }
+                         else { avatarImg.src = avatarImg.src.split('?')[0] + '?t=' + new Date().getTime(); }
                      }
-
-                     // Обновление аватара на странице профиля
-                     if (profileAvatarImg) {
-                         if (profileAvatarImg.src.startsWith('data:')) {
-                             // Если на странице профиля был data URI, тоже лучше перезагрузить
-                             // (можно показать отдельное уведомление здесь, если нужно)
-                             profileAvatarImg.src = '/images/placeholder-avatar.png';
-                         } else {
-                             profileAvatarImg.src = profileAvatarImg.src.split('?')[0] + '?t=' + new Date().getTime();
-                         }
+                     const profileAvatar = document.querySelector('.profile-avatar');
+                     if (profileAvatar && profileAvatar.src !== avatarImg?.src) {
+                         if (!profileAvatar.src.startsWith('data:')) { profileAvatar.src = profileAvatar.src.split('?')[0] + '?t=' + new Date().getTime(); }
                      }
-                      // Обновление аватара на странице редактирования профиля
-                     const editProfileAvatarImg = document.querySelector('.current-avatar-display img');
-                     if (editProfileAvatarImg) {
-                          if (editProfileAvatarImg.src.startsWith('data:')) {
-                              editProfileAvatarImg.src = '/images/placeholder-avatar.png'; // Сброс на плейсхолдер
-                              // Можно добавить сообщение о необходимости обновить стр.
-                          } else {
-                              editProfileAvatarImg.src = editProfileAvatarImg.src.split('?')[0] + '?t=' + new Date().getTime();
-                          }
-                          // Показываем контейнер с "текущим" аватаром и скрываем "нет аватара"
-                          document.getElementById('currentAvatarContainer')?.classList.remove('hidden');
-                          document.getElementById('noAvatarMessage')?.classList.add('hidden');
-                          // Показываем кнопку сброса (она может быть скрыта, если до этого не было аватара)
-                          const resetButton = document.getElementById('resetAvatarBtn');
-                          if(resetButton && resetButton.parentElement) resetButton.parentElement.style.display = 'block'; // Или как там она скрывается
-                     }
-
-
                   });
 
-                  // Обновление данных профиля
-                  socket.on('profile_data_updated', (data) => {
+                 socket.on('profile_data_updated', (data) => {
                      console.log(`[Socket.IO Client] Event 'profile_data_updated' received:`, data);
-                     if (!data) return;
-
                      const nameEl = document.getElementById('headerUserName');
                      const roleEl = document.getElementById('headerUserRole');
-                     const companyContainer = document.getElementById('headerUserCompany');
-                     const companyNameSpan = document.getElementById('headerUserCompanyName');
-                     const profileNameEl = document.querySelector('.profile-name-role h2'); // Имя на странице профиля
-                     const profileRoleEl = document.querySelector('.profile-name-role .role'); // Роль на странице профиля
-
-                     // Обновляем имя
-                     if (nameEl && data.fullName) { nameEl.textContent = data.fullName; }
-                     if (profileNameEl && data.fullName) { profileNameEl.textContent = data.fullName; }
-
-                     // Обновляем роль
-                     if (roleEl && data.role) { roleEl.textContent = data.role; }
-                     if (profileRoleEl && data.role) { profileRoleEl.textContent = data.role; }
-
-                     // Обновляем компанию
-                     if (companyContainer && companyNameSpan) {
-                         if (data.companyName && (data.role === 'Owner' || data.role === 'Staff')) {
-                              companyNameSpan.textContent = data.companyName;
-                              companyContainer.title = data.companyName;
-                              companyContainer.style.display = 'inline-flex'; // Показываем
-                         } else {
-                              companyContainer.style.display = 'none'; // Скрываем
-                         }
-                     }
-
-                      // Обновляем видимость ссылки "Добавить объект"
+                     const companyContainer = document.querySelector('.user-sub-info .user-company');
+                     const companyTextSpan = companyContainer?.querySelector('span');
+                     if (nameEl && data?.fullName) { nameEl.textContent = data.fullName; }
+                     if (roleEl && data?.role) { roleEl.textContent = data.role; }
+                      if (companyContainer) {
+                          if (data?.companyName && (data.role === 'Owner' || data.role === 'Staff')) {
+                               if (companyTextSpan) companyTextSpan.textContent = data.companyName;
+                               companyContainer.title = data.companyName; companyContainer.style.display = 'inline-flex';
+                          } else { companyContainer.style.display = 'none'; }
+                      } else if (data?.companyName && (data.role === 'Owner' || data.role === 'Staff')) { console.warn("Header company element not found."); }
                       const addPropertyLink = document.querySelector('.main-nav-links a[href="/properties/add"]');
-                      if (addPropertyLink) {
-                          const canAdd = data.role === 'Admin' || (data.role === 'Owner' && data.companyProfileCompleted === true);
-                          addPropertyLink.style.display = canAdd ? 'inline' : 'none';
-                      }
-                      // Обновляем видимость ссылки "Моя компания"
-                       const myCompanyLink = document.querySelector('.main-nav-links a[href="/company/manage"]');
-                       if (myCompanyLink) {
-                           const canManageCompany = (data.role === 'Owner' || data.role === 'Staff') && data.companyId;
-                           myCompanyLink.style.display = canManageCompany ? 'inline' : 'none';
-                       }
-                       // Обновляем видимость ссылки "Пользователи"
-                       const usersLink = document.querySelector('.main-nav-links a[href="/users"]');
-                       if (usersLink) {
-                            usersLink.style.display = (data.role === 'Admin') ? 'inline' : 'none';
-                       }
-                        // Обновляем видимость ссылки "Упр. арендами"
-                        const rentalsLink = document.querySelector('.main-nav-links a[href="/rentals"]');
-                        if (rentalsLink) {
-                             rentalsLink.style.display = (data.role === 'Admin' || data.role === 'Owner' || data.role === 'Staff') ? 'inline' : 'none';
-                        }
-                         // Обновляем видимость ссылки "Мои бронирования"
-                         const bookingsLink = document.querySelector('.main-nav-links a[href="/bookings"]');
-                         if (bookingsLink) {
-                             bookingsLink.style.display = (data.role === 'Tenant') ? 'inline' : 'none';
-                         }
+                      if (addPropertyLink) { const canAdd = data?.role === 'Admin' || (data?.role === 'Owner' && data?.companyProfileCompleted === true); addPropertyLink.style.display = canAdd ? 'inline' : 'none'; }
+                 });
 
-
-                     // Показываем уведомление об изменениях
-                     showJsNotification('info', 'Ваши данные профиля были обновлены администратором.', 5000, false);
-                  });
-
-                  // Удаление аккаунта
-                  socket.on('account_deleted', (data) => {
+                 socket.on('account_deleted', (data) => {
                      console.warn(`[Socket.IO Client] Event 'account_deleted' received:`, data?.message);
                      if(socket.connected) { socket.disconnect(); }
                      alert(data?.message || 'Ваш аккаунт был удален администратором.');
-                     // Форсируем выход через форму
-                     const logoutForm = document.createElement('form');
-                     logoutForm.method = 'POST'; logoutForm.action = '/logout';
-                     document.body.appendChild(logoutForm);
-                     logoutForm.submit();
-                  });
-
-                 // Уведомление о сбросе пароля
-                 socket.on('password_reset_notification', (data) => {
-                     console.log(`[Socket.IO Client] Event 'password_reset_notification' received.`);
-                     showJsNotification('warning', data?.message || 'Ваш пароль был сброшен. Пожалуйста, смените его при следующем входе.', 10000, true);
-                     // Дополнительно можно показать сообщение о необходимости выхода, если это требуется
-                     // alert("Ваш пароль был сброшен администратором. Текущая сессия будет завершена. Пожалуйста, войдите снова с временным паролем.");
-                     // const logoutForm = document.createElement('form'); logoutForm.method = 'POST'; logoutForm.action = '/logout'; document.body.appendChild(logoutForm); logoutForm.submit();
+                     const logoutForm = document.createElement('form'); logoutForm.method = 'POST'; logoutForm.action = '/logout';
+                     document.body.appendChild(logoutForm); logoutForm.submit();
                  });
 
-
-                 // --- Обработчики уведомлений о бронированиях (без изменений) ---
-                 socket.on('booking_confirmed', (data) => { console.log("[Socket.IO Client] Event 'booking_confirmed':", data); showJsNotification('success', `✅ Бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>" <strong>подтверждена</strong>!`, 7000, true); const row = document.getElementById(`booking-row-${data.bookingId}`); if (row && window.location.pathname === '/bookings') { const statusCell = row.querySelector('.status-cell .status-label'); const actionsCell = row.querySelector('.actions-cell'); if (statusCell) { statusCell.textContent = 'Активна'; statusCell.className = 'status-label status-active'; statusCell.title = 'Активна'; } if (actionsCell) { const form = actionsCell.querySelector('form'); if(form) form.dataset.currentStatus = 'Активна'; } } });
-                 socket.on('booking_rejected', (data) => { console.log("[Socket.IO Client] Event 'booking_rejected':", data); const reasonText = data.reason ? ` Причина: ${data.reason}` : ''; showJsNotification('warning', `❌ Запрос #${data.bookingId?.substring(0,6)} на "<strong>${data.propertyTitle || '?'}</strong>" <strong>отклонен</strong>.${reasonText}`, 10000, true); const row = document.getElementById(`booking-row-${data.bookingId}`); if (row && window.location.pathname === '/bookings') { const statusCell = row.querySelector('.status-cell'); const actionsCell = row.querySelector('.actions-cell'); if (statusCell) { statusCell.innerHTML = `<span class="status-label status-rejected" title="Отклонена">Отклонена</span>`; if(data.reason) { statusCell.innerHTML += ` <i class="fas fa-info-circle" title="${data.reason}" style="margin-left: 5px; color: #d35400; cursor: help;"></i>`; } } if (actionsCell) { actionsCell.innerHTML = '<span>-</span>'; } } });
-                 socket.on('booking_cancelled_by_owner', (data) => { console.log("[Socket.IO Client] Event 'booking_cancelled_by_owner':", data); showJsNotification('error', `❗ Бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>" была <strong>аннулирована</strong> администрацией.`, 10000, true); const row = document.getElementById(`booking-row-${data.bookingId}`); if (row && window.location.pathname === '/bookings') { const statusCell = row.querySelector('.status-cell .status-label'); const actionsCell = row.querySelector('.actions-cell'); if (statusCell) { statusCell.textContent = 'Аннулирована'; statusCell.className = 'status-label status-annulled'; statusCell.title = 'Аннулирована'; } if (actionsCell) { actionsCell.innerHTML = '<span>-</span>'; } } });
-                 socket.on('new_booking_pending', (data) => { console.log("[Socket.IO Client] Event 'new_booking_pending':", data); if (!window.location.pathname.startsWith('/rentals')) { showJsNotification('info', `📬 Новый запрос на бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>" от ${data.tenantName}. <a href="/rentals" style='color:inherit; font-weight:bold;'>К арендам</a>`, 15000, true); } else { /* Можно обновить таблицу аренд, если пользователь на /rentals */ } });
-                 socket.on('pending_booking_cancelled', (data) => { console.log("[Socket.IO Client] Event 'pending_booking_cancelled':", data); showJsNotification('warning', `❌ Арендатор <strong>${data.tenantName}</strong> отменил запрос #${data.bookingId?.substring(0,6)} на "<strong>${data.propertyTitle || '?'}</strong>".`, 7000, true); const row = document.getElementById(`rental-row-${data.bookingId}`); if (row && window.location.pathname.startsWith('/rentals')) { row.remove(); const pendingCountSpan = document.getElementById('pendingCount'); if(pendingCountSpan) { let count = parseInt(pendingCountSpan.textContent || '0') - 1; pendingCountSpan.textContent = Math.max(0, count); } const pendingBody = document.getElementById('pendingBookingsTableBody'); const noPendingMsg = pendingBody?.closest('.rentals-section')?.querySelector('.no-bookings-message'); if(pendingBody && noPendingMsg) { noPendingMsg.style.display = pendingBody.rows.length === 0 ? 'block' : 'none'; } } });
-                 socket.on('active_booking_cancelled', (data) => { console.log("[Socket.IO Client] Event 'active_booking_cancelled':", data); showJsNotification('error', `🚫 Арендатор <strong>${data.tenantName}</strong> отменил активную бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>".`, 10000, true); const row = document.getElementById(`rental-row-${data.bookingId}`); if (row && window.location.pathname.startsWith('/rentals')) { const statusCell = row.querySelector('.status-cell .status-label'); const actionsCell = row.querySelector('.actions-cell'); if (statusCell) { statusCell.textContent = 'Отменена'; statusCell.className = 'status-label status-cancelled'; statusCell.title = 'Отменена'; } row.dataset.status = 'Отменена'; if (actionsCell) { actionsCell.innerHTML = ''; const isAdmin = currentUser.role === 'Admin'; if (isAdmin) { actionsCell.innerHTML = `<form class="rental-action-form" data-action="delete" data-booking-id="${data.bookingId}" action="/rentals/${data.bookingId}/delete" method="POST"><button type="submit" class="btn btn-small btn-delete"> <span class="button-text">Удалить</span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button></form>`; } else { actionsCell.innerHTML = '<span>-</span>'; } } } });
+                // Обработчики уведомлений о бронированиях (твои существующие)
+                socket.on('booking_confirmed', (data) => {
+                     console.log("[Socket.IO Client] Event 'booking_confirmed':", data);
+                     showJsNotification('success', `✅ Бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>" <strong>подтверждена</strong>!`, 7000, true);
+                     const row = document.getElementById(`booking-row-${data.bookingId}`);
+                     if (row && window.location.pathname === '/bookings') {
+                         const statusCell = row.querySelector('.status-cell .status-label');
+                         const actionsCell = row.querySelector('.actions-cell');
+                         if (statusCell) { statusCell.textContent = 'Активна'; statusCell.className = 'status-label status-active'; statusCell.title = 'Активна'; }
+                         if (actionsCell) { const form = actionsCell.querySelector('form'); if(form) form.dataset.currentStatus = 'Активна'; }
+                     }
+                 });
+                socket.on('booking_rejected', (data) => {
+                     console.log("[Socket.IO Client] Event 'booking_rejected':", data);
+                     const reasonText = data.reason ? ` Причина: ${data.reason}` : '';
+                     showJsNotification('warning', `❌ Запрос #${data.bookingId?.substring(0,6)} на "<strong>${data.propertyTitle || '?'}</strong>" <strong>отклонен</strong>.${reasonText}`, 10000, true);
+                     const row = document.getElementById(`booking-row-${data.bookingId}`);
+                     if (row && window.location.pathname === '/bookings') {
+                         const statusCell = row.querySelector('.status-cell');
+                         const actionsCell = row.querySelector('.actions-cell');
+                         if (statusCell) { statusCell.innerHTML = `<span class="status-label status-rejected" title="Отклонена">Отклонена</span>`; if(data.reason) { statusCell.innerHTML += ` <i class="fas fa-info-circle" title="${data.reason}" style="margin-left: 5px; color: #d35400; cursor: help;"></i>`; } }
+                         if (actionsCell) { actionsCell.innerHTML = '<span>-</span>'; }
+                     }
+                 });
+                socket.on('booking_cancelled_by_owner', (data) => {
+                     console.log("[Socket.IO Client] Event 'booking_cancelled_by_owner':", data);
+                     showJsNotification('error', `❗ Бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>" была <strong>аннулирована</strong> администрацией.`, 10000, true);
+                     const row = document.getElementById(`booking-row-${data.bookingId}`);
+                     if (row && window.location.pathname === '/bookings') {
+                         const statusCell = row.querySelector('.status-cell .status-label');
+                         const actionsCell = row.querySelector('.actions-cell');
+                         if (statusCell) { statusCell.textContent = 'Аннулирована'; statusCell.className = 'status-label status-annulled'; statusCell.title = 'Аннулирована'; }
+                         if (actionsCell) { actionsCell.innerHTML = '<span>-</span>'; }
+                     }
+                 });
+                socket.on('new_booking_pending', (data) => {
+                     console.log("[Socket.IO Client] Event 'new_booking_pending':", data);
+                     if (!window.location.pathname.startsWith('/rentals')) { showJsNotification('info', `📬 Новый запрос на бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>" от ${data.tenantName}. <a href="/rentals" style='color:inherit; font-weight:bold;'>К арендам</a>`, 15000, true); }
+                 });
+                socket.on('pending_booking_cancelled', (data) => {
+                      console.log("[Socket.IO Client] Event 'pending_booking_cancelled':", data);
+                      showJsNotification('warning', `❌ Арендатор <strong>${data.tenantName}</strong> отменил запрос #${data.bookingId?.substring(0,6)} на "<strong>${data.propertyTitle || '?'}</strong>".`, 7000, true);
+                      const row = document.getElementById(`rental-row-${data.bookingId}`);
+                      if (row && window.location.pathname.startsWith('/rentals')) {
+                          row.remove();
+                          const pendingCountSpan = document.getElementById('pendingCount');
+                          if(pendingCountSpan) { let count = parseInt(pendingCountSpan.textContent || '0') - 1; pendingCountSpan.textContent = Math.max(0, count); }
+                          const pendingBody = document.getElementById('pendingBookingsTableBody');
+                          const noPendingMsg = pendingBody?.closest('.rentals-section')?.querySelector('.no-bookings-message');
+                          if(pendingBody && noPendingMsg) { noPendingMsg.style.display = pendingBody.rows.length === 0 ? 'block' : 'none'; }
+                      }
+                  });
+                socket.on('active_booking_cancelled', (data) => {
+                     console.log("[Socket.IO Client] Event 'active_booking_cancelled':", data);
+                     showJsNotification('error', `🚫 Арендатор <strong>${data.tenantName}</strong> отменил активную бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>".`, 10000, true);
+                     const row = document.getElementById(`rental-row-${data.bookingId}`);
+                     if (row && window.location.pathname.startsWith('/rentals')) {
+                         const statusCell = row.querySelector('.status-cell .status-label');
+                         const actionsCell = row.querySelector('.actions-cell');
+                         if (statusCell) { statusCell.textContent = 'Отменена'; statusCell.className = 'status-label status-cancelled'; statusCell.title = 'Отменена'; }
+                         row.dataset.status = 'Отменена';
+                         if (actionsCell) {
+                             actionsCell.innerHTML = '';
+                             const isAdmin = document.body.querySelector('#pendingBookingsTableBody')?.closest('table')?.parentElement?.dataset?.isAdmin === 'true';
+                             if (isAdmin) {
+                                  actionsCell.innerHTML = `<form class="rental-action-form" data-action="delete" data-booking-id="${data.bookingId}" action="/rentals/${data.bookingId}/delete" method="POST"><button type="submit" class="btn btn-small btn-delete"> <span class="button-text">Удалить</span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button></form>`;
+                             } else { actionsCell.innerHTML = '<span>-</span>'; }
+                         }
+                     }
+                 });
                  // --- Конец обработчиков Socket.IO ---
                 } // Конец else для currentUsername
 
@@ -364,21 +280,177 @@
                 console.error("[Socket.IO Client] Error setting up listeners:", e);
             }
 
-            // --- КОД ДЛЯ УПРАВЛЕНИЯ МОДАЛЬНЫМ ОКНОМ ОБНОВЛЕНИЯ (без изменений) ---
-            const modalOverlay = document.getElementById('updateModalOverlay'); const modalContent = document.getElementById('updateModalContent'); const modalTitle = document.getElementById('updateModalTitle'); const modalMessage = document.getElementById('updateModalMessage'); const progressContainer = document.getElementById('updateProgressContainer'); const progressBar = document.getElementById('updateProgressBar'); const restartButtonModal = document.getElementById('updateModalRestartButton'); const closeButtonModal = document.getElementById('updateModalCloseButton'); const errorDetails = document.getElementById('updateErrorDetails'); let listeners = {}; let updateInfoGlobal = null;
-            function setModalStatusClass(statusClass) { if (modalContent) { modalContent.classList.remove('status-info', 'status-available', 'status-downloading', 'status-ready', 'status-error'); modalContent.classList.add(`status-${statusClass}`); const colors = { info: '#5bc0de', available: '#f0ad4e', downloading: '#f0ad4e', ready: '#5cb85c', error: '#d9534f' }; modalContent.style.borderTopColor = colors[statusClass] || '#5bc0de'; } }
-            function showUpdateModal(statusClass = 'info') { if (!modalOverlay || !modalContent) { console.error("[Renderer Updater] ОШИБКА в showUpdateModal: modalOverlay или modalContent не найден!"); return; } setModalStatusClass(statusClass); modalOverlay.style.display = 'flex'; requestAnimationFrame(() => { modalOverlay.style.opacity = '1'; modalContent.style.opacity = '1'; modalContent.style.transform = 'scale(1)'; }); console.log("[Renderer Updater] Modal shown."); }
-            function hideUpdateModal() { if (modalOverlay) { modalOverlay.style.opacity = '0'; if (modalContent) { modalContent.style.opacity = '0'; modalContent.style.transform = 'scale(0.95)'; } setTimeout(() => { modalOverlay.style.display = 'none'; if(progressBar) progressBar.style.width = '0%'; if(progressContainer) progressContainer.style.display = 'none'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) closeButtonModal.style.display = 'none'; if(errorDetails) errorDetails.style.display = 'none'; console.log("[Renderer Updater] Modal hidden."); }, 300); } else { console.error("[Renderer Updater] ОШИБКА в hideUpdateModal: modalOverlay не найден!"); } }
+            // --- КОД ДЛЯ УПРАВЛЕНИЯ МОДАЛЬНЫМ ОКНОМ ОБНОВЛЕНИЯ ---
+            // --- Добавлено больше проверок на существование элементов ---
+            const modalOverlay = document.getElementById('updateModalOverlay');
+            const modalContent = document.getElementById('updateModalContent');
+            const modalTitle = document.getElementById('updateModalTitle');
+            const modalMessage = document.getElementById('updateModalMessage');
+            const progressContainer = document.getElementById('updateProgressContainer');
+            const progressBar = document.getElementById('updateProgressBar');
+            const restartButtonModal = document.getElementById('updateModalRestartButton');
+            const closeButtonModal = document.getElementById('updateModalCloseButton');
+            const errorDetails = document.getElementById('updateErrorDetails');
+            let listeners = {}; // Для хранения функций отписки
+
+            // Функция установки класса статуса для стилизации окна
+            function setModalStatusClass(statusClass) {
+                if (modalContent) {
+                    modalContent.classList.remove('status-info', 'status-available', 'status-downloading', 'status-ready', 'status-error');
+                    modalContent.classList.add(`status-${statusClass}`);
+                    const colors = { info: '#5bc0de', available: '#f0ad4e', downloading: '#f0ad4e', ready: '#5cb85c', error: '#d9534f' };
+                    modalContent.style.borderTopColor = colors[statusClass] || '#5bc0de';
+                }
+            }
+
+            // Функция показа модального окна (прямое управление стилями)
+            function showUpdateModal(statusClass = 'info') {
+                console.log(`[Renderer Updater] Вызов showUpdateModal со статусом: ${statusClass}`);
+                if (!modalOverlay || !modalContent) {
+                    console.error("[Renderer Updater] ОШИБКА в showUpdateModal: modalOverlay или modalContent не найден!");
+                    return;
+                }
+                setModalStatusClass(statusClass);
+                modalOverlay.style.display = 'flex';
+                modalOverlay.style.opacity = '1';
+                modalContent.style.opacity = '1';
+                modalContent.style.transform = 'none'; // Убираем анимационные стили
+                console.log("[Renderer Updater] Установлен display=flex и opacity=1.");
+            }
+
+            // Функция скрытия модального окна (прямое управление стилями)
+            function hideUpdateModal() {
+                console.log("[Renderer Updater] Вызов hideUpdateModal");
+                 if (modalOverlay) {
+                    modalOverlay.style.display = 'none';
+                    modalOverlay.style.opacity = '0';
+                     // Сброс элементов
+                     if(progressBar) progressBar.style.width = '0%';
+                     if(progressContainer) progressContainer.style.display = 'none';
+                     if(restartButtonModal) restartButtonModal.style.display = 'none';
+                     if(closeButtonModal) closeButtonModal.style.display = 'none';
+                     if(errorDetails) errorDetails.style.display = 'none';
+                    console.log("[Renderer Updater] Установлен display=none.");
+                } else {
+                     console.error("[Renderer Updater] ОШИБКА в hideUpdateModal: modalOverlay не найден!");
+                }
+            }
+
+            // Проверяем наличие API И ВСЕХ ЭЛЕМЕНТОВ окна
             if (window.electronUpdater && modalOverlay && modalContent && modalTitle && modalMessage && progressContainer && progressBar && restartButtonModal && closeButtonModal && errorDetails) {
                 console.log('[Renderer Updater] API и все элементы модального окна найдены. Установка слушателей.');
+
+                // Кнопка "Закрыть"
                 closeButtonModal.onclick = hideUpdateModal;
-                restartButtonModal.onclick = () => { console.log('[Renderer Updater] <<< SENDING install-update >>> to main process.'); if(restartButtonModal) { restartButtonModal.textContent = 'Перезапуск...'; restartButtonModal.disabled = true; } if(closeButtonModal) closeButtonModal.disabled = true; window.electronUpdater.send('install-update'); };
-                listeners['update-status'] = window.electronUpdater.on('update-status', (message) => { console.log('[Renderer Updater] <<< RECEIVED update-status >>>', message); if (!message) { if (modalMessage && modalMessage.textContent === 'Установлена последняя версия.') { hideUpdateModal(); } return; } if (message !== `Версия ${updateInfoGlobal?.version} загружена. Готово к установке.`) { if(modalMessage) modalMessage.textContent = message; if(modalTitle) modalTitle.textContent = 'Статус обновления'; if(progressContainer) progressContainer.style.display = 'none'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } if(errorDetails) errorDetails.style.display = 'none'; showUpdateModal('info'); } if (message === 'Установлена последняя версия.') { setTimeout(hideUpdateModal, 5000); } });
-                listeners['update-error'] = window.electronUpdater.on('update-error', (message) => { console.error('[Renderer Updater] <<< RECEIVED update-error >>>', message); if(modalTitle) modalTitle.textContent = 'Ошибка обновления'; if(modalMessage) modalMessage.textContent = 'Не удалось проверить или загрузить обновление.'; if(errorDetails) { errorDetails.textContent = `Детали: ${message}`; errorDetails.style.display = 'block'; } if(progressContainer) progressContainer.style.display = 'none'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } showUpdateModal('error'); });
-                listeners['update-available'] = window.electronUpdater.on('update-available', (info) => { console.log('[Renderer Updater] <<< RECEIVED update-available >>>', info); updateInfoGlobal = info; if(modalTitle) modalTitle.textContent = `Доступна версия ${info.version}`; if(modalMessage) modalMessage.textContent = 'Начинается автоматическая загрузка...'; if(progressBar) progressBar.style.width = '0%'; if(progressContainer) progressContainer.style.display = 'block'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } if(errorDetails) errorDetails.style.display = 'none'; showUpdateModal('available'); });
-                listeners['update-progress'] = window.electronUpdater.on('update-progress', (percent) => { if (Math.round(percent) % 5 === 0 || percent > 95 || percent < 5) { console.log('[Renderer Updater] <<< RECEIVED update-progress >>>', percent); } if(modalTitle) modalTitle.textContent = 'Загрузка обновления'; if(modalMessage) modalMessage.textContent = `Пожалуйста, подождите... ${percent}%`; if(progressBar) progressBar.style.width = `${percent}%`; if(progressContainer) progressContainer.style.display = 'block'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } if(errorDetails) errorDetails.style.display = 'none'; showUpdateModal('downloading'); });
-                listeners['update-ready'] = window.electronUpdater.on('update-ready', (info) => { console.log('%c[Renderer Updater] <<< RECEIVED update-ready! >>>', 'color: green; font-size: 1.2em;', info); updateInfoGlobal = info; if(modalTitle) modalTitle.textContent = `Обновление ${info.version} готово!`; if(modalMessage) modalMessage.textContent = 'Нажмите кнопку ниже, чтобы перезапустить приложение и установить обновление.'; if(progressContainer) progressContainer.style.display = 'none'; if(errorDetails) errorDetails.style.display = 'none'; if(restartButtonModal) { restartButtonModal.textContent = 'Перезапустить и установить'; restartButtonModal.disabled = false; restartButtonModal.style.display = 'inline-block'; console.log("[Renderer Updater] Кнопка ПЕРЕЗАПУСТИТЬ показана."); } else { console.error("[Renderer Updater] Кнопка ПЕРЕЗАПУСТИТЬ НЕ НАЙДЕНА при update-ready!"); } if(closeButtonModal) { closeButtonModal.style.display = 'none'; console.log("[Renderer Updater] Кнопка ЗАКРЫТЬ скрыта."); } else { console.error("[Renderer Updater] Кнопка ЗАКРЫТЬ НЕ НАЙДЕНА при update-ready!"); } showUpdateModal('ready'); });
-            } else { console.error('[Renderer Updater] Initialization FAILED. Checking components...'); /* ...логи */ }
+                // Кнопка "Перезапустить"
+                restartButtonModal.onclick = () => {
+                    console.log('[Renderer Updater] <<< SENDING install-update >>> to main process.');
+                    if(restartButtonModal) { restartButtonModal.textContent = 'Перезапуск...'; restartButtonModal.disabled = true; }
+                    if(closeButtonModal) closeButtonModal.disabled = true;
+                    window.electronUpdater.send('install-update');
+                };
+
+                // --- Слушатели событий от main процесса (ИСПРАВЛЕНА ЛОГИКА КНОПОК) ---
+
+                listeners['update-status'] = window.electronUpdater.on('update-status', (message) => {
+                    console.log('[Renderer Updater] <<< RECEIVED update-status >>>', message);
+                    if (!message) {
+                        // Если пришло пустое сообщение после 'Установлена последняя версия', скрываем окно
+                        if (modalMessage && modalMessage.textContent === 'Установлена последняя версия.') {
+                             hideUpdateModal();
+                        }
+                        return;
+                    }
+                    // Показываем окно для всех статусов, КРОМЕ финального "Готово к установке" (он обрабатывается в update-ready)
+                    if (message !== `Версия ${updateInfoGlobal?.version} загружена. Готово к установке.`) {
+                        if(modalMessage) modalMessage.textContent = message;
+                        if(modalTitle) modalTitle.textContent = 'Статус обновления';
+                        if(progressContainer) progressContainer.style.display = 'none';
+                        if(restartButtonModal) restartButtonModal.style.display = 'none';
+                        if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; }
+                        if(errorDetails) errorDetails.style.display = 'none';
+                        showUpdateModal('info');
+                    }
+                     // Скрываем "Установлена последняя версия" через 5 секунд
+                     if (message === 'Установлена последняя версия.') {
+                         setTimeout(hideUpdateModal, 5000);
+                     }
+                });
+
+                listeners['update-error'] = window.electronUpdater.on('update-error', (message) => {
+                    console.error('[Renderer Updater] <<< RECEIVED update-error >>>', message);
+                    if(modalTitle) modalTitle.textContent = 'Ошибка обновления';
+                    if(modalMessage) modalMessage.textContent = 'Не удалось проверить или загрузить обновление.';
+                    if(errorDetails) { errorDetails.textContent = `Детали: ${message}`; errorDetails.style.display = 'block'; }
+                    if(progressContainer) progressContainer.style.display = 'none';
+                    if(restartButtonModal) restartButtonModal.style.display = 'none';
+                    if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; }
+                    showUpdateModal('error');
+                });
+
+                listeners['update-available'] = window.electronUpdater.on('update-available', (info) => {
+                    console.log('[Renderer Updater] <<< RECEIVED update-available >>>', info);
+                    updateInfoGlobal = info; // Сохраняем для использования в update-status
+                    if(modalTitle) modalTitle.textContent = `Доступна версия ${info.version}`;
+                    if(modalMessage) modalMessage.textContent = 'Начинается автоматическая загрузка...';
+                    if(progressBar) progressBar.style.width = '0%';
+                    if(progressContainer) progressContainer.style.display = 'block';
+                    if(restartButtonModal) restartButtonModal.style.display = 'none';
+                    if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; }
+                    if(errorDetails) errorDetails.style.display = 'none';
+                    showUpdateModal('available');
+                });
+
+                listeners['update-progress'] = window.electronUpdater.on('update-progress', (percent) => {
+                     if (Math.round(percent) % 5 === 0 || percent > 95 || percent < 5) {
+                        console.log('[Renderer Updater] <<< RECEIVED update-progress >>>', percent);
+                     }
+                    if(modalTitle) modalTitle.textContent = 'Загрузка обновления';
+                    if(modalMessage) modalMessage.textContent = `Пожалуйста, подождите... ${percent}%`;
+                    if(progressBar) progressBar.style.width = `${percent}%`;
+                    if(progressContainer) progressContainer.style.display = 'block';
+                    if(restartButtonModal) restartButtonModal.style.display = 'none';
+                    if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; }
+                    if(errorDetails) errorDetails.style.display = 'none';
+                    showUpdateModal('downloading');
+                });
+
+                listeners['update-ready'] = window.electronUpdater.on('update-ready', (info) => {
+                    console.log('%c[Renderer Updater] <<< RECEIVED update-ready! >>>', 'color: green; font-size: 1.2em;', info);
+                    updateInfoGlobal = info; // Сохраняем инфо, чтобы 'update-status' его не перебил
+                    if(modalTitle) modalTitle.textContent = `Обновление ${info.version} готово!`;
+                    if(modalMessage) modalMessage.textContent = 'Нажмите кнопку ниже, чтобы перезапустить приложение и установить обновление.';
+                    if(progressContainer) progressContainer.style.display = 'none';
+                    if(errorDetails) errorDetails.style.display = 'none';
+                    // --- Показываем "Перезапустить" и прячем "Закрыть" ---
+                    if(restartButtonModal) {
+                        restartButtonModal.textContent = 'Перезапустить и установить';
+                        restartButtonModal.disabled = false;
+                        restartButtonModal.style.display = 'inline-block'; // Показываем!
+                        console.log("[Renderer Updater] Кнопка ПЕРЕЗАПУСТИТЬ показана.");
+                    } else { console.error("[Renderer Updater] Кнопка ПЕРЕЗАПУСТИТЬ НЕ НАЙДЕНА при update-ready!"); }
+                    if(closeButtonModal) {
+                        closeButtonModal.style.display = 'none'; // Прячем!
+                         console.log("[Renderer Updater] Кнопка ЗАКРЫТЬ скрыта.");
+                    } else { console.error("[Renderer Updater] Кнопка ЗАКРЫТЬ НЕ НАЙДЕНА при update-ready!"); }
+                    // ---
+                    showUpdateModal('ready');
+                });
+
+            } else {
+                // Лог при ошибке инициализации
+                 console.error('[Renderer Updater] Initialization FAILED. Checking components:');
+                 console.error('window.electronUpdater exists:', !!window.electronUpdater);
+                 console.error('#updateModalOverlay exists:', !!modalOverlay);
+                 console.error('#updateModalContent exists:', !!modalContent);
+                 console.error('#updateModalTitle exists:', !!modalTitle);
+                 console.error('#updateModalMessage exists:', !!modalMessage);
+                 console.error('#updateProgressContainer exists:', !!progressContainer);
+                 console.error('#updateProgressBar exists:', !!progressBar);
+                 console.error('#updateModalRestartButton exists:', !!restartButtonModal);
+                 console.error('#updateModalCloseButton exists:', !!closeButtonModal);
+                 console.error('#updateErrorDetails exists:', !!errorDetails);
+            }
             // --- КОНЕЦ КОДА ДЛЯ МОДАЛЬНОГО ОКНА ---
 
         }); // Конец DOMContentLoaded
