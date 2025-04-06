@@ -94,84 +94,110 @@ io.use((socket, next) => {
 
 // --- Передача данных в шаблоны EJS ---
 // Этот middleware будет выполняться ПЕРЕД каждым маршрутом
+// --- ИМПОРТ СЕРВИСОВ, МАРШРУТОВ И MIDDLEWARE (остается как было) ---
+const firebaseService = require('./services/firebaseService');
+const authRoutes = require('./routes/authRoutes');
+const propertyRoutes = require('./routes/propertyRoutes');
+const bookingRoutes = require('./routes/bookingRoutes');
+const userRoutes = require('./routes/userRoutes');
+const rentalRoutes = require('./routes/rentalRoutes');
+const companyRoutes = require('./routes/companyRoutes');
+const { checkCompanyProfile } = require('./middleware/ownerMiddleware');
+const { ensureCompanyExists } = require('./middleware/companyMiddleware');
+
+// --- Express & HTTP Server (остается как было) ---
+// ... (инициализация express, http, socket.io, redis) ...
+
+// --- Общие Middleware Express (остается как было) ---
+// ... (app.set, bodyParser, express.static) ...
+
+// --- Сессии Express (остается как было) ---
+// ... (sessionMiddleware) ...
+// app.use(sessionMiddleware); // Применяем сессии
+
+// --- Интеграция сессий Express с Socket.IO (остается как было) ---
+// ... (io.use) ...
+
+// --- Передача данных в шаблоны EJS ---
+// *** ИЗМЕНЕННЫЙ MIDDLEWARE ***
 app.use(async (req, res, next) => {
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновление сессии перед установкой res.locals ---
-    if (req.session && req.session.user && req.session.user.username) {
-        // Проверяем, нужно ли обновить данные в сессии
-        // Например, обновляем всегда, когда пользователь заходит на / или /profile
-        // или если в сессии нет каких-то критически важных актуальных данных (например, баланса для Tenant)
-        const needsUpdate = req.path === '/' || req.path === '/profile' || (req.session.user.role === 'Tenant' && req.session.user.balance === undefined);
+    // Сначала предполагаем, что пользователь тот, кто в сессии
+    let userInSession = req.session?.user || null;
+    let messageFromSession = req.session?.message || null;
 
-        // Можно добавить проверку времени последнего обновления, чтобы не делать это слишком часто
-        // const lastUpdateThreshold = 5 * 60 * 1000; // 5 минут
-        // const needsUpdate = !req.session.lastUpdate || (Date.now() - req.session.lastUpdate > lastUpdateThreshold);
+    // Очистка флеш-сообщений СРАЗУ, чтобы они не зависли, если обновление сессии вызовет ошибку
+    if (messageFromSession) {
+        delete req.session.message;
+        // Асинхронно сохраняем сессию БЕЗ ожидания - это менее критично, чем обновление данных
+        req.session.save(err => {
+            if (err) console.warn("[Middleware:FlashClear] Error saving session after deleting flash message:", err);
+        });
+    }
 
-        if (needsUpdate) {
-            try {
-                const freshUser = await firebaseService.getUserByUsername(req.session.user.username);
-                if (freshUser) {
-                    // Формируем обновленный объект сессии
-                    const updatedSessionUser = {
-                        username: freshUser.Username,
-                        fullName: freshUser.FullName,
-                        role: freshUser.Role,
-                        email: freshUser.Email,
-                        phone: freshUser.Phone,
-                        imageData: freshUser.ImageData || null,
-                        companyId: freshUser.companyId || null,
-                        companyProfileCompleted: freshUser.companyProfileCompleted === true,
-                        companyName: null // Загрузим ниже, если нужно
-                    };
-                    if (freshUser.Role === 'Tenant') {
-                        updatedSessionUser.balance = freshUser.Balance ?? 0;
-                    }
-                    if (updatedSessionUser.companyId) {
-                        try {
-                            const company = await firebaseService.getCompanyById(updatedSessionUser.companyId);
-                            updatedSessionUser.companyName = company?.companyName || null;
-                        } catch (companyError) {
-                             console.warn(`[Session Update Middleware] Failed to fetch company name for ${updatedSessionUser.companyId}:`, companyError);
-                        }
-                    }
-                    // Обновляем объект сессии
-                    req.session.user = updatedSessionUser;
-                    // req.session.lastUpdate = Date.now(); // Сохраняем время обновления
-                    console.log(`[Session Update Middleware] Session updated for ${req.session.user.username} on path ${req.path}`);
-                } else {
-                    // Пользователь удален из БД, уничтожаем сессию
-                    console.warn(`[Session Update Middleware] User ${req.session.user.username} not found in DB. Destroying session.`);
-                    return req.session.destroy((err) => {
-                        res.clearCookie('connect.sid');
-                        res.redirect('/login');
-                    });
+    // Если пользователь авторизован (есть user в сессии), ПЫТАЕМСЯ обновить его данные
+    if (userInSession && userInSession.username) {
+        const username = userInSession.username;
+        try {
+            // Получаем АКТУАЛЬНЫЕ данные из Firebase
+            const freshUser = await firebaseService.getUserByUsername(username);
+
+            if (freshUser) {
+                // Формируем НОВЫЙ объект для сессии на основе свежих данных
+                const updatedSessionUser = {
+                    username: freshUser.Username,
+                    fullName: freshUser.FullName,
+                    role: freshUser.Role,
+                    email: freshUser.Email,
+                    phone: freshUser.Phone,
+                    imageData: freshUser.ImageData || null,
+                    companyId: freshUser.companyId || null,
+                    companyProfileCompleted: freshUser.companyProfileCompleted === true,
+                    companyName: null // Будет загружено ниже
+                };
+                if (freshUser.Role === 'Tenant') {
+                    updatedSessionUser.balance = freshUser.Balance ?? 0;
                 }
-            } catch (error) {
-                console.error(`[Session Update Middleware] Error fetching user data for session update:`, error);
-                // Не прерываем запрос из-за ошибки обновления сессии, но логируем
+                if (updatedSessionUser.companyId) {
+                    try {
+                        const company = await firebaseService.getCompanyById(updatedSessionUser.companyId);
+                        updatedSessionUser.companyName = company?.companyName || null;
+                    } catch (companyError) {
+                         console.warn(`[Session Update Middleware] Failed fetch company name for ${username}:`, companyError);
+                    }
+                }
+                // Заменяем старый объект пользователя в сессии на новый
+                req.session.user = updatedSessionUser;
+                userInSession = updatedSessionUser; // Обновляем локальную переменную для res.locals
+                // console.log(`[Session Update Middleware] Session updated FOR EVERY request for ${username}`); // Можно раскомментировать для отладки
+
+                // Асинхронно сохраняем обновленную сессию
+                 req.session.save(err => {
+                     if (err) console.warn(`[Session Update Middleware] Error saving updated session for ${username}:`, err);
+                 });
+
+            } else {
+                // Пользователя нет в БД - уничтожаем сессию
+                console.warn(`[Session Update Middleware] User ${username} not found in DB. Destroying session.`);
+                 // Важно: НЕ вызываем next() здесь, т.к. нужно завершить запрос редиректом
+                 return req.session.destroy((err) => {
+                     if (err) console.error("[Session Destroy Middleware] Error destroying session:", err);
+                     res.clearCookie('connect.sid');
+                     res.redirect('/login');
+                 });
             }
+        } catch (error) {
+            console.error(`[Session Update Middleware] Error fetching user data for ${username}:`, error);
+            // Ошибка при получении данных НЕ должна блокировать запрос
+            // Продолжаем со старыми данными из сессии (userInSession)
         }
     }
-     // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-    // Устанавливаем res.locals ПОСЛЕ возможного обновления сессии
-    res.locals.currentUser = req.session?.user || null;
-    res.locals.companyId = req.session?.user?.companyId || null; // Передаем companyId в шаблоны, если он есть
-    res.locals.message = req.session?.message || null;
+    // Устанавливаем res.locals ТЕКУЩИМИ данными (либо обновленными, либо старыми из сессии)
+    res.locals.currentUser = userInSession; // Теперь это всегда самые актуальные данные из сессии на момент установки
+    res.locals.companyId = userInSession?.companyId || null;
+    res.locals.message = messageFromSession; // Используем сообщение, сохраненное в начале
 
-    // Очистка флеш-сообщений
-    if (req.session?.message) {
-        delete req.session.message;
-         // Сохраняем сессию после удаления сообщения (лучше делать это здесь, а не ждать ответа)
-         // Используем save с колбэком, чтобы next() вызвался после сохранения
-         req.session.save(err => {
-             if (err) {
-                 console.warn("[Middleware] Error saving session after deleting flash message:", err);
-             }
-             next(); // Переходим к следующему middleware/маршруту ТОЛЬКО после сохранения сессии
-         });
-    } else {
-         next(); // Если сообщений не было, просто идем дальше
-    }
+    next(); // Переходим к следующему middleware/маршруту
 });
 
 // --- Middleware для отладки сессии (опционально) ---
