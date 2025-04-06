@@ -28,7 +28,13 @@
         .gallery-container { margin-bottom: 35px; position: relative; overflow: hidden; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07);}
         .image-gallery { width: 100%; height: 480px; border-radius: 12px; background-color: #f8f9fa; }
         .swiper-slide { display: flex; justify-content: center; align-items: center; background-color: #f8f9fa; height: 100%; overflow: hidden; }
-        .swiper-slide img { display: block; width: 100%; height: 100%; object-fit: cover; }
+        .swiper-slide img {
+            display: block;
+            width: 100%; /* Растягиваем по ширине контейнера */
+            height: 100%; /* Растягиваем по высоте контейнера */
+            object-fit: contain; /* <<< ИЗМЕНЕНО с cover на contain */
+            /* object-position: center; /* Можно добавить для центрирования, если нужно */
+        }
         .swiper-pagination { position: absolute; bottom: 15px !important; left: 50% !important; transform: translateX(-50%) !important; width: auto !important; z-index: 10; }
         .swiper-pagination-bullet { background-color: rgba(255, 255, 255, 0.7); width: 10px; height: 10px; opacity: 1; margin: 0 5px !important; transition: background-color 0.2s ease; }
         .swiper-pagination-bullet-active { background-color: #ffffff; }

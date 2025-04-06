@@ -435,17 +435,48 @@
 
         // Функция обновления счетчиков в заголовках
         function updateCounts() {
-            if (pendingCountSpan) pendingCountSpan.textContent = pendingBody.rows.length;
-            if (otherCountSpan) otherCountSpan.textContent = otherBody.rows.length;
-            // Показываем/скрываем сообщения "Нет бронирований"
-            const noPendingMsg = pendingBody.closest('.rentals-section').querySelector('.no-bookings-message');
-            const noOtherMsg = otherBody.closest('.rentals-section').querySelector('.no-bookings-message');
-            if(noPendingMsg) noPendingMsg.style.display = pendingBody.rows.length === 0 ? 'block' : 'none';
-            if(noOtherMsg) noOtherMsg.style.display = otherBody.rows.length === 0 ? 'block' : 'none';
+        // Получаем ссылки на элементы ВНУТРИ функции и проверяем их наличие
+        const currentPendingBody = document.getElementById('pendingBookingsTableBody');
+        const currentOtherBody = document.getElementById('otherBookingsTableBody');
+        const pendingCountSpan = document.getElementById('pendingCount');
+        const otherCountSpan = document.getElementById('otherCount');
+
+        let pendingLength = 0;
+        let otherLength = 0;
+
+        // Обновляем счетчик и сообщение для "Ожидающих"
+        if (currentPendingBody) { // Проверяем, что элемент найден
+            pendingLength = currentPendingBody.rows.length;
+            if (pendingCountSpan) pendingCountSpan.textContent = pendingLength;
+            // Ищем сообщение "Нет бронирований" относительно найденного tbody
+            const noPendingMsg = currentPendingBody.closest('.rentals-section')?.querySelector('.no-bookings-message');
+            if (noPendingMsg) noPendingMsg.style.display = pendingLength === 0 ? 'block' : 'none';
+        } else {
+            // Если tbody не найден (т.е. изначально был пуст)
+            if (pendingCountSpan) pendingCountSpan.textContent = 0;
+            // Пытаемся найти секцию и сообщение по-другому
+            const pendingSection = document.querySelector('.rentals-section:first-of-type'); // Предполагаем, что это первая секция
+            const noPendingMsg = pendingSection?.querySelector('.no-bookings-message');
+            if(noPendingMsg) noPendingMsg.style.display = 'block'; // Показываем сообщение
         }
 
-        // Вызываем updateCounts при загрузке страницы для инициализации
-        document.addEventListener('DOMContentLoaded', updateCounts);
+        // Обновляем счетчик и сообщение для "Остальных"
+        if (currentOtherBody) { // Проверяем, что элемент найден
+            otherLength = currentOtherBody.rows.length;
+            if (otherCountSpan) otherCountSpan.textContent = otherLength;
+            const noOtherMsg = currentOtherBody.closest('.rentals-section')?.querySelector('.no-bookings-message');
+            if (noOtherMsg) noOtherMsg.style.display = otherLength === 0 ? 'block' : 'none';
+        } else {
+             // Если tbody не найден
+             if (otherCountSpan) otherCountSpan.textContent = 0;
+             const otherSection = document.querySelector('.rentals-section:last-of-type'); // Предполагаем, что это последняя секция
+             const noOtherMsg = otherSection?.querySelector('.no-bookings-message');
+             if(noOtherMsg) noOtherMsg.style.display = 'block'; // Показываем сообщение
+        }
+    }
+
+    // Вызываем updateCounts при загрузке страницы для инициализации
+    document.addEventListener('DOMContentLoaded', updateCounts);
 
     </script>
 

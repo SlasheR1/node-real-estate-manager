@@ -77,24 +77,30 @@ function createWindow () {
   });
 
   // Обработчик заголовков CSP
-  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Content-Security-Policy': [
-            "default-src 'self';",
-            " script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://api-maps.yandex.ru https://yandex.st https://yastatic.net https://core-renderer-tiles.maps.yandex.net;",
-            " style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com https://yastatic.net;",
-            " font-src 'self' data: https://cdnjs.cloudflare.com;",
-            " img-src 'self' data: blob: https://*.maps.yandex.net https://yandex.st https://favicon.yandex.net;",
-            " connect-src 'self' ws://localhost:* wss://localhost:* https://*.maps.yandex.net https://api-maps.yandex.ru https://yandex.ru redis://*;", // Добавил redis://* на всякий случай, если он нужен для connect-src
-            " frame-src 'self' https://api-maps.yandex.ru;",
-            " worker-src 'self' blob:;",
-            " object-src 'none';"
-        ].join(' ')
-      }
+    // Обработчик заголовков CSP
+    mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          // Убедитесь, что используется именно 'Content-Security-Policy', а не 'content-security-policy'
+          'Content-Security-Policy': [
+              "default-src 'self';",
+              // Добавляем 'unsafe-eval' временно для диагностики карты, если ошибка ReferenceError сохранится
+              // В продакшене лучше избегать 'unsafe-eval'
+              "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://api-maps.yandex.ru https://yandex.st https://yastatic.net https://core-renderer-tiles.maps.yandex.net;", // 'unsafe-eval' может понадобиться API
+              "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com https://yastatic.net;",
+              "font-src 'self' data: https://cdnjs.cloudflare.com;",
+              // *** ИЗМЕНЕНИЕ ЗДЕСЬ: Добавлен https://api-maps.yandex.ru ***
+              "img-src 'self' data: blob: https://*.maps.yandex.net https://yandex.st https://favicon.yandex.net https://api-maps.yandex.ru;",
+              // *** КОНЕЦ ИЗМЕНЕНИЯ ***
+              "connect-src 'self' ws://localhost:* wss://localhost:* https://*.maps.yandex.net https://api-maps.yandex.ru https://yandex.ru redis://*;",
+              "frame-src 'self' https://api-maps.yandex.ru;",
+              "worker-src 'self' blob:;",
+              "object-src 'none';"
+          ].join(' ') // Убедитесь, что здесь пробел, а не точка с запятой
+        }
+      })
     })
-  })
 
   console.log('Loading URL: http://localhost:3000/');
   mainWindow.loadURL('http://localhost:3000/');

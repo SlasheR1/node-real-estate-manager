@@ -6,7 +6,7 @@
     <title><%= title %></title>
     <link rel="stylesheet" href="/css/style.css">
     <!-- === Font Awesome ПЕРВЫМ === -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <!-- ===================================== -->
     <link rel="stylesheet" href="/css/properties.css">
 
@@ -15,7 +15,7 @@
     <!-- ======================== -->
 
     <style>
-        /* --- Стили Фильтров --- */
+        /* --- Стили Фильтров (без изменений) --- */
         .filters-container { background-color: #ffffff; padding: 20px 25px; border-radius: 8px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08); border: 1px solid #e2e8f0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px 22px; align-items: end; }
         .filter-group { display: flex; flex-direction: column; }
         .filter-group label, .filter-group-amenities legend { font-size: 0.8rem; color: #475569; margin-bottom: 6px; font-weight: 500; display: block; }
@@ -35,8 +35,8 @@
         @media (max-width: 992px) { .filters-container { grid-template-columns: repeat(2, 1fr); } .filter-buttons { grid-column: span 2; } }
         @media (max-width: 576px) { .filters-container { grid-template-columns: 1fr; padding: 15px; } .filter-buttons { grid-column: 1 / -1; text-align: center; margin-top: 15px; } .filter-buttons button { width: 100%; } .amenity-checkbox-item label { font-size: 0.9rem; } }
 
-        /* --- Стили Карточек --- */
-        .properties-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; margin-top: 20px; }
+        /* --- Стили Карточек (без изменений) --- */
+        .properties-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; }
         .property-card { background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06); overflow: hidden; display: flex; flex-direction: column; transition: transform 0.3s ease, box-shadow 0.3s ease; border: 1px solid #e5e7eb; }
         .property-card:hover { transform: translateY(-8px); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); }
         .card-image-container { position: relative; width: 100%; height: 220px; overflow: hidden; background-color: #f3f4f6; }
@@ -48,7 +48,6 @@
         .card-content .address i { color: #9ca3af; font-size: 0.9em; }
         .property-meta { display: flex; gap: 15px; font-size: 0.875rem; color: #4b5563; margin-bottom: 16px; flex-wrap: wrap; }
         .property-meta span { display: inline-flex; align-items: center; gap: 5px; }
-        /* Добавил CompanyName в .property-meta span */
         .property-meta span.company-name { color: #3498db; font-weight: 500;}
         .property-meta i, .amenity-item i, .card-content .address i { font-family: "Font Awesome 6 Free", "FontAwesome", sans-serif !important; font-weight: 900; font-style: normal; speak: none; display: inline-block; text-rendering: auto; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
         .card-rating { display: flex; align-items: center; gap: 6px; margin-bottom: 14px; color: #6b7280; font-size: 0.85rem; }
@@ -69,28 +68,27 @@
         .amenity-item:hover::after { opacity: 1; visibility: visible; }
         .card-actions { margin-top: auto; padding-top: 15px; border-top: 1px solid #e5e7eb; display: flex; flex-wrap: wrap; gap: 10px; }
         .card-actions .btn { padding: 8px 14px; font-size: 0.85rem; border-radius: 6px; text-decoration: none; text-align: center; cursor: pointer; border: 1px solid transparent; font-weight: 500; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.15s ease; flex-grow: 1; }
-        .card-actions .btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .card-actions .btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .card-actions .btn-details { background-color: #3b82f6; color: white; border-color: #3b82f6;} .card-actions .btn-details:hover { background-color: #2563eb; border-color: #2563eb; }
         .card-actions .btn-book { background-color: #10b981; color: white; border-color: #10b981; } .card-actions .btn-book:hover { background-color: #059669; border-color: #059669;}
         .card-actions .btn-edit { background-color: #f59e0b; color: white; border-color: #f59e0b; } .card-actions .btn-edit:hover { background-color: #d97706; border-color: #d97706;}
         .card-actions .btn-delete { background-color: #ef4444; color: white; border-color: #ef4444;} .card-actions .btn-delete:hover:not(:disabled) { background-color: #dc2626; border-color: #dc2626;}
         .card-actions form { flex-grow: 1; display: flex; }
         .card-actions form button { width: 100%; }
-        /* Стили для спиннера внутри кнопки */
         .button-spinner { margin-left: 5px; display: none; font-size: 0.9em; }
         button:disabled .button-spinner { display: inline-block; }
         button .button-text { vertical-align: middle; }
 
         /* --- Стили скрытия, пагинации, сообщений --- */
-        .property-card.hidden-filter, .property-card.hidden-card { display: none !important; }
-        .btn:disabled, button:disabled { opacity: 0.65; cursor: not-allowed; }
-        #noPropertiesMessage { display: none; text-align: center; margin-top: 20px; }
-        #noFilterResultsMessage { display: none; text-align: center; margin-top: 20px; }
+        .property-card.hidden-filter { display: none !important; }
+        .property-card.hidden-card { display: none !important; }
+        .btn:disabled, button:disabled { opacity: 0.65; cursor: not-allowed !important; }
+        #noPropertiesMessage { display: none; text-align: center; margin: 40px 0; color: #6b7280; }
+        #noFilterResultsMessage { display: none; text-align: center; margin: 40px 0; color: #6b7280; }
         .pagination-container { margin-top: 30px; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; }
         .pagination-controls { display: flex; align-items: center; gap: 5px; }
         .pagination-controls button { padding: 6px 12px; font-size: 0.9rem; border: 1px solid #dee2e6; background-color: #fff; color: #0d6efd; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; min-width: 36px; text-align: center; }
         .pagination-controls button:hover:not(:disabled) { background-color: #e9ecef; border-color: #adb5bd; }
-        .pagination-controls button:disabled { color: #6c757d; background-color: #f8f9fa; cursor: not-allowed; opacity: 0.7; }
         .pagination-controls button.active { background-color: #0d6efd; border-color: #0d6efd; color: #fff; cursor: default; font-weight: 500; }
         .pagination-info { font-size: 0.9rem; color: #6c757d; display: flex; align-items: center; gap: 8px; }
         .pagination-info select { padding: 5px 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 0.9rem; vertical-align: middle; background-color: #f8fafc; }
@@ -98,9 +96,10 @@
         .pagination-container.hidden { display: none; }
 
         /* === СТИЛИ ДЛЯ КАРТЫ === */
-        .map-view-container { margin-bottom: 30px; position: relative; }
+        .map-section { margin-top: 40px; margin-bottom: 30px; }
+        .map-section h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee; color: #34495e; }
+        .map-view-container { position: relative; }
         #propertiesMap { width: 100%; height: 500px; border-radius: 8px; border: 1px solid #e2e8f0; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center; color: #6b7280; font-style: italic; }
-        /* Стили для балуна */
         .custom-balloon-content { font-family: 'Inter', sans-serif; padding: 5px; min-width: 200px; }
         .custom-balloon-content h3 { font-size: 1rem; font-weight: 600; margin: 0 0 5px 0; color: #1f2937; }
         .custom-balloon-content p { font-size: 0.85rem; margin: 3px 0; color: #4b5563; }
@@ -108,6 +107,152 @@
         .custom-balloon-content a { display: inline-block; margin-top: 8px; font-size: 0.8rem; color: #3b82f6; text-decoration: none; font-weight: 500; }
         .custom-balloon-content a:hover { text-decoration: underline; }
         .hidden { display: none !important; }
+
+        .search-filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px; /* Отступ снизу */
+            background-color: #fff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+            border: 1px solid #e2e8f0;
+        }
+
+        .search-input-wrapper {
+            flex-grow: 1; /* Занимает все доступное место */
+            position: relative;
+        }
+
+        .search-input-wrapper .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 0.9em;
+        }
+
+        #filterSearch { /* Стилизуем главный поиск */
+            width: 100%;
+            padding: 10px 15px 10px 35px; /* Отступ слева для иконки */
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        #filterSearch:focus {
+             outline: none;
+             border-color: #4f46e5;
+             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+         }
+
+        #toggleFiltersBtn {
+            flex-shrink: 0; /* Не сжиматься */
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 18px; /* Чуть крупнее кнопка */
+            font-size: 0.9rem;
+            background-color: #edf2f7; /* Светлый фон */
+            color: #4a5568;
+            border: 1px solid #e2e8f0;
+        }
+        #toggleFiltersBtn:hover {
+            background-color: #e2e8f0;
+            border-color: #cbd5e0;
+        }
+        #toggleFiltersBtn .filter-icon {
+            font-size: 1em;
+        }
+        /* Стиль кнопки при раскрытых фильтрах (опционально) */
+        #toggleFiltersBtn[aria-expanded="true"] {
+            background-color: #e2e8f0;
+        }
+
+        /* Контейнер для скрываемых фильтров */
+        .advanced-filters {
+            max-height: 0; /* Начальная высота 0 */
+            overflow: hidden; /* Скрываем содержимое */
+            opacity: 0; /* Начальная прозрачность */
+            visibility: hidden; /* Скрываем для доступности */
+            transition: max-height 0.5s ease-in-out, opacity 0.4s ease-in-out, visibility 0s linear 0.5s, padding 0.5s ease-in-out, margin 0.5s ease-in-out;
+            background-color: #f8fafc; /* Легкий фон для блока */
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 0; /* Убираем отступ снизу в скрытом состоянии */
+            padding: 0 25px; /* Убираем верт. паддинг в скрытом состоянии */
+            border-top: none; /* Убираем верхнюю границу, т.к. она дублирует нижнюю у search-bar */
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        .advanced-filters.expanded {
+            max-height: 1000px; /* Достаточно большая высота для контента */
+            opacity: 1;
+            visibility: visible;
+            transition: max-height 0.5s ease-in-out, opacity 0.4s ease-in-out 0.1s, visibility 0s linear 0s, padding 0.5s ease-in-out, margin 0.5s ease-in-out;
+            padding: 25px 25px; /* Возвращаем паддинги */
+            margin-bottom: 30px; /* Возвращаем отступ снизу */
+        }
+
+        /* Вложенный grid для фильтров */
+        .advanced-filters .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 18px 22px;
+            align-items: end;
+        }
+        .advanced-filters .filter-group { display: flex; flex-direction: column; }
+        .advanced-filters .filter-group label,
+        .advanced-filters .filter-group-amenities legend { font-size: 0.8rem; color: #475569; margin-bottom: 6px; font-weight: 500; }
+        .advanced-filters .filter-group input,
+        .advanced-filters .filter-group select { padding: 9px 12px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 0.9rem; width: 100%; background-color: #fff; } /* Белый фон для инпутов внутри */
+        .advanced-filters .filter-group input::placeholder { color: #94a3b8; }
+        .advanced-filters .filter-group input:focus,
+        .advanced-filters .filter-group select:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15); }
+        .advanced-filters .filter-group-amenities { grid-column: 1 / -1; padding: 0; margin: 5px 0 0 0; }
+        .advanced-filters .amenities-checkboxes { display: flex; flex-wrap: wrap; gap: 10px 20px; }
+        .advanced-filters .amenity-checkbox-item { display: flex; align-items: center; gap: 6px; }
+        .advanced-filters .amenity-checkbox-item label { font-weight: normal; margin-bottom: 0; }
+        .advanced-filters .amenity-checkbox-item input[type="checkbox"] { margin: 0; }
+        .advanced-filters .filter-buttons { grid-column: 1 / -1; text-align: right; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #d1d5db; }
+        #resetFilters { color: #6b7280; text-decoration: none; padding: 8px 0; } /* Делаем кнопку сброса ссылкой */
+        #resetFilters:hover { color: #dc2626; text-decoration: underline; }
+
+        /* Адаптивность для новой панели */
+         @media (max-width: 768px) {
+             .search-filter-bar {
+                 flex-direction: column;
+                 align-items: stretch;
+                 padding: 15px;
+             }
+             #toggleFiltersBtn {
+                 margin-top: 10px;
+                 justify-content: center; /* Центрируем текст и иконку */
+             }
+             .advanced-filters .filters-grid {
+                 grid-template-columns: 1fr 1fr; /* 2 колонки на средних экранах */
+             }
+             .advanced-filters .filter-group-amenities,
+             .advanced-filters .filter-buttons {
+                 grid-column: 1 / -1; /* Растягиваем на всю ширину */
+             }
+         }
+         @media (max-width: 576px) {
+              .advanced-filters .filters-grid {
+                  grid-template-columns: 1fr; /* 1 колонка на малых экранах */
+              }
+              .advanced-filters .filter-buttons {
+                  text-align: center;
+              }
+              #resetFilters {
+                  display: block; /* Ссылка на всю ширину */
+                  width: 100%;
+              }
+         }
     </style>
 </head>
 <body>
@@ -118,23 +263,67 @@
          <%- include('partials/messages') %>
 
         <!-- Фильтры (HTML без изменений) -->
-        <div class="filters-container">
-             <div class="filter-group"> <label for="filterSearch">Поиск</label> <input type="text" id="filterSearch" placeholder="Название, адрес, компания..."> </div> <%# Расширен плейсхолдер %>
-             <div class="filter-group"> <label for="filterType">Тип</label> <select id="filterType"> <option value="">Все типы</option> <option value="Квартира">Квартира</option> <option value="Дом">Дом</option> <option value="Коммерческая недвижимость">Коммерческая</option> </select> </div>
-             <div class="filter-group"> <label for="filterAvailable">Статус</label> <select id="filterAvailable"> <option value="">Все</option> <option value="available">Доступные</option> <option value="unavailable">Недоступные</option> </select> </div>
-             <div class="filter-group"> <label for="filterPriceMin">Цена от</label> <input type="number" id="filterPriceMin" placeholder="Мин. (₽/мес)" min="0" step="100"> </div>
-             <div class="filter-group"> <label for="filterPriceMax">Цена до</label> <input type="number" id="filterPriceMax" placeholder="Макс. (₽/мес)" min="0" step="100"> </div>
-             <div class="filter-group"> <label for="filterAreaMin">Площадь от</label> <input type="number" id="filterAreaMin" placeholder="Мин. (м²)" min="0" step="1"> </div>
-             <div class="filter-group"> <label for="filterAreaMax">Площадь до</label> <input type="number" id="filterAreaMax" placeholder="Макс. (м²)" min="0" step="1"> </div>
-             <fieldset class="filter-group filter-group-amenities"> <legend>Удобства</legend> <div class="amenities-checkboxes"> <div class="amenity-checkbox-item"> <input type="checkbox" id="filterAmenityParking" name="amenity" value="HasParking"><label for="filterAmenityParking">Парковка</label> </div> <div class="amenity-checkbox-item"> <input type="checkbox" id="filterAmenityWifi" name="amenity" value="HasWifi"><label for="filterAmenityWifi">Wi-Fi</label> </div> <div class="amenity-checkbox-item"> <input type="checkbox" id="filterAmenityBalcony" name="amenity" value="HasBalcony"><label for="filterAmenityBalcony">Балкон</label> </div> <div class="amenity-checkbox-item"> <input type="checkbox" id="filterAmenityFurnished" name="amenity" value="IsFurnished"><label for="filterAmenityFurnished">Мебель</label> </div> <div class="amenity-checkbox-item"> <input type="checkbox" id="filterAmenityAirConditioned" name="amenity" value="IsAirConditioned"><label for="filterAmenityAirConditioned">Кондиционер</label> </div> </div> </fieldset>
-            <div class="filter-buttons"> <button type="button" class="btn btn-secondary btn-small" id="resetFilters">Сбросить все</button> </div>
+        <div class="search-filter-bar">
+            <div class="search-input-wrapper">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="filterSearch" placeholder="Поиск по названию, адресу, компании...">
+            </div>
+            <button id="toggleFiltersBtn" class="btn btn-secondary" type="button" aria-expanded="false" aria-controls="advancedFiltersContainer">
+                <i class="fas fa-sliders-h filter-icon"></i>
+                <span>Фильтры</span>
+            </button>
         </div>
 
-        <!-- === Карта === -->
-        <div class="map-view-container">
-            <div id="propertiesMap">Загрузка карты...</div>
+        <div id="advancedFiltersContainer" class="advanced-filters">
+            <div class="filters-grid"> <%# Используем вложенный grid для сохранения разметки %>
+                <div class="filter-group">
+                    <label for="filterType">Тип</label>
+                    <select id="filterType">
+                        <option value="">Все типы</option>
+                        <option value="Квартира">Квартира</option>
+                        <option value="Дом">Дом</option>
+                        <option value="Коммерческая недвижимость">Коммерческая</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterAvailable">Статус</label>
+                    <select id="filterAvailable">
+                        <option value="">Все</option>
+                        <option value="available">Доступные</option>
+                        <option value="unavailable">Недоступные</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterPriceMin">Цена от (₽/мес)</label>
+                    <input type="number" id="filterPriceMin" placeholder="Мин." min="0" step="100">
+                </div>
+                <div class="filter-group">
+                    <label for="filterPriceMax">Цена до (₽/мес)</label>
+                    <input type="number" id="filterPriceMax" placeholder="Макс." min="0" step="100">
+                </div>
+                <div class="filter-group">
+                    <label for="filterAreaMin">Площадь от (м²)</label>
+                    <input type="number" id="filterAreaMin" placeholder="Мин." min="0" step="1">
+                </div>
+                <div class="filter-group">
+                    <label for="filterAreaMax">Площадь до (м²)</label>
+                    <input type="number" id="filterAreaMax" placeholder="Макс." min="0" step="1">
+                </div>
+                <fieldset class="filter-group filter-group-amenities">
+                    <legend>Удобства</legend>
+                    <div class="amenities-checkboxes">
+                        <div class="amenity-checkbox-item"> <input type="checkbox" id="filterAmenityParking" name="amenity" value="HasParking"><label for="filterAmenityParking">Парковка</label> </div>
+                        <div class="amenity-checkbox-item"> <input type="checkbox" id="filterAmenityWifi" name="amenity" value="HasWifi"><label for="filterAmenityWifi">WiFi</label> </div>
+                        <div class="amenity-checkbox-item"> <input type="checkbox" id="filterAmenityBalcony" name="amenity" value="HasBalcony"><label for="filterAmenityBalcony">Балкон</label> </div>
+                        <div class="amenity-checkbox-item"> <input type="checkbox" id="filterAmenityFurnished" name="amenity" value="IsFurnished"><label for="filterAmenityFurnished">Мебель</label> </div>
+                        <div class="amenity-checkbox-item"> <input type="checkbox" id="filterAmenityAirConditioned" name="amenity" value="IsAirConditioned"><label for="filterAmenityAirConditioned">Кондиционер</label> </div>
+                    </div>
+                </fieldset>
+                <div class="filter-buttons">
+                    <button type="button" class="btn btn-link" id="resetFilters">Сбросить фильтры</button>
+                </div>
+            </div>
         </div>
-        <!-- ============ -->
 
         <!-- Сетка Объектов -->
         <div class="properties-grid" id="propertiesGrid">
@@ -146,7 +335,7 @@
                              data-id="<%= property.Id %>"
                              data-title="<%= property.Title ? property.Title.toLowerCase() : '' %>"
                              data-address="<%= property.Address ? property.Address.toLowerCase() : '' %>"
-                             data-company="<%= property.CompanyName ? property.CompanyName.toLowerCase() : '' %>" <%# Добавлен data-атрибут для компании %>
+                             data-company="<%= property.CompanyName ? property.CompanyName.toLowerCase() : '' %>"
                              data-type="<%= property.Type || '' %>"
                              data-available="<%= property.IsAvailable ? 'available' : 'unavailable' %>"
                              data-price="<%= typeof property.Price === 'number' ? property.Price : '' %>"
@@ -164,7 +353,6 @@
                                 <div class="property-meta">
                                     <span><i class="fas fa-building"></i><%= property.Type || 'Не указ.' %></span>
                                     <span><i class="fas fa-ruler-combined"></i><%= property.Area || '?' %> м²</span>
-                                    <%# Отображение компании %>
                                     <span class="company-name"><i class="fas fa-briefcase"></i><%= property.CompanyName || property.OwnerUsername || 'Частное лицо' %></span>
                                     <% if (property.Bedrooms && property.Bedrooms > 0) { %> <span><i class="fas fa-bed"></i><%= property.Bedrooms %> сп.</span> <% } %>
                                     <% if (property.Bathrooms && property.Bathrooms > 0) { %> <span><i class="fas fa-bath"></i><%= property.Bathrooms %> ван.</span> <% } %>
@@ -190,32 +378,54 @@
                     <% } %>
                 <% }) %>
             <% } %>
-        </div>
+        </div><!-- Конец properties-grid -->
 
+        <!-- Сообщения об отсутствии объектов/результатов -->
         <p id="noPropertiesMessage" class="<%= propertiesExist ? 'hidden' : '' %>">Объекты недвижимости не найдены.</p>
         <% if (!propertiesExist && currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Owner')) { %> <p style="text-align: center;"><a href="/properties/add" class="btn btn-primary">Добавить первый объект</a></p> <% } %>
         <p id="noFilterResultsMessage" style="display: none;">Объекты, соответствующие вашему запросу, не найдены.</p>
 
+        <!-- Карта перемещена сюда -->
+        <section class="map-section">
+            <h2>Объекты на карте</h2>
+            <div class="map-view-container">
+                <div id="propertiesMap">Загрузка карты...</div>
+            </div>
+        </section>
+
+        <!-- Пагинация -->
         <div class="pagination-container hidden" id="paginationContainer">
-            <div class="pagination-info"> <span id="paginationInfo"></span> <select id="itemsPerPageSelect"> <option value="6">6</option> <option value="9">9</option> <option value="12" selected>12</option> <option value="24">24</option> </select> <label for="itemsPerPageSelect" style="margin-left: 5px;">на странице</label> </div>
-            <div class="pagination-controls" id="paginationControls"></div>
+            <div class="pagination-info">
+                <span id="paginationInfo"></span>
+                <select id="itemsPerPageSelect">
+                    <option value="6">6</option>
+                    <option value="9">9</option>
+                    <option value="12" selected>12</option>
+                    <option value="24">24</option>
+                </select>
+                <label for="itemsPerPageSelect" style="margin-left: 5px;">на странице</label>
+            </div>
+            <div class="pagination-controls" id="paginationControls">
+                <%# Кнопки пагинации будут добавлены JS %>
+            </div>
         </div>
     </main>
 
      <%- include('partials/footer') %>
 
+     <%# Данные для карты %>
      <script id="propertiesData" type="application/json">
         <%- JSON.stringify((properties || []).map(p => ({
             id: p.Id,
             title: p.Title,
             address: p.Address,
             price: p.Price,
-            company: p.CompanyName || p.OwnerUsername // <<< Передаем компанию для балуна
+            company: p.CompanyName || p.OwnerUsername
         }))) %>
      </script>
 
      <script>
-        // --- JavaScript Фильтрации и Пагинации ---
+        // --- Глобальные переменные для скрипта ---
         const searchInput = document.getElementById('filterSearch');
         const typeSelect = document.getElementById('filterType');
         const availableSelect = document.getElementById('filterAvailable');
@@ -235,12 +445,11 @@
         const allCards = propertiesGridElement ? Array.from(propertiesGridElement.querySelectorAll('.property-card')) : [];
         let currentPage = 1;
         let itemsPerPage = parseInt(itemsPerPageSelect.value);
-
-        // Глобальные переменные для карты
         let propertiesMapInstance = null;
         let objectManager = null;
         let propertiesDataForMap = [];
 
+        // --- ФУНКЦИЯ ФИЛЬТРАЦИИ (без изменений в логике фильтрации) ---
         function applyFilters() {
              const searchTerm = searchInput.value.toLowerCase().trim();
              const selectedType = typeSelect.value;
@@ -249,69 +458,154 @@
              const maxPrice = priceMaxInput.value ? parseFloat(priceMaxInput.value) : null;
              const minArea = areaMinInput.value ? parseFloat(areaMinInput.value) : null;
              const maxArea = areaMaxInput.value ? parseFloat(areaMaxInput.value) : null;
-             const requiredAmenities = Array.from(amenityCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
+             const requiredAmenities = Array.from(amenityCheckboxes)
+                                        .filter(cb => cb.checked)
+                                        .map(cb => cb.value);
              let visibleCardIds = [];
 
              allCards.forEach(card => {
+                 const cardId = card.dataset.id || 'Unknown ID';
                  const title = card.dataset.title || '';
                  const address = card.dataset.address || '';
-                 const company = card.dataset.company || ''; // << Получаем компанию
+                 const company = card.dataset.company || '';
                  const type = card.dataset.type || '';
                  const availability = card.dataset.available || '';
                  const cardPrice = card.dataset.price ? parseFloat(card.dataset.price) : null;
                  const cardArea = card.dataset.area ? parseFloat(card.dataset.area) : null;
 
-                 // Обновляем проверку поиска, включая компанию
                  const searchMatch = searchTerm === '' || title.includes(searchTerm) || address.includes(searchTerm) || company.includes(searchTerm);
                  const typeMatch = selectedType === '' || type === selectedType;
                  const availabilityMatch = selectedAvailability === '' || availability === selectedAvailability;
                  const priceMatch = (cardPrice !== null) && (minPrice === null || isNaN(minPrice) || cardPrice >= minPrice) && (maxPrice === null || isNaN(maxPrice) || cardPrice <= maxPrice);
                  const areaMatch = (cardArea !== null) && (minArea === null || isNaN(minArea) || cardArea >= minArea) && (maxArea === null || isNaN(maxArea) || cardArea <= maxArea);
+
                  let amenitiesMatch = true;
-                 if (requiredAmenities.length > 0) { amenitiesMatch = requiredAmenities.every(amenityKey => card.getAttribute(`data-${amenityKey.replace(/([A-Z])/g, '-$1').toLowerCase()}`) === 'true'); }
+                 if (requiredAmenities.length > 0) {
+                    amenitiesMatch = requiredAmenities.every(amenityKey => {
+                        const attributeSuffix = amenityKey.replace(/([A-Z])/g, (match, letter, offset) => {
+                            return (offset > 0 ? '-' : '') + letter.toLowerCase();
+                        }).toLowerCase();
+                        const cardAttributeName = `data-${attributeSuffix}`;
+                        const cardAttributeValue = card.getAttribute(cardAttributeName);
+                        return cardAttributeValue === 'true';
+                    });
+                 }
 
                  if (searchMatch && typeMatch && availabilityMatch && priceMatch && areaMatch && amenitiesMatch) {
-                     card.classList.remove('hidden-filter'); visibleCardIds.push(card.dataset.id);
-                 } else { card.classList.add('hidden-filter'); }
+                     card.classList.remove('hidden-filter');
+                     visibleCardIds.push(card.dataset.id);
+                 } else {
+                     card.classList.add('hidden-filter');
+                 }
              });
 
              const visibleCount = visibleCardIds.length;
-             if (noFilterResultsMessage) { noFilterResultsMessage.style.display = (visibleCount === 0 && allCards.length > 0) ? 'block' : 'none'; }
-             if (noPropertiesMessage) { const isAnyFilterActive = searchTerm || selectedType || selectedAvailability || minPrice || maxPrice || minArea || maxArea || requiredAmenities.length > 0; noPropertiesMessage.style.display = (visibleCount === 0 && allCards.length === 0 && !isAnyFilterActive) ? 'block' : 'none'; }
+             if (noFilterResultsMessage) {
+                 noFilterResultsMessage.style.display = (visibleCount === 0 && allCards.length > 0) ? 'block' : 'none';
+             }
+             if (noPropertiesMessage) {
+                 const isAnyFilterActive = searchTerm || selectedType || selectedAvailability || minPrice || maxPrice || minArea || maxArea || requiredAmenities.length > 0;
+                 noPropertiesMessage.style.display = (visibleCount === 0 && allCards.length === 0 && !isAnyFilterActive) ? 'block' : 'none';
+             }
 
              updateMapMarkers(visibleCardIds);
              displayPage(1);
          }
 
+        // --- ФУНКЦИЯ ОТОБРАЖЕНИЯ СТРАНИЦЫ ПАГИНАЦИИ (без изменений)---
         function displayPage(page) {
-             if (!propertiesGridElement || !paginationContainer) return; currentPage = page;
-             const visibleCards = allCards.filter(card => !card.classList.contains('hidden-filter'));
-             const totalVisibleCards = visibleCards.length;
-             if (totalVisibleCards > itemsPerPage) { paginationContainer.classList.remove('hidden'); } else { paginationContainer.classList.add('hidden'); }
-             if (totalVisibleCards === 0) { renderPaginationControls(totalVisibleCards); updatePaginationInfo(totalVisibleCards); allCards.forEach(card => card.classList.add('hidden-card')); return; }
-             const start = (page - 1) * itemsPerPage; const end = start + itemsPerPage;
-             allCards.forEach(card => card.classList.add('hidden-card'));
-             visibleCards.slice(start, end).forEach(card => { card.classList.remove('hidden-card'); });
-             renderPaginationControls(totalVisibleCards); updatePaginationInfo(totalVisibleCards);
-         }
+            if (!propertiesGridElement || !paginationContainer) return;
+            currentPage = page;
 
+            const visibleCards = allCards.filter(card => !card.classList.contains('hidden-filter'));
+            const totalVisibleCards = visibleCards.length;
+
+            if (totalVisibleCards > itemsPerPage) {
+                paginationContainer.classList.remove('hidden');
+            } else {
+                paginationContainer.classList.add('hidden');
+            }
+
+            if (totalVisibleCards === 0) {
+                renderPaginationControls(totalVisibleCards);
+                updatePaginationInfo(totalVisibleCards);
+                // Скрывать не нужно, они уже скрыты фильтром
+                return;
+            }
+
+            const start = (page - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+
+            visibleCards.forEach((card, index) => {
+                if (index >= start && index < end) {
+                    card.classList.remove('hidden-card'); // Показываем нужные
+                } else {
+                    card.classList.add('hidden-card'); // Скрываем остальные
+                }
+            });
+
+            renderPaginationControls(totalVisibleCards);
+            updatePaginationInfo(totalVisibleCards);
+        }
+
+        // --- ФУНКЦИЯ РЕНДЕРИНГА КНОПОК ПАГИНАЦИИ (без изменений) ---
         function renderPaginationControls(totalItems) {
-             if (!paginationControls) return; paginationControls.innerHTML = ''; if (totalItems === 0) return;
-             const pageCount = Math.ceil(totalItems / itemsPerPage); if (pageCount <= 1) return;
-             const prevButton = document.createElement('button'); prevButton.innerHTML = '‹'; prevButton.disabled = currentPage === 1; prevButton.addEventListener('click', () => { if (currentPage > 1) displayPage(currentPage - 1); }); paginationControls.appendChild(prevButton);
-             const maxButtons = 5; let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2)); let endPage = Math.min(pageCount, startPage + maxButtons - 1); if (endPage - startPage + 1 < maxButtons) { startPage = Math.max(1, endPage - maxButtons + 1); }
-             if (startPage > 1) { const firstButton = document.createElement('button'); firstButton.textContent = 1; firstButton.addEventListener('click', () => displayPage(1)); paginationControls.appendChild(firstButton); if (startPage > 2) { const dots = document.createElement('span'); dots.textContent = '...'; dots.style.padding = '0 5px'; paginationControls.appendChild(dots); } }
-             for (let i = startPage; i <= endPage; i++) { const pageButton = document.createElement('button'); pageButton.textContent = i; if (i === currentPage) { pageButton.classList.add('active'); pageButton.disabled = true; } pageButton.addEventListener('click', () => displayPage(i)); paginationControls.appendChild(pageButton); }
-             if (endPage < pageCount) { if (endPage < pageCount - 1) { const dots = document.createElement('span'); dots.textContent = '...'; dots.style.padding = '0 5px'; paginationControls.appendChild(dots); } const lastButton = document.createElement('button'); lastButton.textContent = pageCount; lastButton.addEventListener('click', () => displayPage(pageCount)); paginationControls.appendChild(lastButton); }
-             const nextButton = document.createElement('button'); nextButton.innerHTML = '›'; nextButton.disabled = currentPage === pageCount; nextButton.addEventListener('click', () => { if (currentPage < pageCount) displayPage(currentPage + 1); }); paginationControls.appendChild(nextButton);
+            if (!paginationControls) return;
+             paginationControls.innerHTML = '';
+             if (totalItems === 0) return;
+             const pageCount = Math.ceil(totalItems / itemsPerPage);
+             if (pageCount <= 1) return;
+
+             const prevButton = document.createElement('button');
+             prevButton.innerHTML = '‹';
+             prevButton.disabled = currentPage === 1;
+             prevButton.addEventListener('click', () => { if (currentPage > 1) displayPage(currentPage - 1); });
+             paginationControls.appendChild(prevButton);
+
+             const maxButtons = 5;
+             let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+             let endPage = Math.min(pageCount, startPage + maxButtons - 1);
+             if (endPage - startPage + 1 < maxButtons) { startPage = Math.max(1, endPage - maxButtons + 1); }
+
+             if (startPage > 1) {
+                 const firstButton = document.createElement('button'); firstButton.textContent = 1;
+                 firstButton.addEventListener('click', () => displayPage(1));
+                 paginationControls.appendChild(firstButton);
+                 if (startPage > 2) { const dots = document.createElement('span'); dots.textContent = '...'; dots.style.padding = '0 5px'; paginationControls.appendChild(dots); }
+             }
+
+             for (let i = startPage; i <= endPage; i++) {
+                 const pageButton = document.createElement('button'); pageButton.textContent = i;
+                 if (i === currentPage) { pageButton.classList.add('active'); pageButton.disabled = true; }
+                 pageButton.addEventListener('click', () => displayPage(i));
+                 paginationControls.appendChild(pageButton);
+             }
+
+             if (endPage < pageCount) {
+                 if (endPage < pageCount - 1) { const dots = document.createElement('span'); dots.textContent = '...'; dots.style.padding = '0 5px'; paginationControls.appendChild(dots); }
+                 const lastButton = document.createElement('button'); lastButton.textContent = pageCount;
+                 lastButton.addEventListener('click', () => displayPage(pageCount));
+                 paginationControls.appendChild(lastButton);
+             }
+
+             const nextButton = document.createElement('button');
+             nextButton.innerHTML = '›';
+             nextButton.disabled = currentPage === pageCount;
+             nextButton.addEventListener('click', () => { if (currentPage < pageCount) displayPage(currentPage + 1); });
+             paginationControls.appendChild(nextButton);
          }
 
+        // --- ФУНКЦИЯ ОБНОВЛЕНИЯ ИНФОРМАЦИИ О ПАГИНАЦИИ (без изменений) ---
         function updatePaginationInfo(totalItems) {
-             if (!paginationInfo) return; if (totalItems === 0) { paginationInfo.textContent = ''; return; }
-             const pageCount = Math.ceil(totalItems / itemsPerPage); const startItem = Math.min((currentPage - 1) * itemsPerPage + 1, totalItems); const endItem = Math.min(startItem + itemsPerPage - 1, totalItems);
+             if (!paginationInfo) return;
+             if (totalItems === 0) { paginationInfo.textContent = ''; return; }
+             const pageCount = Math.ceil(totalItems / itemsPerPage);
+             const startItem = Math.min((currentPage - 1) * itemsPerPage + 1, totalItems);
+             const endItem = Math.min(startItem + itemsPerPage - 1, totalItems);
              paginationInfo.textContent = `Объекты ${startItem}-${endItem} из ${totalItems}`;
          }
 
+        // --- ФУНКЦИЯ УДАЛЕНИЯ ОБЪЕКТА (без изменений) ---
         function confirmAndDeleteProperty(buttonElement, propertyId, propertyTitleJSON) {
              try {
                  const propertyTitle = JSON.parse(propertyTitleJSON);
@@ -320,26 +614,40 @@
                      if (form) {
                          const buttonText = buttonElement.querySelector('.button-text');
                          const originalText = buttonText.textContent;
-                         buttonElement.disabled = true;
-                         buttonText.textContent = 'Удал...';
-                         form.submit();
+                         buttonElement.disabled = true; buttonText.textContent = 'Удал...'; form.submit();
                      }
                  }
-             } catch (e) { console.error("Error parsing title:", e); if (confirm(`Удалить объект ID ${propertyId}?`)){ const form = buttonElement.closest('form'); if(form) form.submit(); } }
+             } catch (e) { console.error("Error parsing title for delete confirmation:", e); if (confirm(`Удалить объект ID ${propertyId}?`)){ const form = buttonElement.closest('form'); if(form) form.submit(); } }
          }
 
-        // --- Логика для КАРТЫ ---
-        function initPropertiesMap() {
-            console.log("Initializing properties map...");
+        // --- ФУНКЦИИ ДЛЯ КАРТЫ ---
+        // *** ИЗМЕНЕНИЕ: Переместили определение initMap сюда, перед DOMContentLoaded ***
+        function initMap() {
+            console.log("Map initialization started (initMap function).");
             const mapContainer = document.getElementById('propertiesMap');
             if (!mapContainer) { console.error("Map container #propertiesMap not found."); return; }
-            mapContainer.textContent = '';
-            propertiesMapInstance = new ymaps.Map(mapContainer, { center: [55.75, 37.62], zoom: 9, controls: ['zoomControl', 'fullscreenControl', 'searchControl', 'typeSelector'] });
-            objectManager = new ymaps.ObjectManager({ clusterize: true, gridSize: 64, clusterDisableClickZoom: true });
+            mapContainer.textContent = ''; // Clear "Loading..."
+
+            propertiesMapInstance = new ymaps.Map(mapContainer, {
+                center: [55.75, 37.62], // Default center (Moscow)
+                zoom: 9,
+                controls: ['zoomControl', 'fullscreenControl', 'searchControl', 'typeSelector']
+            });
+
+            objectManager = new ymaps.ObjectManager({
+                clusterize: true,
+                gridSize: 64,
+                clusterDisableClickZoom: true
+            });
+
             propertiesMapInstance.geoObjects.add(objectManager);
+
             let objectsToAdd = [];
             let geocodePromises = propertiesDataForMap.map((property) => {
-                if (!property.address) { return Promise.resolve(); }
+                if (!property.address) {
+                    console.warn(`Skipping geocode for property ID ${property.id}: no address.`);
+                    return Promise.resolve(); // Skip if no address
+                }
                 return ymaps.geocode(property.address, { results: 1 })
                     .then(res => {
                         const geoObject = res.geoObjects.get(0);
@@ -347,42 +655,125 @@
                             const coords = geoObject.geometry.getCoordinates();
                             const priceFormatted = property.price ? new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(property.price) : 'Цена не указ.';
                             objectsToAdd.push({
-                                type: 'Feature', id: property.id, geometry: { type: 'Point', coordinates: coords },
+                                type: 'Feature',
+                                id: property.id,
+                                geometry: { type: 'Point', coordinates: coords },
                                 properties: {
-                                     balloonContentBody: `<div class="custom-balloon-content"><h3>${property.title||''}</h3><p>${property.address||''}</p><p><strong>Компания:</strong> ${property.company || 'Не указана'}</p><p class="price">${priceFormatted} / мес.</p><a href="/properties/${property.id}" target="_blank">Подробнее</a></div>`, // Добавлена компания
-                                     hintContent: `${property.title||'Объект'}<br>${property.company || ''}<br>${priceFormatted}` // Добавлена компания
-                                 },
-                                options: { preset: 'islands#blueDotIcon' }
+                                    // Hint shows on hover, Balloon on click
+                                    hintContent: `${property.title || 'Объект'}<br>${property.company || ''}<br>${priceFormatted}`,
+                                    balloonContentBody: `<div class="custom-balloon-content"><h3>${property.title || ''}</h3><p>${property.address || ''}</p><p><strong>Компания:</strong> ${property.company || 'Не указана'}</p><p class="price">${priceFormatted} / мес.</p><a href="/properties/${property.id}" target="_blank">Подробнее</a></div>`
+                                },
+                                options: { preset: 'islands#blueDotIcon' } // Standard blue placemark
                             });
-                        } else { console.warn(`Geocode failed: ${property.address}`); }
-                    }).catch(err => console.error(`Geocode error for ${property.address}:`, err));
+                        } else {
+                            console.warn(`Geocode failed for address: "${property.address}" (Property ID: ${property.id})`);
+                        }
+                    }).catch(err => console.error(`Geocode error for address "${property.address}" (Property ID: ${property.id}):`, err));
             });
 
+            // Wait for all geocoding attempts to finish
             Promise.all(geocodePromises).then(() => {
-                console.log(`Adding ${objectsToAdd.length} objects to ObjectManager.`);
+                console.log(`Adding ${objectsToAdd.length} geocoded objects to ObjectManager.`);
                 objectManager.add(objectsToAdd);
+
+                // Adjust map bounds only if objects were successfully added
                 if (objectsToAdd.length > 0) {
-                    setTimeout(() => { try { const bounds = objectManager.getBounds(); if (bounds) { propertiesMapInstance.setBounds(bounds, { checkZoomRange: true, duration: 300 }); console.log("Map bounds set."); } else { console.warn("Could not get bounds from object manager."); } } catch(e) { console.error("Error setting bounds:", e); } }, 500);
-                } else if (propertiesDataForMap.length > 0) { mapContainer.textContent = 'Не удалось определить координаты.'; }
-                else { mapContainer.textContent = 'Нет объектов для карты.'; }
-                applyFilters();
+                    // Use a small delay to ensure the object manager has processed the additions
+                    setTimeout(() => {
+                        try {
+                            const bounds = objectManager.getBounds();
+                            if (bounds) {
+                                propertiesMapInstance.setBounds(bounds, {
+                                    checkZoomRange: true, // Prevents zooming too far in/out
+                                    duration: 300 // Smooth transition
+                                }).catch(e => console.warn("Error setting bounds after geocoding:", e)); // Catch potential setBounds errors
+                                console.log("Map bounds automatically adjusted.");
+                            } else {
+                                console.warn("Could not get bounds from object manager after adding objects. Map center remains default.");
+                            }
+                        } catch (e) {
+                            console.error("Error calculating or setting map bounds:", e);
+                        }
+                    }, 500); // 500ms delay
+                } else if (propertiesDataForMap.length > 0) {
+                    // Objects existed, but geocoding failed for all
+                    mapContainer.textContent = 'Не удалось определить координаты для объектов на карте.';
+                    console.warn("No objects added to the map due to geocoding failures.");
+                } else {
+                    // No properties data to begin with
+                    mapContainer.textContent = 'Нет объектов для отображения на карте.';
+                    console.log("No properties data to display on the map.");
+                }
+                // Apply initial filters (which also calls pagination) AFTER map objects are added
+                // applyFilters(); // This was called inside initMap before, now called in DOMContentLoaded
+            }).catch(err => {
+                 console.error("Error during Promise.all for geocoding:", err);
+                 mapContainer.textContent = 'Произошла ошибка при геокодировании адресов.';
             });
-        }
+        } // --- END of initMap ---
 
         function updateMapMarkers(visibleIds) {
-            if (!objectManager) return;
-            console.log(`Updating map markers. Visible IDs: ${visibleIds.length}`);
+            if (!objectManager) { console.warn("ObjectManager not ready for filtering map markers."); return; }
+            // console.log(`Updating map markers. Visible IDs: ${visibleIds.length}`);
             objectManager.setFilter(object => visibleIds.includes(String(object.id)));
-        }
 
-        // --- Инициализация при загрузке ---
+            // Optional: Adjust bounds to visible markers after filtering
+             setTimeout(() => {
+                 try {
+                     // Get only the objects that pass the current filter
+                     const visibleObjects = objectManager.getObjects().getAll().filter(obj => objectManager.getFilter()(obj));
+                     if (visibleObjects.length > 0) {
+                         // Calculate bounds based on visible objects
+                         const bounds = ymaps.util.bounds.fromPoints(visibleObjects.map(obj => obj.geometry.coordinates));
+                         if(bounds && propertiesMapInstance) {
+                             propertiesMapInstance.setBounds(bounds, { checkZoomRange: true, duration: 300 })
+                                 .catch(e => console.warn("Error adjusting map bounds after filter:", e));
+                         }
+                     } else {
+                          // No visible objects, maybe reset view or leave as is
+                          // propertiesMapInstance?.setCenter([55.75, 37.62], 9); // Example: reset to Moscow
+                     }
+                 } catch(e) { console.error("Error getting bounds for filtered markers:", e); }
+             }, 350);
+        } // --- END of updateMapMarkers ---
+
+
+        // --- ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ ---
         document.addEventListener('DOMContentLoaded', () => {
-            try { const jsonData = document.getElementById('propertiesData')?.textContent; if (jsonData) { propertiesDataForMap = JSON.parse(jsonData || '[]'); } } catch (e) { console.error("Error parsing properties data:", e); }
-            if (typeof ymaps !== 'undefined') { ymaps.ready(initPropertiesMap); }
-            else { console.error("Yandex Maps API not loaded yet."); const mapContainer = document.getElementById('propertiesMap'); if (mapContainer) mapContainer.textContent = 'Ошибка: API Яндекс.Карт не загружен.'; }
-            if (allCards.length > 0) { applyFilters(); }
-            else { if (paginationContainer) paginationContainer.classList.add('hidden'); if (noPropertiesMessage) noPropertiesMessage.style.display = 'block'; }
-            // Слушатели событий
+            console.log("DOMContentLoaded event fired.");
+            // 1. Парсим данные для карты
+            try {
+                 const jsonData = document.getElementById('propertiesData')?.textContent;
+                 if (jsonData) { propertiesDataForMap = JSON.parse(jsonData || '[]'); }
+                 console.log(`Parsed ${propertiesDataForMap.length} properties for map.`);
+            } catch (e) { console.error("Error parsing properties data:", e); }
+
+            // 2. Инициализируем карту (вызываем ymaps.ready)
+            console.log("Checking Yandex Maps API readiness...");
+            if (typeof ymaps !== 'undefined') {
+                 console.log("Yandex Maps API is available, scheduling initMap.");
+                 ymaps.ready(initMap); // Передаем саму функцию initMap
+            } else {
+                 console.error("Yandex Maps API not loaded yet. Map initialization deferred or failed.");
+                 const mapContainer = document.getElementById('propertiesMap');
+                 if (mapContainer) mapContainer.textContent = 'Ошибка: API Яндекс.Карт не загружен.';
+            }
+
+            // 3. Инициализируем фильтры и пагинацию
+            console.log(`Initializing filters and pagination. Total cards found: ${allCards.length}`);
+            if (allCards.length > 0) {
+                // Применяем фильтры (покажутся все карточки), это вызовет displayPage(1)
+                applyFilters();
+            } else {
+                // Если карточек нет изначально
+                if (paginationContainer) paginationContainer.classList.add('hidden');
+                if (noPropertiesMessage) noPropertiesMessage.style.display = 'block';
+                if (noFilterResultsMessage) noFilterResultsMessage.style.display = 'none';
+                 console.log("No property cards found on the page.");
+            }
+
+            // 4. Назначаем слушателей событий
+            console.log("Adding event listeners...");
             if (searchInput) searchInput.addEventListener('input', applyFilters);
             if (typeSelect) typeSelect.addEventListener('change', applyFilters);
             if (availableSelect) availableSelect.addEventListener('change', applyFilters);
@@ -391,10 +782,64 @@
             if (areaMinInput) areaMinInput.addEventListener('input', applyFilters);
             if (areaMaxInput) areaMaxInput.addEventListener('input', applyFilters);
             amenityCheckboxes.forEach(checkbox => checkbox.addEventListener('change', applyFilters));
-            if (resetButton) { resetButton.addEventListener('click', () => { if (searchInput) searchInput.value = ''; if (typeSelect) typeSelect.value = ''; if (availableSelect) availableSelect.value = ''; if (priceMinInput) priceMinInput.value = ''; if (priceMaxInput) priceMaxInput.value = ''; if (areaMinInput) areaMinInput.value = ''; if (areaMaxInput) areaMaxInput.value = ''; amenityCheckboxes.forEach(checkbox => checkbox.checked = false); applyFilters(); }); }
-            if (itemsPerPageSelect) itemsPerPageSelect.addEventListener('change', (event) => { itemsPerPage = parseInt(event.target.value); displayPage(1); });
-        });
+            if (resetButton) {
+                 resetButton.addEventListener('click', () => {
+                     console.log("Reset filters button clicked.");
+                     if (searchInput) searchInput.value = '';
+                     if (typeSelect) typeSelect.value = '';
+                     if (availableSelect) availableSelect.value = '';
+                     if (priceMinInput) priceMinInput.value = '';
+                     if (priceMaxInput) priceMaxInput.value = '';
+                     if (areaMinInput) areaMinInput.value = '';
+                     if (areaMaxInput) areaMaxInput.value = '';
+                     amenityCheckboxes.forEach(checkbox => checkbox.checked = false);
+                     applyFilters();
+                 });
+            }
+            if (itemsPerPageSelect) {
+                 itemsPerPageSelect.addEventListener('change', (event) => {
+                     console.log(`Items per page changed to: ${event.target.value}`);
+                     itemsPerPage = parseInt(event.target.value);
+                     displayPage(1); // Переходим на первую страницу
+                 });
+            }
+            console.log("Event listeners added.");
+        }); // --- END of DOMContentLoaded ---
 
+        const toggleBtn = document.getElementById('toggleFiltersBtn');
+        const advancedFilters = document.getElementById('advancedFiltersContainer');
+        const toggleBtnText = toggleBtn ? toggleBtn.querySelector('span') : null; // Находим текст кнопки
+
+        if (toggleBtn && advancedFilters && toggleBtnText) {
+            toggleBtn.addEventListener('click', () => {
+                const isExpanded = advancedFilters.classList.toggle('expanded');
+                toggleBtn.setAttribute('aria-expanded', isExpanded);
+                // Меняем текст кнопки (опционально)
+                toggleBtnText.textContent = isExpanded ? 'Скрыть фильтры' : 'Фильтры';
+                console.log('Toggled filters visibility. Expanded:', isExpanded);
+            });
+        } else {
+            console.error('Could not find toggle button or advanced filters container.');
+        }
+
+        // Добавляем логику для кнопки сброса внутри advancedFilters
+        const advancedResetBtn = document.getElementById('resetFilters');
+        if (advancedResetBtn) {
+            advancedResetBtn.addEventListener('click', () => {
+                console.log("Reset filters button clicked.");
+                 // Сбрасываем все поля формы фильтров (включая основной поиск)
+                 if (searchInput) searchInput.value = '';
+                 if (typeSelect) typeSelect.value = ''; // или selectedIndex = 0
+                 if (availableSelect) availableSelect.value = '';
+                 if (priceMinInput) priceMinInput.value = '';
+                 if (priceMaxInput) priceMaxInput.value = '';
+                 if (areaMinInput) areaMinInput.value = '';
+                 if (areaMaxInput) areaMaxInput.value = '';
+                 amenityCheckboxes.forEach(checkbox => checkbox.checked = false);
+                 // Применяем фильтры заново (что покажет все карточки)
+                 applyFilters();
+             });
+        }
      </script>
 
 </body>
