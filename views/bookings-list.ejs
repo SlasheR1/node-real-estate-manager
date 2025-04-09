@@ -1,5 +1,4 @@
-<!-- views/bookings-list.ejs -->
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -7,34 +6,483 @@
     <title><%= title %></title>
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/tables.css">
+    <!-- Font Awesome для иконок и спиннера -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        /* Стили для статусов (как в rentals-management) */
-        .status-label { padding: 3px 8px; border-radius: 4px; font-size: 0.85em; font-weight: 500; display: inline-block; }
-        .status-active { background-color: #e6f9f0; color: #27ae60; } /* Зеленый */
-        .status-pending { background-color: #fff8e1; color: #f39c12; } /* Желтый */
-        .status-rejected { background-color: #fbeee6; color: #d35400; } /* Оранжевый */
-        .status-cancelled { background-color: #fdeded; color: #e74c3c; } /* Красный (Отменена арендатором) */
-        .status-annulled { background-color: #eaeded; color: #7f8c8d; } /* Серый (Аннулирована админом) */
-        .status-other { background-color: #f8f9fa; color: #6c757d; }
+        :root {
+            --primary-color: #0d6efd;
+            --primary-dark: #0b5ed7;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --transition-speed: 0.3s;
+        }
 
-        /* Остальные стили (JS сообщения, спиннер) */
-        .actions-cell .btn:disabled { opacity: 0.65; cursor: not-allowed; }
-        .cancel-booking-form { display: inline-block; }
-        #js-messages-container { margin-bottom: 15px; }
-        .flash-message { padding: 12px 20px; margin-bottom: 15px; border-radius: 6px; border: 1px solid transparent; position: relative; font-size: 0.95rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .flash-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
-        .flash-error { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
-        .flash-warning { color: #664d03; background-color: #fff3cd; border-color: #ffecb5; }
-        .flash-info { color: #055160; background-color: #cff4fc; border-color: #b6effb; }
-        .flash-message .close-flash { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); background: none; border: none; font-size: 1.5rem; line-height: 1; color: inherit; opacity: 0.6; cursor: pointer; padding: 0 5px; }
-        .flash-message .close-flash:hover { opacity: 0.9; }
-        .button-spinner { margin-left: 5px; display: none; font-size: 0.9em; }
-        button:disabled .button-spinner { display: inline-block; }
-        button .button-text { vertical-align: middle; }
-        .actions-cell button { vertical-align: middle; }
+        body {
+            background-color: #f9fafb;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Улучшенные стили заголовка */
+        h1 {
+            position: relative;
+            font-weight: 600;
+            color: var(--dark-color);
+            margin-bottom: 30px;
+            display: inline-block;
+        }
+
+        h1::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 60%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-color), transparent);
+            border-radius: 2px;
+            transition: width 0.4s ease;
+        }
+
+        h1:hover::after {
+            width: 100%;
+        }
+
+        /* Модернизированные стили таблицы */
+        .data-table {
+            width: 100%;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            border-collapse: separate;
+            border-spacing: 0;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .data-table thead th {
+            background-color: #f1f5f9;
+            font-weight: 600;
+            padding: 16px 12px;
+            text-align: left;
+            color: var(--dark-color);
+            border-bottom: 2px solid #e5e7eb;
+            position: relative;
+        }
+
+        .data-table thead th::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--primary-color);
+            transition: width 0.3s ease;
+        }
+
+        .data-table thead th:hover::after {
+            width: 100%;
+        }
+
+        .data-table tbody tr {
+            transition: all var(--transition-speed) ease;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .data-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .data-table tbody tr:hover {
+            background-color: rgba(13, 110, 253, 0.04);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .data-table tbody td {
+            padding: 16px 12px;
+            vertical-align: middle;
+        }
+
+        /* Улучшенные стили для кнопок */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 16px;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            transition: all var(--transition-speed) ease;
+            border: none;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.5s, height 0.5s;
+            z-index: 1;
+        }
+
+        .btn:hover::before {
+            width: 300%;
+            height: 300%;
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .btn-warning {
+            background-color: var(--warning-color);
+            color: #212529;
+        }
+
+        .btn-warning:hover {
+            background-color: #e0a800;
+        }
+
+        .btn-cancel {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .btn-cancel:hover {
+            background-color: #c82333;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.875rem;
+        }
+
+        .btn .button-text {
+            position: relative;
+            z-index: 2;
+        }
+
+        .btn:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn:disabled::before {
+            display: none;
+        }
+
+        /* Стили для статусов с улучшенным дизайном */
+        .status-label {
+            padding: 6px 10px;
+            border-radius: var(--border-radius);
+            font-size: 0.85em;
+            font-weight: 500;
+            display: inline-block;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .status-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-active {
+            background-color: #e6f9f0;
+            color: #27ae60;
+            border-left: 3px solid #27ae60;
+        }
+
+        .status-pending {
+            background-color: #fff8e1;
+            color: #f39c12;
+            border-left: 3px solid #f39c12;
+        }
+
+        .status-rejected {
+            background-color: #fbeee6;
+            color: #d35400;
+            border-left: 3px solid #d35400;
+        }
+
+        .status-cancelled {
+            background-color: #fdeded;
+            color: #e74c3c;
+            border-left: 3px solid #e74c3c;
+        }
+
+        .status-annulled {
+            background-color: #eaeded;
+            color: #7f8c8d;
+            border-left: 3px solid #7f8c8d;
+        }
+
+        .status-other {
+            background-color: #f8f9fa;
+            color: #6c757d;
+            border-left: 3px solid #6c757d;
+        }
+
+        /* Стили для действий в таблице */
+        .actions-cell {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .actions-cell form {
+            margin: 0;
+        }
+
+        .cancel-booking-form {
+            display: inline-block;
+        }
+
+        /* Улучшенные стили для JS сообщений */
+        #js-messages-container {
+            margin-bottom: 20px;
+        }
+
+        .flash-message {
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            border-radius: var(--border-radius);
+            border-left: 4px solid transparent;
+            position: relative;
+            font-size: 0.95rem;
+            box-shadow: var(--box-shadow);
+            animation: slideInDown 0.4s forwards;
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .flash-success {
+            color: #0f5132;
+            background-color: #d1e7dd;
+            border-left-color: #20c997;
+        }
+
+        .flash-error {
+            color: #842029;
+            background-color: #f8d7da;
+            border-left-color: #dc3545;
+        }
+
+        .flash-warning {
+            color: #664d03;
+            background-color: #fff3cd;
+            border-left-color: #ffc107;
+        }
+
+        .flash-info {
+            color: #055160;
+            background-color: #cff4fc;
+            border-left-color: #0dcaf0;
+        }
+
+        .flash-message .close-flash {
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            line-height: 1;
+            color: inherit;
+            opacity: 0.6;
+            cursor: pointer;
+            padding: 0 5px;
+            transition: all 0.2s ease;
+        }
+
+        .flash-message .close-flash:hover {
+            opacity: 1;
+            transform: translateY(-50%) rotate(90deg);
+        }
+
+        /* Спиннер с улучшенным стилем */
+        .button-spinner {
+            margin-left: 5px;
+            display: none;
+            font-size: 0.9em;
+            color: inherit;
+        }
+
+        button:disabled .button-spinner {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Улучшенные стили для ссылок */
+        .data-table a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .data-table a::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 1.5px;
+            bottom: -2px;
+            left: 0;
+            background-color: var(--primary-color);
+            transition: width 0.3s ease;
+        }
+
+        .data-table a:hover {
+            color: var(--primary-dark);
+        }
+
+        .data-table a:hover::after {
+            width: 100%;
+        }
+
         /* Стиль для иконки информации */
-        .fa-info-circle { cursor: help; }
+        .fa-info-circle {
+            cursor: help;
+            transition: all 0.3s ease;
+            margin-left: 8px;
+        }
+
+        .fa-info-circle:hover {
+            transform: scale(1.2);
+        }
+
+        /* Анимация для строк таблицы при загрузке страницы */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .data-table tbody tr {
+            opacity: 0;
+            animation: fadeInUp 0.5s forwards;
+        }
+
+        .data-table tbody tr:nth-child(1) { animation-delay: 0.05s; }
+        .data-table tbody tr:nth-child(2) { animation-delay: 0.1s; }
+        .data-table tbody tr:nth-child(3) { animation-delay: 0.15s; }
+        .data-table tbody tr:nth-child(4) { animation-delay: 0.2s; }
+        .data-table tbody tr:nth-child(5) { animation-delay: 0.25s; }
+        .data-table tbody tr:nth-child(6) { animation-delay: 0.3s; }
+        .data-table tbody tr:nth-child(7) { animation-delay: 0.35s; }
+        .data-table tbody tr:nth-child(8) { animation-delay: 0.4s; }
+        .data-table tbody tr:nth-child(9) { animation-delay: 0.45s; }
+        .data-table tbody tr:nth-child(10) { animation-delay: 0.5s; }
+
+        /* Тултипы для кнопок */
+        [data-tooltip] {
+            position: relative;
+        }
+
+        [data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 6px 10px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        [data-tooltip]::before {
+            content: '';
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%) translateY(100%);
+            border-width: 5px;
+            border-style: solid;
+            border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        [data-tooltip]:hover::after,
+        [data-tooltip]:hover::before {
+            opacity: 1;
+            visibility: visible;
+            bottom: 135%;
+        }
     </style>
 </head>
 <body>
@@ -80,7 +528,7 @@
                                 }
                             %>
                             <tr id="booking-row-<%= booking.Id %>">
-                                <td> <a href="/properties/<%= booking.PropertyId %>"><%= booking.PropertyTitle %></a> </td>
+                                <td><a href="/properties/<%= booking.PropertyId %>"><%= booking.PropertyTitle %></a></td>
                                 <td><%= booking.StartDateFormatted %></td>
                                 <td><%= booking.EndDateFormatted %></td>
                                 <td><%= booking.TotalCost ? new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(booking.TotalCost) : '?' %></td>
@@ -88,14 +536,14 @@
                                     <span class="status-label <%= statusClass %>" title="<%= fullStatusTitle %>"><%= statusText %></span>
                                     <%# Показываем причину отклонения, если есть %>
                                     <% if (booking.Status === 'Отклонена' && booking.RejectedReason) { %>
-                                        <i class="fas fa-info-circle" title="<%= booking.RejectedReason %>" style="margin-left: 5px; color: #d35400;"></i>
+                                        <i class="fas fa-info-circle" title="<%= booking.RejectedReason %>" style="color: #d35400;"></i>
                                     <% } %>
                                 </td>
                                 <td class="actions-cell">
                                     <%# Кнопку "Отменить" показываем только для Активных и Ожидающих %>
                                     <% if (booking.Status === 'Активна' || booking.Status === 'Ожидает подтверждения') { %>
                                         <form class="cancel-booking-form" data-booking-id="<%= booking.Id %>" data-current-status="<%= booking.Status %>" action="/bookings/<%= booking.Id %>/cancel" method="POST">
-                                            <button type="submit" class="btn btn-small btn-cancel">
+                                            <button type="submit" class="btn btn-small btn-cancel" data-tooltip="Отменить бронирование">
                                                 <span class="button-text">Отменить</span>
                                                 <i class="fas fa-spinner fa-spin button-spinner"></i>
                                             </button>
@@ -112,30 +560,52 @@
                 </tbody>
             </table>
         </div>
-
     </main>
+    
     <%- include('partials/footer') %>
 
     <script>
-        // JS для отмены (Обновлен для разных сообщений confirm)
+        // Улучшенная функция показа JS сообщений
         function showJsMessage(type, text) {
             const container = document.getElementById('js-messages-container');
             if (!container) return;
+            
             const messageDiv = document.createElement('div');
             messageDiv.className = `flash-message flash-${type}`;
             messageDiv.innerHTML = `${text} <button type="button" class="close-flash" onclick="this.parentElement.remove()">×</button>`;
+            
             // Добавляем перед существующими сообщениями, если они есть
-            if (container.firstChild) { container.insertBefore(messageDiv, container.firstChild); }
-            else { container.appendChild(messageDiv); }
-            setTimeout(() => { if(messageDiv) messageDiv.remove(); }, 6000); // Увеличил время показа
+            if (container.firstChild) { 
+                container.insertBefore(messageDiv, container.firstChild);
+            } else { 
+                container.appendChild(messageDiv);
+            }
+            
+            // Автоматическое скрытие сообщения через 6 секунд
+            setTimeout(() => { 
+                if(messageDiv && messageDiv.parentNode) {
+                    // Добавляем анимацию исчезновения
+                    messageDiv.style.opacity = '0';
+                    messageDiv.style.transform = 'translateY(-20px)';
+                    messageDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                    
+                    // После анимации удаляем элемент
+                    setTimeout(() => {
+                        if(messageDiv && messageDiv.parentNode) {
+                            messageDiv.remove();
+                        }
+                    }, 300);
+                }
+            }, 6000);
         }
 
+        // Обработка форм отмены бронирования
         const cancelForms = document.querySelectorAll('.cancel-booking-form');
         cancelForms.forEach(form => {
             form.addEventListener('submit', async (event) => {
                 event.preventDefault();
                 const bookingId = form.dataset.bookingId;
-                const currentStatus = form.dataset.currentStatus; // Получаем статус из data-атрибута
+                const currentStatus = form.dataset.currentStatus;
                 const submitButton = form.querySelector('button[type="submit"]');
                 const buttonText = submitButton.querySelector('.button-text');
                 const originalButtonText = buttonText.textContent;
@@ -154,41 +624,96 @@
                 document.getElementById('js-messages-container').innerHTML = '';
 
                 try {
-                    const response = await fetch(form.action, { method: 'POST', headers: { 'Accept': 'application/json' } });
+                    const response = await fetch(form.action, { 
+                        method: 'POST', 
+                        headers: { 'Accept': 'application/json' } 
+                    });
+                    
                     const result = await response.json();
+                    
                     if (response.ok && result.success) {
                         const row = document.getElementById(`booking-row-${bookingId}`);
                         if (row) {
-                            const statusCell = row.querySelector('.status-cell .status-label');
-                            if (statusCell) {
-                                statusCell.textContent = 'Отменена'; // Новый текст статуса
-                                statusCell.className = 'status-label status-cancelled'; // Новый класс
-                                statusCell.title = 'Отменена'; // Обновляем title
-                                // Удаляем иконку с причиной, если она была
-                                const infoIcon = row.querySelector('.status-cell .fa-info-circle');
-                                if(infoIcon) infoIcon.remove();
-                            }
-                            const actionsCell = row.querySelector('.actions-cell');
-                            if (actionsCell) { actionsCell.innerHTML = '<span>-</span>'; } // Убираем кнопку
+                            // Анимация строки перед обновлением
+                            row.style.transition = 'background-color 0.5s ease';
+                            row.style.backgroundColor = 'rgba(220, 53, 69, 0.1)';
+                            
+                            setTimeout(() => {
+                                // Обновляем статус
+                                const statusCell = row.querySelector('.status-cell .status-label');
+                                if (statusCell) {
+                                    statusCell.textContent = 'Отменена';
+                                    statusCell.className = 'status-label status-cancelled';
+                                    statusCell.title = 'Отменена';
+                                    
+                                    // Анимация обновления статуса
+                                    statusCell.style.transform = 'scale(1.1)';
+                                    setTimeout(() => {
+                                        statusCell.style.transform = 'scale(1)';
+                                    }, 300);
+                                    
+                                    // Удаляем иконку с причиной, если она была
+                                    const infoIcon = row.querySelector('.status-cell .fa-info-circle');
+                                    if(infoIcon) infoIcon.remove();
+                                }
+                                
+                                // Удаляем кнопку действий
+                                const actionsCell = row.querySelector('.actions-cell');
+                                if (actionsCell) { 
+                                    actionsCell.innerHTML = '<span>-</span>'; 
+                                }
+                                
+                                // Восстанавливаем фон строки
+                                row.style.backgroundColor = '';
+                            }, 500);
                         }
+                        
                         showJsMessage('success', result.message || 'Действие выполнено.');
+                        
                         // Обновляем баланс в шапке, если он изменился
                         if (typeof result.newBalance === 'number') {
                             const balanceEl = document.getElementById('headerUserBalance');
                             if (balanceEl) {
-                                 try { balanceEl.textContent = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(result.newBalance); } catch(e){}
+                                try { 
+                                    const oldBalance = balanceEl.textContent;
+                                    const newBalanceFormatted = new Intl.NumberFormat('ru-RU', { 
+                                        style: 'currency', 
+                                        currency: 'RUB', 
+                                        minimumFractionDigits: 0, 
+                                        maximumFractionDigits: 0 
+                                    }).format(result.newBalance);
+                                    
+                                    balanceEl.textContent = newBalanceFormatted;
+                                    
+                                    // Анимация обновления баланса
+                                    balanceEl.classList.add('updated');
+                                    setTimeout(() => {
+                                        balanceEl.classList.remove('updated');
+                                    }, 1000);
+                                } catch(e){}
                             }
                         }
-                    } else { throw new Error(result.error || 'Не удалось отменить.'); }
+                    } else { 
+                        throw new Error(result.error || 'Не удалось отменить.'); 
+                    }
                 } catch (error) {
-                     console.error(`Error cancelling booking ${bookingId}:`, error);
-                     showJsMessage('error', error.message || 'Произошла ошибка.');
-                     submitButton.disabled = false;
-                     buttonText.textContent = originalButtonText;
+                    console.error(`Error cancelling booking ${bookingId}:`, error);
+                    showJsMessage('error', error.message || 'Произошла ошибка.');
+                    submitButton.disabled = false;
+                    buttonText.textContent = originalButtonText;
                 }
             });
         });
-    </script>
 
+        // Добавляем анимацию при загрузке страницы для строк таблицы
+        document.addEventListener('DOMContentLoaded', function() {
+            const tableRows = document.querySelectorAll('.data-table tbody tr');
+            tableRows.forEach((row, index) => {
+                setTimeout(() => {
+                    row.style.opacity = '1';
+                }, 50 * index);
+            });
+        });
+    </script>
 </body>
 </html>
