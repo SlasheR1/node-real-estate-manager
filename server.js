@@ -8,6 +8,7 @@ const http = require('http');
 const { Server } = require("socket.io");
 const { createClient } = require("redis");
 const { createAdapter } = require("@socket.io/redis-adapter");
+const log = require('electron-log');
 
 // --- ИНИЦИАЛИЗАЦИЯ FIREBASE ADMIN SDK ---
 const serviceAccount = require('./serviceAccountKey.json');
@@ -256,52 +257,99 @@ const userSockets = {};
 app.set('userSockets', userSockets);
 
 io.on('connection', (socket) => {
-    console.log(`[Socket.IO] Client connected: ${socket.id}`);
+    const socketId = socket.id;
+    log.info(`[Socket.IO] Client connected: ${socketId}`);
     let associatedUserId = null;
 
+    // --- ИЗМЕНЕНО: Функция отправки начальных уведомлений ---
+    // Отправляет последние N, НЕ помечает как прочитанные
+    const sendInitialNotifications = async (userId) => {
+         if (!userId) return;
+         try {
+             const notificationLimit = 20; // Сколько последних уведомлений загружать
+             const lastNotifications = await firebaseService.getLastNotifications(userId, notificationLimit);
+
+             if (lastNotifications.length > 0) {
+                  log.info(`[Socket.IO] Found ${lastNotifications.length} last notifications for user ${userId}. Sending 'initial_notifications'...`);
+                  socket.emit('initial_notifications', lastNotifications); // Отправляем клиенту с их статусом read
+                  // !!! НЕ ПОМЕЧАЕМ ПРОЧИТАННЫМИ ЗДЕСЬ !!!
+             } else {
+                  log.info(`[Socket.IO] No notifications found for user ${userId}.`);
+                  socket.emit('initial_notifications', []); // Отправляем пустой массив
+             }
+         } catch (error) {
+             log.error(`[Socket.IO] Error fetching initial notifications for user ${userId}:`, error);
+         }
+    };
+    // 
+    // --- КОНЕЦ ИЗМЕНЕНИЯ sendPendingNotifications ---
+
+    // Пытаемся получить пользователя из сессии
     const session = socket.request.session;
     if (session) {
         session.reload((err) => {
-            if (err) { console.error(`[Socket.IO] Error reloading session for ${socket.id}:`, err); return; }
+            if (err) { log.error(`[Socket.IO] Error reloading session for ${socketId}:`, err); return; }
             const socketUser = session.user;
             if (socketUser && socketUser.username) {
                 associatedUserId = socketUser.username;
-                console.log(`[Socket.IO] Associating user ${associatedUserId} (from session) with socket ${socket.id}`);
-                userSockets[associatedUserId] = socket.id;
+                userSockets[associatedUserId] = socketId;
                 socket.userId = associatedUserId;
                 socket.join(`user:${associatedUserId}`);
-                console.log(`[Socket.IO] Socket ${socket.id} joined room 'user:${associatedUserId}'`);
-            } else { console.warn(`[Socket.IO] No user found in session for socket ${socket.id}. Waiting for 'register_user' event.`); }
+                log.info(`[Socket.IO] User ${associatedUserId} associated (session). Socket ${socketId} joined room.`);
+                sendInitialNotifications(associatedUserId); // Отправляем начальные
+            } else { log.warn(`[Socket.IO] No user in session for socket ${socketId}.`); }
         });
-    } else { console.warn(`[Socket.IO] Session middleware did not attach session to socket request for ${socket.id}.`); }
+    } else { log.warn(`[Socket.IO] No session found for socket ${socketId}.`); }
 
+    // Регистрация по событию
     socket.on('register_user', (userIdFromClient) => {
-        if (userIdFromClient && !associatedUserId) {
-             associatedUserId = userIdFromClient;
-             console.log(`[Socket.IO] Registering user ${associatedUserId} (from event) with socket ${socket.id}`);
-             userSockets[associatedUserId] = socket.id;
-             socket.userId = associatedUserId;
-             socket.join(`user:${associatedUserId}`);
-             console.log(`[Socket.IO] Socket ${socket.id} joined room 'user:${associatedUserId}' (via event)`);
-        } else if (userIdFromClient && associatedUserId && userIdFromClient !== associatedUserId) {
-            console.warn(`[Socket.IO] Mismatch: Session User (${associatedUserId}) != Event User (${userIdFromClient}) for socket ${socket.id}`);
-        }
+         if (userIdFromClient && (!associatedUserId || associatedUserId !== userIdFromClient)) {
+             log.info(`[Socket.IO] Registering/Re-registering user ${userIdFromClient} (event) with socket ${socketId}`);
+             if(associatedUserId && userSockets[associatedUserId] === socketId) { delete userSockets[associatedUserId]; }
+             associatedUserId = userIdFromClient; userSockets[associatedUserId] = socketId; socket.userId = associatedUserId;
+             socket.rooms.forEach(room => { if(room !== socketId) socket.leave(room); }); socket.join(`user:${associatedUserId}`);
+             sendInitialNotifications(associatedUserId); // Отправляем начальные
+         } else if (userIdFromClient && associatedUserId && userIdFromClient === associatedUserId) {
+             sendInitialNotifications(associatedUserId); // Повторно на всякий случай
+         }
     });
 
-    socket.on('disconnect', (reason) => {
-        console.log(`[Socket.IO] Client disconnected: ${socket.id}. Reason: ${reason}`);
+    // Обработка пометки прочитанными от клиента
+    socket.on('mark_notifications_read', async (notificationIds) => {
         const userId = socket.userId || associatedUserId;
-        if (userId && userSockets[userId] === socket.id) {
-             console.log(`[Socket.IO] Removing user ${userId} (socket ${socket.id}) from local registry.`);
+        if (userId && Array.isArray(notificationIds) && notificationIds.length > 0) {
+            log.info(`[Socket.IO] User ${userId} requested marking notifications as read:`, notificationIds);
+            await firebaseService.markNotificationsAsRead(userId, notificationIds); // Помечаем в БД
+        } else { log.warn(`[Socket.IO] Received 'mark_notifications_read' with invalid data.`); }
+    });
+
+    // Обработка delete_notification
+    socket.on('delete_notification', async (notificationId) => {
+        const userId = socket.userId || associatedUserId;
+        if (userId && notificationId) { await firebaseService.deleteNotification(userId, notificationId); }
+        else { log.warn(`[Socket.IO] Invalid 'delete_notification' received.`); }
+    });
+
+    // Обработка clear_all_notifications
+    socket.on('clear_all_notifications', async () => {
+        const userId = socket.userId || associatedUserId;
+        if (userId) { await firebaseService.clearAllNotificationsForUser(userId); }
+        else { log.warn(`[Socket.IO] Invalid 'clear_all_notifications' received.`); }
+     });
+
+
+    socket.on('disconnect', (reason) => {
+        log.info(`[Socket.IO] Client disconnected: ${socketId}. Reason: ${reason}`);
+        const userId = socket.userId || associatedUserId; // Используем сохраненный ID
+        if (userId && userSockets[userId] === socketId) {
+             log.info(`[Socket.IO] Removing user ${userId} (socket ${socketId}) from local registry.`);
              delete userSockets[userId];
-        } else if (userId) {
-             console.log(`[Socket.IO] Disconnected socket ${socket.id} did not match stored socket ${userSockets[userId]} for user ${userId}. Not removing from registry.`);
-        } else {
-            let foundUserId = Object.keys(userSockets).find(uid => userSockets[uid] === socket.id);
-            if (foundUserId) {
-                 console.log(`[Socket.IO] Removing user ${foundUserId} (socket ${socket.id}) by socket ID lookup.`);
-                 delete userSockets[foundUserId];
-            } else { console.warn(`[Socket.IO] Could not find user for disconnected socket ${socket.id} to remove from registry.`); }
+        } else if (userId) { log.info(`[Socket.IO] Disconnected socket ${socketId} didn't match stored ${userSockets[userId]} for user ${userId}. Not removing.`); }
+        else {
+            // Попытка найти по ID сокета, если userId не был установлен
+            let foundUserId = Object.keys(userSockets).find(uid => userSockets[uid] === socketId);
+            if (foundUserId) { log.info(`[Socket.IO] Removing user ${foundUserId} (socket ${socketId}) by socket ID lookup.`); delete userSockets[foundUserId]; }
+            else { log.warn(`[Socket.IO] Could not find user for disconnected socket ${socketId} to remove.`); }
         }
     });
 });

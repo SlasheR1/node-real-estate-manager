@@ -414,3 +414,166 @@ main.container {
   #updateModalContent.status-downloading { border-top-color: #f0ad4e; /* Оранжевый */ }
   #updateModalContent.status-ready { border-top-color: #5cb85c; /* Зеленый */ }
   #updateModalContent.status-error { border-top-color: #d9534f; /* Красный */ }
+
+  /* --- Стили Глобальной Панели Уведомлений --- */
+  .global-notification-panel { /* Панель внутри обертки */
+    position: absolute;
+    top: 100%; /* Позиционируем под родительским элементом (оберткой) */
+    right: 0; /* Выравниваем по правому краю обертки */
+    margin-top: 8px; /* Небольшой отступ сверху */
+    width: 360px; /* Можно сделать шире */
+    max-width: calc(100vw - 40px); /* Ограничение по ширине экрана */
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.18); /* Более заметная тень */
+    border: 1px solid #d1d5db;
+    z-index: 1010;
+    max-height: calc(100vh - 100px); /* Ограничение высоты */
+    display: flex; /* Оставляем flex для внутренней структуры */
+    flex-direction: column;
+    /* Скрытие/показ через opacity и visibility */
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(-5px) scale(0.98); /* Немного уменьшаем при скрытии */
+    transform-origin: top right; /* Анимация из правого верхнего угла */
+    transition: opacity 0.25s ease-out, transform 0.25s ease-out, visibility 0s linear 0.25s;
+}
+
+.global-notification-panel.active { /* Класс для показа панели */
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    transition: opacity 0.25s ease-out, transform 0.25s ease-out, visibility 0s linear 0s;
+}
+
+#notificationToggleBtn {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: #64748b;
+    cursor: pointer;
+    padding: 6px 10px;
+    margin-right: 5px; /* Отступ от блока профиля */
+    position: relative;
+    line-height: 1;
+    border-radius: 50%;
+    width: 36px; /* Фикс. размер */
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+#notificationToggleBtn:hover {
+    background-color: #f1f5f9;
+    color: #334155;
+}
+
+.notification-item.unread {
+    background-color: #f0f9ff; /* Светло-голубой фон */
+    border-left: 4px solid #3b82f6; /* Синяя полоска слева */
+    padding-left: 8px; /* Немного сдвинуть контент вправо */
+}
+
+.notification-item.unread .title {
+    font-weight: bold; /* Можно сделать заголовок жирным */
+}
+
+/* Позиционирование badge внутри кнопки */
+#notificationToggleBtn #unreadCountBadge {
+    position: absolute;
+    top: 4px;  /* Положение кружка */
+    right: 4px;
+    /* Остальные стили badge без изменений */
+    background-color: #dc3545; color: white; font-size: 0.65rem; padding: 1px 4px; border-radius: 50%; min-width: 15px; height: 15px; line-height: 13px; text-align: center; font-weight: bold; display: none;
+}
+
+.global-notification-panel .notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px; /* Меньше паддинги */
+    border-bottom: 1px solid #eee;
+    background-color: #f8f9fa;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    cursor: pointer; /* Добавим курсор для клика по шапке */
+}
+.user-profile-wrapper { /* Новая обертка */
+    position: relative; /* Делаем родителя позиционированным */
+    display: flex;
+    align-items: center;
+}
+.global-notification-panel .notification-header h3 {
+    margin: 0; font-size: 0.95rem; font-weight: 600;
+    color: #34495e; display: flex; align-items: center; gap: 8px;
+}
+.global-notification-panel .notification-header h3 i { color: #95a5a6; }
+/* Счетчик непрочитанных */
+#unreadCountBadge {
+    background-color: #dc3545;
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 5px;
+    border-radius: 50%;
+    min-width: 18px;
+    height: 18px;
+    line-height: 14px;
+    text-align: center;
+    font-weight: bold;
+    margin-left: 8px;
+    display: none; /* Скрыт по умолчанию */
+}
+
+#globalClearNotificationsBtn, #globalToggleNotificationsBtn {
+    font-size: 0.9rem; color: #6c757d; padding: 2px 5px;
+    text-decoration: none; background: none; border: none; cursor: pointer;
+}
+#globalClearNotificationsBtn:hover { color: #e74c3c; }
+#globalToggleNotificationsBtn:hover { color: #343a40; }
+#globalToggleNotificationsBtn i { transition: transform 0.3s ease; }
+/* Поворот стрелки при скрытии списка */
+#globalToggleNotificationsBtn[aria-expanded="false"] i { transform: rotate(-180deg); }
+
+
+.global-notification-panel .notification-list-container {
+    overflow-y: auto;
+    flex-shrink: 1; /* Позволяет контейнеру сжиматься */
+    /* Стили для скрытия/показа */
+    max-height: 350px; /* Начальная высота */
+    transition: max-height 0.4s ease-in-out, opacity 0.3s ease;
+    opacity: 1;
+}
+.global-notification-panel .notification-list-container.collapsed {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden; /* Важно скрыть полностью */
+    border-top: none; /* Убрать границу, если она есть */
+}
+
+.global-notification-panel .notification-list { list-style: none; padding: 0; margin: 0; }
+.global-notification-panel .notification-item {
+    padding: 10px 12px; border-bottom: 1px dashed #eee;
+    display: flex; gap: 10px; align-items: flex-start;
+    opacity: 0; animation: fadeInSlideDown 0.4s ease-out forwards;
+    font-size: 0.85rem; /* Уменьшим шрифт */
+}
+.global-notification-panel .notification-item:last-child { border-bottom: none; }
+.global-notification-panel .notification-item .icon {
+    font-size: 1rem; flex-shrink: 0; width: 18px;
+    text-align: center; margin-top: 1px;
+}
+.global-notification-panel .notification-item.success .icon { color: #27ae60; }
+.global-notification-panel .notification-item.warning .icon { color: #f39c12; }
+.global-notification-panel .notification-item.error .icon { color: #e74c3c; }
+.global-notification-panel .notification-item.info .icon { color: #3498db; }
+.global-notification-panel .notification-item .content { flex-grow: 1; }
+.global-notification-panel .notification-item .title { font-weight: 600; font-size: 0.85rem; color: #34495e; margin-bottom: 2px; display: block;}
+.global-notification-panel .notification-item .message { font-size: 0.8rem; color: #555; line-height: 1.4; margin-bottom: 3px; }
+.global-notification-panel .notification-item .timestamp { font-size: 0.7rem; color: #95a5a6; }
+.global-notification-panel .notification-item .close-btn { margin-left: auto; flex-shrink: 0; background: none; border: none; font-size: 1rem; line-height: 1; color: #adb5bd; opacity: 0.7; cursor: pointer; padding: 0 0 0 8px; }
+.global-notification-panel .notification-item .close-btn:hover { color: #343a40; opacity: 1;}
+.global-notification-panel .no-notifications { text-align: center; color: #95a5a6; padding: 15px; font-style: italic; font-size: 0.85rem; }
+
+@keyframes fadeInSlideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+/* --- Конец стилей панели --- */

@@ -1,6 +1,7 @@
 // services/firebaseService.js
 const admin = require('firebase-admin');
 const db = admin.database();
+const log = require('electron-log');
 
 // --- Пользователи (Users) ---
 async function getUserByUsername(username) {
@@ -258,6 +259,128 @@ async function hasUserReviewedProperty(propertyId, userId) {
     catch (error) { console.error(`Error checking review status for prop ${propertyId}, user ${userId}:`, error); return true; /* Fail safe */ }
 }
 
+// --- Уведомления (Notifications) ---
+async function addNotification(userId, notificationData) {
+    if (!userId || !notificationData || !notificationData.type || !notificationData.title || !notificationData.message) {
+        log.error(`[addNotification] Invalid data provided. UserID: ${userId}, Data:`, notificationData);
+        return null;
+    }
+    try {
+        const notificationsRef = db.ref(`user_notifications/${userId}`);
+        const newNotifRef = notificationsRef.push(); // Генерируем уникальный ID
+        const notificationId = newNotifRef.key;
+        if (!notificationId) {
+             log.error(`[addNotification] Failed to generate notification ID for user ${userId}`);
+             return null;
+        }
+
+        const notificationPayload = {
+            id: notificationId, // Сохраняем ID внутри объекта
+            timestamp: admin.database.ServerValue.TIMESTAMP, // Время сервера Firebase
+            read: false, // Новые всегда непрочитанные
+            type: notificationData.type,
+            title: notificationData.title,
+            message: notificationData.message,
+            ...(notificationData.bookingId && { bookingId: notificationData.bookingId }) // Добавляем bookingId, если он есть
+        };
+
+        await newNotifRef.set(notificationPayload);
+        log.info(`[addNotification] Notification ${notificationId} added for user ${userId}`);
+        return notificationId;
+    } catch (error) {
+        log.error(`[addNotification] Error adding notification for user ${userId}:`, error);
+        return null;
+    }
+}
+
+async function getLastNotifications(userId, limit = 20) { // Добавляем лимит по умолчанию
+    if (!userId) return [];
+    try {
+        const snapshot = await db.ref(`user_notifications/${userId}`)
+                                .orderByChild('timestamp') // Сортируем по времени
+                                .limitToLast(limit)      // Берем последние N
+                                .once('value');
+        const data = snapshot.val();
+        if (!data) return [];
+        // Преобразуем и сортируем новые сверху
+        return Object.values(data).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    } catch (error) {
+        log.error(`[getLastNotifications] Error fetching last notifications for user ${userId}:`, error);
+        return [];
+    }
+}
+
+/**
+ * Помечает уведомления как прочитанные.
+ * @param {string} userId - Логин пользователя.
+ * @param {Array<string>} notificationIds - Массив ID уведомлений для пометки.
+ * @returns {Promise<boolean>} - true при успехе, false при ошибке.
+ */
+async function markNotificationsAsRead(userId, notificationIds) {
+    if (!userId || !Array.isArray(notificationIds) || notificationIds.length === 0) {
+        log.warn(`[markNotificationsAsRead] Invalid input. UserID: ${userId}, IDs:`, notificationIds);
+        return false;
+    }
+    try {
+        const updates = {};
+        notificationIds.forEach(id => {
+            if (id) { // Доп. проверка на пустой ID
+                 updates[`/user_notifications/${userId}/${id}/read`] = true;
+            }
+        });
+        if (Object.keys(updates).length === 0) {
+             log.info(`[markNotificationsAsRead] No valid notification IDs provided for user ${userId}.`);
+             return true; // Ничего не делаем, но не ошибка
+        }
+        await db.ref().update(updates);
+        log.info(`[markNotificationsAsRead] Marked ${notificationIds.length} notifications as read for user ${userId}`);
+        return true;
+    } catch (error) {
+        log.error(`[markNotificationsAsRead] Error marking notifications as read for user ${userId}:`, error);
+        return false;
+    }
+}
+
+/**
+ * Удаляет конкретное уведомление пользователя.
+ * @param {string} userId - Логин пользователя.
+ * @param {string} notificationId - ID уведомления для удаления.
+ * @returns {Promise<boolean>} - true при успехе, false при ошибке.
+ */
+async function deleteNotification(userId, notificationId) {
+    if (!userId || !notificationId) {
+        log.warn(`[deleteNotification] Invalid input. UserID: ${userId}, NotificationID: ${notificationId}`);
+        return false;
+    }
+    try {
+        await db.ref(`user_notifications/${userId}/${notificationId}`).remove();
+        log.info(`[deleteNotification] Deleted notification ${notificationId} for user ${userId}`);
+        return true;
+    } catch (error) {
+        log.error(`[deleteNotification] Error deleting notification ${notificationId} for user ${userId}:`, error);
+        return false;
+    }
+}
+
+/**
+ * Удаляет ВСЕ уведомления пользователя.
+ * @param {string} userId - Логин пользователя.
+ * @returns {Promise<boolean>} - true при успехе, false при ошибке.
+ */
+async function clearAllNotificationsForUser(userId) {
+     if (!userId) {
+         log.warn(`[clearAllNotificationsForUser] Invalid input. UserID: ${userId}`);
+         return false;
+     }
+     try {
+         await db.ref(`user_notifications/${userId}`).remove();
+         log.info(`[clearAllNotificationsForUser] Cleared all notifications for user ${userId}`);
+         return true;
+     } catch (error) {
+         log.error(`[clearAllNotificationsForUser] Error clearing notifications for user ${userId}:`, error);
+         return false;
+     }
+ }
 
 // --- Экспорт ---
 module.exports = {
@@ -270,5 +393,7 @@ module.exports = {
     // Bookings
     getBookingById, getAllBookings, getBookingsByUserId, saveBooking, deleteBooking,
     // Reviews
-    getPropertyReviews, hasUserReviewedProperty
+    getPropertyReviews, hasUserReviewedProperty,
+    // Notifications (НОВОЕ)
+    addNotification, getLastNotifications, markNotificationsAsRead, deleteNotification, clearAllNotificationsForUser
 };

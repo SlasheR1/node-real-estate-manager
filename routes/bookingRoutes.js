@@ -129,19 +129,17 @@ router.get('/new', isLoggedIn, isTenant, async (req, res, next) => {
 
 
 // POST /new (Создание бронирования)
- router.post('/new', isLoggedIn, isTenant, async (req, res, next) => {
-     const { propertyId, startDate, endDate } = req.body;
-     const currentUsername = req.session.user.username;
-     const io = req.app.get('socketio'); // Получаем io
-     log.info(`[Booking POST v5 - Rooms] Attempt by ${currentUsername} for property ${propertyId}. Dates: ${startDate} to ${endDate}`);
+router.post('/new', isLoggedIn, isTenant, async (req, res, next) => {
+    const { propertyId, startDate, endDate } = req.body;
+    const currentUsername = req.session.user.username;
+    const io = req.app.get('socketio');
+    const userSockets = req.app.get('userSockets'); // Получаем карту сокетов
+    log.info(`[Booking POST v6 - DB Store] Attempt by ${currentUsername} for property ${propertyId}. Dates: ${startDate} to ${endDate}`);
 
-     // Формируем URL для редиректа в случае ошибки НА страницу бронирования
-     let errorRedirectUrl = '/properties'; // По умолчанию на список объектов
-     if (propertyId) {
-         errorRedirectUrl = `/bookings/new?propertyId=${propertyId}&startDate=${encodeURIComponent(startDate || '')}&endDate=${encodeURIComponent(endDate || '')}`;
-     }
+    let errorRedirectUrl = '/properties';
+    if (propertyId) { errorRedirectUrl = `/bookings/new?propertyId=${propertyId}&startDate=${encodeURIComponent(startDate || '')}&endDate=${encodeURIComponent(endDate || '')}`; }
 
-     try {
+    try {
          // --- Валидация Дат и Длительности ---
          if (!propertyId || !startDate || !endDate) { throw new Error('Укажите объект и даты.'); }
          const start = new Date(startDate); const end = new Date(endDate); const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -212,22 +210,35 @@ router.get('/new', isLoggedIn, isTenant, async (req, res, next) => {
              const ownerUsername = company.ownerUsername;
              const staffUsernames = company.staff ? Object.keys(company.staff) : [];
              const recipients = [...new Set([ownerUsername, ...staffUsernames])].filter(Boolean);
-             log.info(`[Booking POST v5] Sending 'new_booking_pending' to recipients: ${recipients.join(', ')}`);
+             log.info(`[Booking POST v6] Saving 'new_booking_pending' notification to DB for recipients: ${recipients.join(', ')}`);
 
+             const notificationData = {
+                  type: 'info', // Тип уведомления
+                  title: 'Новый запрос на бронь',
+                  message: `Поступил запрос (#${newBookingId.substring(0,6)}) на бронь объекта "<strong>${property.Title || '?'}</strong>" от пользователя ${user.FullName || currentUsername}. Даты: ${newBooking.StartDate} - ${newBooking.EndDate}. Сумма: ${new Intl.NumberFormat('ru-RU',{style:'currency', currency:'RUB'}).format(newBooking.TotalCost || 0)}.`,
+                  bookingId: newBookingId
+             };
+
+             // Добавляем уведомление для каждого получателя в БД
              for (const recipient of recipients) {
-                 const recipientRoom = `user:${recipient}`; // Комната получателя
-                 io.to(recipientRoom).emit('new_booking_pending', { // Отправляем в комнату
-                     bookingId: newBookingId,
-                     propertyTitle: property.Title || '?',
-                     tenantName: user.FullName || user.Username,
-                     startDate: newBooking.StartDate,
-                     endDate: newBooking.EndDate,
-                     totalCost: newBooking.TotalCost
-                 });
-                 log.info(`[Booking POST v5] Emitted 'new_booking_pending' to room ${recipientRoom}`);
+                  await firebaseService.addNotification(recipient, notificationData);
+                  // Дополнительно: Пытаемся отправить мгновенное уведомление, если пользователь онлайн
+                  const recipientSocketId = userSockets[recipient];
+                  if (recipientSocketId) {
+                       io.to(recipientSocketId).emit('new_booking_pending', { // Отправляем старому событию для обратной совместимости или рефакторинга клиента
+                           bookingId: newBookingId,
+                           propertyTitle: property.Title || '?',
+                           tenantName: user.FullName || currentUsername,
+                           startDate: newBooking.StartDate,
+                           endDate: newBooking.EndDate,
+                           totalCost: newBooking.TotalCost
+                       });
+                        log.info(`[Booking POST v6] Also emitted 'new_booking_pending' directly to online user ${recipient}`);
+                  } else {
+                        log.info(`[Booking POST v6] User ${recipient} is offline, notification stored in DB.`);
+                  }
              }
-         } else { log.warn(`[Booking POST v5] Company ${companyId} not found for notification.`); }
-         // *** КОНЕЦ ОТПРАВКИ ***
+         } else { log.warn(`[Booking POST v6] Company ${companyId} not found for notification.`); }
 
          req.session.message = { type: 'success', text: 'Запрос на бронирование отправлен! Ожидайте подтверждения владельцем.' };
          req.session.save(err => {
@@ -246,42 +257,59 @@ router.get('/new', isLoggedIn, isTenant, async (req, res, next) => {
  });
 
 // POST /:id/cancel (Отмена Tenant'ом)
+// POST /:id/cancel (Отмена Tenant'ом - ИЗМЕНЕНО УВЕДОМЛЕНИЕ)
 router.post('/:id/cancel', isLoggedIn, isTenant, async (req, res, next) => {
     const bookingId = req.params.id;
     const currentUsername = req.session.user.username; // Арендатор
     const io = req.app.get('socketio');
-    log.info(`[Booking Cancel AJAX v5 - Rooms] Tenant ${currentUsername} cancelling booking ${bookingId}`);
+    const userSockets = req.app.get('userSockets');
+    log.info(`[Booking Cancel AJAX v6 - DB Store] Tenant ${currentUsername} cancelling booking ${bookingId}`);
 
     try {
         const booking = await firebaseService.getBookingById(bookingId);
         if (!booking) throw new Error('Бронирование не найдено.');
         if (booking.UserId !== currentUsername) throw new Error('Вы не можете отменить это бронирование.');
 
-        const property = await firebaseService.getPropertyById(booking.PropertyId); // Нужен для уведомления и companyId
+        const property = await firebaseService.getPropertyById(booking.PropertyId);
         const companyId = property?.companyId;
+        const tenantFullName = req.session.user.fullName || currentUsername; // Имя текущего юзера (арендатора)
 
         // --- Логика отмены в зависимости от статуса ---
         if (booking.Status === 'Ожидает подтверждения') {
             const newStatus = 'Отменена';
             await db.ref(`bookings/${bookingId}`).update({ Status: newStatus, CancelledAt: new Date().toISOString(), CancelledBy: currentUsername });
-            log.info(`[Booking Cancel AJAX v5] Booking ${bookingId} (Pending) status changed to '${newStatus}'.`);
+            log.info(`[Booking Cancel AJAX v6] Booking ${bookingId} (Pending) status changed to '${newStatus}'.`);
 
-            // *** ОТПРАВКА УВЕДОМЛЕНИЯ ВЛАДЕЛЬЦУ/СТАФФУ В КОМНАТЫ ***
+            // *** ИЗМЕНЕНО: ОТПРАВКА УВЕДОМЛЕНИЯ ВЛАДЕЛЬЦУ/СТАФФУ ЧЕРЕЗ БД ***
             if (companyId) {
-                const company = await firebaseService.getCompanyById(companyId);
-                if (company) {
-                    const ownerUsername = company.ownerUsername;
-                    const staffUsernames = company.staff ? Object.keys(company.staff) : [];
-                    const recipients = [...new Set([ownerUsername, ...staffUsernames])].filter(Boolean);
-                    log.info(`[Booking Cancel AJAX v5] Sending 'pending_booking_cancelled' to: ${recipients.join(', ')}`);
-                    for (const recipient of recipients) {
-                        const recipientRoom = `user:${recipient}`;
-                        io.to(recipientRoom).emit('pending_booking_cancelled', {
-                            bookingId: bookingId, propertyTitle: property?.Title || '?', tenantName: req.session.user.fullName || currentUsername
-                        });
-                         log.info(`[Booking Cancel AJAX v5] Emitted 'pending_booking_cancelled' to room ${recipientRoom}`);
-                    }
-                } else { log.warn(`[Booking Cancel AJAX v5] Company ${companyId} not found for notification (pending cancel).`); }
+                 const company = await firebaseService.getCompanyById(companyId);
+                 if (company) {
+                     const ownerUsername = company.ownerUsername;
+                     const staffUsernames = company.staff ? Object.keys(company.staff) : [];
+                     const recipients = [...new Set([ownerUsername, ...staffUsernames])].filter(Boolean);
+                     log.info(`[Booking Cancel AJAX v6] Saving 'pending_booking_cancelled' notification to DB for: ${recipients.join(', ')}`);
+
+                     const notificationData = {
+                          type: 'warning',
+                          title: 'Запрос отменен арендатором',
+                          message: `Арендатор <strong>${tenantFullName}</strong> отменил запрос (#${bookingId.substring(0,6)}) на бронирование объекта "<strong>${property?.Title || '?'}</strong>".`,
+                          bookingId: bookingId
+                     };
+
+                     for (const recipient of recipients) {
+                          await firebaseService.addNotification(recipient, notificationData);
+                          const recipientSocketId = userSockets[recipient];
+                          if (recipientSocketId) {
+                               io.to(recipientSocketId).emit('pending_booking_cancelled', { // Сохраняем старое событие для мгновенности
+                                   bookingId: bookingId, propertyTitle: property?.Title || '?', tenantName: tenantFullName
+                               });
+                               log.info(`[Booking Cancel AJAX v6] Also emitted 'pending_booking_cancelled' directly to online user ${recipient}`);
+                          }
+                          else {
+                              log.info(`[Booking Cancel AJAX v6] User ${recipient} is offline, notification stored in DB.`);
+                          }
+                     }
+                 } else { log.warn(`[Booking Cancel AJAX v6] Company ${companyId} not found for notification (pending cancel).`); }
             }
             // *** КОНЕЦ ОТПРАВКИ ***
             return res.status(200).json({ success: true, message: 'Запрос на бронирование успешно отменен.', newStatus: newStatus });
@@ -326,20 +354,33 @@ router.post('/:id/cancel', isLoggedIn, isTenant, async (req, res, next) => {
             if (companyBalanceUpdated) log.info(`[Booking Cancel AJAX v5] Company ${companyId} balance updated.`);
 
             // *** ОТПРАВКА УВЕДОМЛЕНИЯ ВЛАДЕЛЬЦУ/СТАФФУ В КОМНАТЫ ***
-            const company = await firebaseService.getCompanyById(companyId); // Получаем еще раз, если нужно
+            const company = await firebaseService.getCompanyById(companyId); // Получаем еще раз
             if (company) {
                 const ownerUsername = company.ownerUsername;
                 const staffUsernames = company.staff ? Object.keys(company.staff) : [];
                 const recipients = [...new Set([ownerUsername, ...staffUsernames])].filter(Boolean);
-                 log.info(`[Booking Cancel AJAX v5] Sending 'active_booking_cancelled' to: ${recipients.join(', ')}`);
+                log.info(`[Booking Cancel AJAX v6] Saving 'active_booking_cancelled' notification to DB for: ${recipients.join(', ')}`);
+
+                const notificationData = {
+                     type: 'error', // Используем error, т.к. это отмена активной брони
+                     title: 'Активная бронь отменена арендатором',
+                     message: `Арендатор <strong>${tenantFullName}</strong> отменил <strong>активную</strong> бронь (#${bookingId.substring(0,6)}) объекта "<strong>${property?.Title || '?'}</strong>".`,
+                     bookingId: bookingId
+                };
+
                 for (const recipient of recipients) {
-                    const recipientRoom = `user:${recipient}`;
-                    io.to(recipientRoom).emit('active_booking_cancelled', {
-                        bookingId: bookingId, propertyTitle: property?.Title || '?', tenantName: req.session.user.fullName || currentUsername
-                    });
-                     log.info(`[Booking Cancel AJAX v5] Emitted 'active_booking_cancelled' to room ${recipientRoom}`);
+                     await firebaseService.addNotification(recipient, notificationData);
+                     const recipientSocketId = userSockets[recipient];
+                     if (recipientSocketId) {
+                          io.to(recipientSocketId).emit('active_booking_cancelled', { // Старое событие
+                              bookingId: bookingId, propertyTitle: property?.Title || '?', tenantName: tenantFullName
+                          });
+                          log.info(`[Booking Cancel AJAX v6] Also emitted 'active_booking_cancelled' directly to online user ${recipient}`);
+                     } else {
+                          log.info(`[Booking Cancel AJAX v6] User ${recipient} is offline, notification stored in DB.`);
+                     }
                 }
-            } else { log.warn(`[Booking Cancel AJAX v5] Company ${companyId} not found for notification (active cancel).`); }
+            } else { log.warn(`[Booking Cancel AJAX v6] Company ${companyId} not found for notification (active cancel).`); }
             // *** КОНЕЦ ОТПРАВКИ ***
 
             req.session.user.balance = finalTenantBalance;

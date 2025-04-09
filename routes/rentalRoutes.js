@@ -5,9 +5,53 @@ const { isLoggedIn, isAdmin } = require('../middleware/authMiddleware'); // isAd
 const { isCompanyMemberOrAdmin } = require('../middleware/companyMiddleware'); // Для confirm/reject/cancel
 const admin = require('firebase-admin');
 const db = admin.database();
+const log = require('electron-log'); // Используем electron-log
 
 const router = express.Router();
 const COMMISSION_RATE = 0.15; // Ставка комиссии
+
+// --- Helper Функция для отправки уведомлений команде ---
+// Сохраняет в БД И отправляет онлайн-юзерам, исключая пользователя, совершившего действие
+async function notifyCompanyTeam(companyId, eventName, data, excludedUsername, ioInstance, actionSource = 'system', notificationDetails = null) {
+    if (!companyId || !ioInstance || !notificationDetails) {
+        log.warn(`[notifyCompanyTeamV6] Missing required data. CompanyID: ${companyId}, Event: ${eventName}, Details provided: ${!!notificationDetails}`);
+        return;
+    }
+    log.info(`[notifyCompanyTeamV6] Preparing '${eventName}' DB notification for company ${companyId}, excluding ${excludedUsername}. Source: ${actionSource}`);
+    try {
+        const company = await firebaseService.getCompanyById(companyId);
+        if (!company) { log.warn(`[notifyCompanyTeamV6] Company ${companyId} not found.`); return; }
+
+        const ownerUsername = company.ownerUsername;
+        const staffUsernames = company.staff ? Object.keys(company.staff) : [];
+        const recipients = [...new Set([ownerUsername, ...staffUsernames])].filter(uname => uname && uname !== excludedUsername);
+        const userSockets = ioInstance.sockets.server.settings.userSockets || {}; // Получаем карту сокетов (если есть)
+
+        if (recipients.length > 0) {
+            log.info(`[notifyCompanyTeamV6] Recipients for '${eventName}' (Company ${companyId}): ${recipients.join(', ')}`);
+            // Сохраняем уведомления в БД для всех получателей
+            const dbPromises = recipients.map(recipient =>
+                firebaseService.addNotification(recipient, notificationDetails)
+            );
+            await Promise.all(dbPromises);
+            log.info(`[notifyCompanyTeamV6] Saved DB notifications for ${recipients.length} recipients.`);
+
+            // Пытаемся отправить мгновенное уведомление онлайн-пользователям
+            recipients.forEach(recipient => {
+                 const recipientSocketId = userSockets[recipient];
+                 if (recipientSocketId) {
+                      // Отправляем событие для мгновенного обновления UI (если клиент его слушает)
+                      ioInstance.to(recipientSocketId).emit(eventName, { ...data, actionSource });
+                      log.info(`[notifyCompanyTeamV6] Also emitted '${eventName}' directly to online user ${recipient}`);
+                 } else {
+                     log.info(`[notifyCompanyTeamV6] User ${recipient} is offline for direct emit, notification stored in DB.`);
+                 }
+            });
+
+        } else { log.info(`[notifyCompanyTeamV6] No other team members to notify in company ${companyId}.`); }
+    } catch (error) { log.error(`[notifyCompanyTeamV6] Error sending '${eventName}' notification for company ${companyId}:`, error); }
+}
+// --- Конец Helper Функции ---
 
 // GET /: Отображение страницы управления арендами
 router.get('/', isLoggedIn, async (req, res, next) => {
@@ -17,7 +61,7 @@ router.get('/', isLoggedIn, async (req, res, next) => {
         req.session.message = {type:'error', text:'Доступ запрещен.'};
         return res.redirect('/');
     }
-    console.log(`[GET /rentals v4 - Rooms] Accessing rentals management for user: ${currentUser.username}, Role: ${currentUser.role}`);
+    log.info(`[GET /rentals v6] Accessing rentals management for user: ${currentUser.username}, Role: ${currentUser.role}`);
 
     try {
         let properties = [];
@@ -26,7 +70,7 @@ router.get('/', isLoggedIn, async (req, res, next) => {
 
         // Загрузка данных с фильтрацией по компании
         if (currentUser.role === 'Admin') {
-            console.log("[Rentals GET v4] Fetching all data for Admin");
+            log.info("[Rentals GET v6] Fetching all data for Admin");
             [allBookings, properties, allUsers] = await Promise.allSettled([
                 firebaseService.getAllBookings(),
                 firebaseService.getAllProperties(),
@@ -34,15 +78,14 @@ router.get('/', isLoggedIn, async (req, res, next) => {
             ]).then(results => results.map(r => r.status === 'fulfilled' ? r.value : []));
         } else if ((currentUser.role === 'Owner' || currentUser.role === 'Staff') && currentUser.companyId) {
             const companyId = currentUser.companyId;
-            console.log(`[Rentals GET v4] Fetching data for Company ID ${companyId}`);
+            log.info(`[Rentals GET v6] Fetching data for Company ID ${companyId}`);
             [properties, allBookings, allUsers] = await Promise.allSettled([
                  firebaseService.getPropertiesByCompanyId(companyId),
                  firebaseService.getAllBookings(), // Получаем все брони, отфильтруем ниже
                  firebaseService.getAllUsers()    // Получаем всех пользователей для имен
              ]).then(results => results.map(r => r.status === 'fulfilled' ? r.value : []));
         } else {
-             // Если Owner/Staff, но нет companyId (маловероятно из-за middleware, но для надежности)
-             console.warn(`[Rentals GET v4] Access denied or invalid state for ${currentUser.username} (Role: ${currentUser.role}, CompanyId: ${currentUser.companyId})`);
+             log.warn(`[Rentals GET v6] Access denied or invalid state for ${currentUser.username} (Role: ${currentUser.role}, CompanyId: ${currentUser.companyId})`);
              return res.render('rentals-management', { title: 'Управление арендами', bookings: [], message: {type:'error', text:'Ошибка: Не удалось определить вашу компанию.'} });
         }
 
@@ -55,14 +98,13 @@ router.get('/', isLoggedIn, async (req, res, next) => {
         if (currentUser.role === 'Admin') {
             filteredBookings = Array.isArray(allBookings) ? allBookings : [];
         } else {
-            // Оставляем только брони по объектам, которые принадлежат компании пользователя
             const companyPropertyIds = Array.from(propertiesMap.keys());
             filteredBookings = (Array.isArray(allBookings) ? allBookings : []).filter(booking => booking && booking.PropertyId && companyPropertyIds.includes(booking.PropertyId));
         }
 
         // Форматирование данных для отображения
         const bookingsWithDetails = filteredBookings.map(booking => {
-             if(!booking || !booking.Id) return null; // Доп проверка
+             if(!booking || !booking.Id) return null;
              const propInfo = booking.PropertyId ? propertiesMap.get(booking.PropertyId) : null;
              const tenantName = booking.UserId ? usersMap.get(booking.UserId) : '???';
              return {
@@ -71,10 +113,10 @@ router.get('/', isLoggedIn, async (req, res, next) => {
                  TenantName: tenantName,
                  StartDateFormatted: booking.StartDate ? new Date(booking.StartDate).toLocaleDateString('ru-RU') : '?',
                  EndDateFormatted: booking.EndDate ? new Date(booking.EndDate).toLocaleDateString('ru-RU') : '?',
-                 RejectedReason: booking.RejectedReason || null // Передаем причину для EJS
+                 RejectedReason: booking.RejectedReason || null
              };
-        }).filter(Boolean) // Убираем null значения
-          .sort((a, b) => { // Сортировка: Ожидающие -> Активные -> Остальные по дате
+        }).filter(Boolean)
+          .sort((a, b) => {
                 const statusOrder = { 'Ожидает подтверждения': 1, 'Активна': 2 };
                 const statusA = statusOrder[a.Status] || 3;
                 const statusB = statusOrder[b.Status] || 3;
@@ -84,65 +126,63 @@ router.get('/', isLoggedIn, async (req, res, next) => {
 
         const message = req.session.message || null; if (req.session.message) delete req.session.message;
 
-        // Передаем все брони в один шаблон, разделение будет в EJS
         res.render('rentals-management', {
             title: 'Управление арендами',
             bookings: bookingsWithDetails,
             message: message
-            // currentUser передается автоматически через res.locals
         });
 
     } catch (error) {
-        console.error("[Rentals GET v4] Error fetching rentals list:", error);
-        next(error); // Передаем ошибку дальше
+        log.error("[Rentals GET v6] Error fetching rentals list:", error);
+        next(error);
     }
 });
 
 // POST /:id/confirm (Подтверждение брони)
 router.post('/:id/confirm', isLoggedIn, isCompanyMemberOrAdmin, async (req, res, next) => {
     const bookingId = req.params.id;
-    const confirmerUser = req.session.user; // Пользователь, который подтверждает
-    const io = req.app.get('socketio'); // Получаем io из app
-    console.log(`[Rental Confirm AJAX v4 - Rooms] User ${confirmerUser.username} confirming booking ${bookingId}`);
+    const confirmerUser = req.session.user;
+    const io = req.app.get('socketio');
+    const userSockets = req.app.get('userSockets');
+    log.info(`[Rental Confirm AJAX v6] User ${confirmerUser.username} confirming booking ${bookingId}`);
 
     try {
         const booking = await firebaseService.getBookingById(bookingId);
         if (!booking) { throw new Error('Бронирование не найдено.'); }
         if (booking.Status !== 'Ожидает подтверждения') { throw new Error(`Броню нельзя подтвердить (статус: ${booking.Status}).`); }
 
-        // Получаем объект и ID компании
         const property = await firebaseService.getPropertyById(booking.PropertyId);
-        if (!property) { throw new Error('Объект недвижимости не найден.'); }
+        if (!property?.companyId) { throw new Error('Не удалось определить компанию объекта.'); }
         const companyId = property.companyId;
-        if (!companyId) { throw new Error('Не удалось определить компанию объекта.'); }
-
-        // Получаем арендатора и компанию
-        const [tenant, company] = await Promise.all([
-            firebaseService.getUserByUsername(booking.UserId),
-            firebaseService.getCompanyById(companyId)
-        ]);
+        const [tenant, company] = await Promise.all([ firebaseService.getUserByUsername(booking.UserId), firebaseService.getCompanyById(companyId) ]);
         if (!tenant) { throw new Error(`Арендатор (${booking.UserId}) не найден.`); }
         if (!company) { throw new Error(`Компания (${companyId}) не найдена.`); }
 
-        // Проверяем баланс арендатора
         const currentBalance = tenant.Balance || 0;
         const totalCost = booking.TotalCost || 0;
-        if (totalCost <= 0) { throw new Error("Некорректная сумма бронирования."); } // Доп. проверка
+        if (totalCost <= 0) { throw new Error("Некорректная сумма бронирования."); }
 
-        // Если средств недостаточно, отклоняем бронь
+        // --- Если средств недостаточно, отклоняем бронь ---
         if (currentBalance < totalCost) {
-            console.warn(`[Rental Confirm AJAX v4] Insufficient funds for tenant ${tenant.Username} on confirm.`);
+            log.warn(`[Rental Confirm AJAX v6] Insufficient funds for tenant ${tenant.Username} on confirm.`);
             const rejectionReason = 'Недостаточно средств на момент подтверждения';
-            await db.ref(`bookings/${bookingId}`).update({ Status: 'Отклонена', RejectedAt: new Date().toISOString(), RejectedBy: confirmerUser.username, RejectedReason: rejectionReason });
+            const timestampReject = new Date().toISOString();
+            await db.ref(`bookings/${bookingId}`).update({ Status: 'Отклонена', RejectedAt: timestampReject, RejectedBy: confirmerUser.username, RejectedReason: rejectionReason });
 
-            // Отправляем уведомление об отклонении арендатору
-            const tenantRoomReject = `user:${tenant.Username}`;
-            io.to(tenantRoomReject).emit('booking_rejected', {
-                bookingId: bookingId,
-                reason: rejectionReason,
-                propertyTitle: property.Title || '?'
-            });
-            console.log(`[Rental Confirm AJAX v4] Emitted 'booking_rejected' (insufficient funds) to room ${tenantRoomReject}`);
+            // Уведомление арендатору (через БД и сокет)
+            const tenantNotificationReject = { type: 'warning', title: 'Запрос отклонен', message: `Ваш запрос (#${bookingId.substring(0,6)}) на бронирование объекта "<strong>${property.Title || '?'}</strong>" был отклонен. Причина: ${rejectionReason}.`, bookingId: bookingId };
+            await firebaseService.addNotification(tenant.Username, tenantNotificationReject);
+            const tenantSocketIdReject = userSockets[tenant.Username];
+            if (tenantSocketIdReject) { io.to(tenantSocketIdReject).emit('booking_rejected', { bookingId: bookingId, reason: rejectionReason, propertyTitle: property.Title || '?' }); log.info(`[Rental Confirm AJAX v6] Emitted 'booking_rejected' directly to online tenant ${tenant.Username}`); }
+
+             // Уведомление команде (через БД и сокет)
+             const teamNotificationReject = {
+                  type: 'warning', title: 'Бронь отклонена (средства)',
+                  message: `Запрос (#${bookingId.substring(0,6)}) для "<strong>${property.Title || '?'}</strong>" (Арендатор: ${tenant.FullName || tenant.Username}) <strong>автоматически отклонен</strong> из-за недостатка средств при попытке подтверждения пользователем ${confirmerUser.username}.`,
+                  bookingId: bookingId
+             };
+             const socketDataReject = { bookingId: bookingId, newStatus: 'Отклонена', reason: rejectionReason, changedBy: confirmerUser.username, propertyTitle: property.Title || '?', tenantName: tenant.FullName || tenant.Username };
+             await notifyCompanyTeam(companyId, 'booking_status_changed', socketDataReject, confirmerUser.username, io, 'confirm_insufficient_funds', teamNotificationReject);
 
             throw new Error('Недостаточно средств у арендатора для подтверждения. Бронь отклонена.');
         }
@@ -151,20 +191,16 @@ router.post('/:id/confirm', isLoggedIn, isCompanyMemberOrAdmin, async (req, res,
         const updates = {};
         const timestamp = new Date().toISOString();
         const newStatus = 'Активна';
-
-        // 1. Обновляем бронь
         updates[`/bookings/${bookingId}/Status`] = newStatus;
         updates[`/bookings/${bookingId}/ConfirmedAt`] = timestamp;
-        updates[`/bookings/${bookingId}/ConfirmedBy`] = confirmerUser.username; // Кто подтвердил
+        updates[`/bookings/${bookingId}/ConfirmedBy`] = confirmerUser.username;
 
-        // 2. Списываем у арендатора
         const tenantNewBalance = parseFloat((currentBalance - totalCost).toFixed(2));
         const tenantHistoryKey = db.ref(`users/${tenant.Username}/BalanceHistory`).push().key;
         if(!tenantHistoryKey) throw new Error("Не удалось сгенерировать ключ истории для арендатора.");
         updates[`/users/${tenant.Username}/Balance`] = tenantNewBalance;
         updates[`/users/${tenant.Username}/BalanceHistory/${tenantHistoryKey}`] = { Id: tenantHistoryKey, Date: timestamp, Amount: -totalCost, OperationType: "Оплата брони", Description: `Бронь #${bookingId.substring(0,6)}: "${property.Title}"`, NewBalance: tenantNewBalance };
 
-        // 3. Начисляем компании (если сумма > 0)
         const amountToCreditCompany = booking.AmountPaidToCompany || 0;
         if(amountToCreditCompany > 0) {
             const currentCompanyBalance = company.Balance || 0;
@@ -173,31 +209,38 @@ router.post('/:id/confirm', isLoggedIn, isCompanyMemberOrAdmin, async (req, res,
              if(!companyHistoryKey) throw new Error("Не удалось сгенерировать ключ истории для компании.");
             updates[`/companies/${companyId}/Balance`] = newCompanyBalance;
             updates[`/companies/${companyId}/balanceHistory/${companyHistoryKey}`] = { Id: companyHistoryKey, Date: timestamp, Amount: amountToCreditCompany, OperationType: "Поступление (Аренда)", Description: `Подтверждение #${bookingId.substring(0,6)} (Общ:${totalCost.toFixed(2)}, Ком:${(booking.Commission || 0).toFixed(2)})`, NewBalance: newCompanyBalance };
-            console.log(`[Rental Confirm AJAX v4] Company ${companyId} credit prepared. New balance: ${newCompanyBalance}.`);
-        } else {
-            console.log(`[Rental Confirm AJAX v4] Calculated amountToCreditCompany is zero or negative for booking ${bookingId}. Skipping company credit.`);
-        }
+            log.info(`[Rental Confirm AJAX v6] Company ${companyId} credit prepared. New balance: ${newCompanyBalance}.`);
+        } else { log.info(`[Rental Confirm AJAX v6] Calculated amountToCreditCompany is zero or negative. Skipping company credit.`); }
 
         // Выполняем обновление
         await db.ref().update(updates);
-        console.log(`[Rental Confirm AJAX v4] SUCCESS. Booking ${bookingId} confirmed. Tenant balance: ${tenantNewBalance}.`);
+        log.info(`[Rental Confirm AJAX v6] SUCCESS. Booking ${bookingId} confirmed. Tenant balance: ${tenantNewBalance}.`);
 
-        // Отправляем уведомления арендатору
-        const tenantRoomConfirm = `user:${tenant.Username}`;
-        io.to(tenantRoomConfirm).emit('balance_updated', tenantNewBalance); // Обновляем баланс
-        io.to(tenantRoomConfirm).emit('booking_confirmed', { // Событие подтверждения
-             bookingId: bookingId,
-             propertyTitle: property.Title || '?',
-             startDate: booking.StartDate,
-             endDate: booking.EndDate
-        });
-        console.log(`[Rental Confirm AJAX v4] Emitted 'booking_confirmed' and 'balance_updated' to room ${tenantRoomConfirm}`);
+        // --- УВЕДОМЛЕНИЯ ---
+        // Арендатору
+        const tenantNotificationConfirm = { type: 'success', title: 'Бронь подтверждена', message: `Ваша бронь (#${bookingId.substring(0,6)}) для объекта "<strong>${property.Title || '?'}</strong>" (${booking.StartDate} - ${booking.EndDate}) была подтверждена.`, bookingId: bookingId };
+        await firebaseService.addNotification(tenant.Username, tenantNotificationConfirm);
+        const tenantSocketIdConfirm = userSockets[tenant.Username];
+        if (tenantSocketIdConfirm) {
+             io.to(tenantSocketIdConfirm).emit('balance_updated', tenantNewBalance);
+             io.to(tenantSocketIdConfirm).emit('booking_confirmed', { bookingId: bookingId, propertyTitle: property.Title || '?', startDate: booking.StartDate, endDate: booking.EndDate });
+             log.info(`[Rental Confirm AJAX v6] Emitted 'booking_confirmed' and 'balance_updated' directly to online tenant ${tenant.Username}`);
+        }
 
-        // Отправляем успешный ответ
-        res.status(200).json({ success: true, message: 'Бронирование подтверждено.', newStatus: newStatus });
+        // Команде
+        const teamNotificationConfirm = {
+             type: 'success', title: 'Бронь подтверждена',
+             message: `Бронь (#${bookingId.substring(0,6)}) для "<strong>${property.Title || '?'}</strong>" (Арендатор: ${tenant.FullName || tenant.Username}) <strong>подтверждена</strong> пользователем ${confirmerUser.username}.`,
+             bookingId: bookingId
+        };
+        const socketDataConfirm = { bookingId: bookingId, newStatus: newStatus, changedBy: confirmerUser.username, propertyTitle: property.Title || '?', tenantName: tenant.FullName || tenant.Username };
+        await notifyCompanyTeam(companyId, 'booking_status_changed', socketDataConfirm, confirmerUser.username, io, 'confirm', teamNotificationConfirm);
+        // --- КОНЕЦ УВЕДОМЛЕНИЙ ---
+
+        res.status(200).json({ success: true, message: 'Бронирование подтверждено.', newStatus: newStatus, tenantName: tenant.FullName || tenant.Username, propertyTitle: property.Title || '?' });
 
     } catch (error) {
-        console.error(`[Rental Confirm AJAX v4] ERROR confirming booking ${bookingId}:`, error);
+        log.error(`[Rental Confirm AJAX v6] ERROR confirming booking ${bookingId}:`, error);
         const statusCode = error.message.includes("не найдено") ? 404 : (error.message.includes("Недостаточно средств") ? 400 : 500);
         res.status(statusCode).json({ success: false, error: error.message || 'Ошибка подтверждения бронирования.' });
     }
@@ -207,99 +250,99 @@ router.post('/:id/confirm', isLoggedIn, isCompanyMemberOrAdmin, async (req, res,
 router.post('/:id/reject', isLoggedIn, isCompanyMemberOrAdmin, async (req, res, next) => {
     const bookingId = req.params.id;
     const rejecterUser = req.session.user;
-    const reason = req.body.reason || 'Отклонено владельцем/администрацией'; // Получаем причину из тела
+    const reason = req.body.reason || 'Отклонено владельцем/администрацией';
     const io = req.app.get('socketio');
-    console.log(`[Rental Reject AJAX v4 - Rooms] User ${rejecterUser.username} rejecting booking ${bookingId} with reason: ${reason}`);
+    const userSockets = req.app.get('userSockets');
+    log.info(`[Rental Reject AJAX v6] User ${rejecterUser.username} rejecting booking ${bookingId} with reason: ${reason}`);
 
     try {
         const booking = await firebaseService.getBookingById(bookingId);
         if (!booking) { throw new Error('Бронирование не найдено.'); }
         if (booking.Status !== 'Ожидает подтверждения') { throw new Error(`Броню нельзя отклонить (статус: ${booking.Status}).`); }
 
-        // Обновляем статус и добавляем информацию об отклонении
+        const property = await firebaseService.getPropertyById(booking.PropertyId);
+        const tenant = await firebaseService.getUserByUsername(booking.UserId);
+        const companyId = property?.companyId;
         const newStatus = 'Отклонена';
-        await db.ref(`bookings/${bookingId}`).update({
-            Status: newStatus,
-            RejectedAt: new Date().toISOString(),
-            RejectedBy: rejecterUser.username,
-            RejectedReason: reason // Сохраняем причину
-        });
-        console.log(`[Rental Reject AJAX v4] SUCCESS. Booking ${bookingId} rejected.`);
 
-        // Отправляем уведомление арендатору
-        const tenantRoom = `user:${booking.UserId}`;
-        const property = await firebaseService.getPropertyById(booking.PropertyId); // Получаем для названия
-        io.to(tenantRoom).emit('booking_rejected', {
-             bookingId: bookingId,
-             propertyTitle: property?.Title || 'объекта', // Используем безопасный доступ
-             reason: reason
-        });
-        console.log(`[Rental Reject AJAX v4] Emitted 'booking_rejected' notification to room ${tenantRoom}`);
+        await db.ref(`bookings/${bookingId}`).update({ Status: newStatus, RejectedAt: new Date().toISOString(), RejectedBy: rejecterUser.username, RejectedReason: reason });
+        log.info(`[Rental Reject AJAX v6] SUCCESS. Booking ${bookingId} rejected.`);
 
-        // Возвращаем причину в ответе для возможного отображения на клиенте
-        res.status(200).json({ success: true, message: 'Бронирование отклонено.', newStatus: newStatus, rejectedReason: reason });
+        // --- УВЕДОМЛЕНИЯ ---
+        // Арендатору
+        const tenantNotificationReject = { type: 'warning', title: 'Запрос отклонен', message: `Ваш запрос (#${bookingId.substring(0,6)}) на бронирование объекта "<strong>${property?.Title || '?'}</strong>" был отклонен.${reason ? ' Причина: ' + reason : ''}`, bookingId: bookingId };
+        await firebaseService.addNotification(booking.UserId, tenantNotificationReject);
+        const tenantSocketIdReject = userSockets[booking.UserId];
+        if (tenantSocketIdReject) { io.to(tenantSocketIdReject).emit('booking_rejected', { bookingId: bookingId, propertyTitle: property?.Title || '?', reason: reason }); log.info(`[Rental Reject AJAX v6] Emitted 'booking_rejected' directly to online tenant ${booking.UserId}`); }
+
+        // Команде
+         if (companyId) {
+              const teamNotificationReject = {
+                   type: 'warning', title: 'Бронь отклонена',
+                   message: `Запрос (#${bookingId.substring(0,6)}) для "<strong>${property?.Title || '?'}</strong>" (Арендатор: ${tenant?.FullName || tenant?.Username || '?'}) <strong>отклонен</strong> пользователем ${rejecterUser.username}.${reason ? ' Причина: '+reason : ''}`,
+                   bookingId: bookingId
+              };
+              const socketDataReject = { bookingId: bookingId, newStatus: newStatus, reason: reason, changedBy: rejecterUser.username, propertyTitle: property?.Title || '?', tenantName: tenant?.FullName || tenant?.Username || '?' };
+              await notifyCompanyTeam(companyId, 'booking_status_changed', socketDataReject, rejecterUser.username, io, 'reject', teamNotificationReject);
+         }
+        // --- КОНЕЦ УВЕДОМЛЕНИЙ ---
+
+        res.status(200).json({ success: true, message: 'Бронирование отклонено.', newStatus: newStatus, rejectedReason: reason, tenantName: tenant?.FullName || tenant?.Username || '?', propertyTitle: property?.Title || '?' });
 
     } catch (error) {
-        console.error(`[Rental Reject AJAX v4] ERROR rejecting booking ${bookingId}:`, error);
+        log.error(`[Rental Reject AJAX v6] ERROR rejecting booking ${bookingId}:`, error);
         const statusCode = error.message.includes("не найдено") ? 404 : 400;
         res.status(statusCode).json({ success: false, error: error.message || 'Ошибка отклонения бронирования.' });
     }
 });
 
-// POST /:id/cancel (Аннулирование Админом/Владельцем/Стаффом активной брони)
+// POST /:id/cancel (Аннулирование админом/владельцем)
 router.post('/:id/cancel', isLoggedIn, isCompanyMemberOrAdmin, async (req, res, next) => {
     const bookingId = req.params.id;
-    const currentUser = req.session.user; // Админ/Владелец/Стафф
+    const cancellerUser = req.session.user;
     const io = req.app.get('socketio');
-    console.log(`[Rentals Cancel AJAX v4 - Rooms] User ${currentUser.username} cancelling booking ${bookingId}`);
+    const userSockets = req.app.get('userSockets');
+    log.info(`[Rentals Cancel AJAX v6] User ${cancellerUser.username} cancelling booking ${bookingId}`);
 
     try {
         const booking = await firebaseService.getBookingById(bookingId);
         if (!booking) { throw new Error('Бронирование не найдено.'); }
-        // Аннулировать можно только АКТИВНЫЕ брони этим маршрутом
         if (booking.Status !== 'Активна') { throw new Error(`Статус брони: "${booking.Status}". Аннуляция активной брони невозможна.`); }
 
         const property = await firebaseService.getPropertyById(booking.PropertyId);
         if (!property?.companyId) { throw new Error('Ошибка: не найдена компания объекта для обработки отмены.'); }
         const companyId = property.companyId;
+        const tenantUserId = booking.UserId;
 
-        // Готовим обновления
+        // Подготовка обновлений
         const updates = {};
         const timestamp = new Date().toISOString();
-        const tenantUserId = booking.UserId;
         const refundAmountTenant = booking.TotalCost || 0;
-        // Сумма к списанию с компании (если она была начислена)
         const amountToDebitCompany = booking.AmountPaidToCompany ?? parseFloat(((booking.TotalCost || 0) * (1 - COMMISSION_RATE)).toFixed(2));
         let finalTenantBalance = null;
-        const newStatus = 'Аннулирована'; // Статус при отмене владельцем/админом
+        const newStatus = 'Аннулирована'; // Статус для отмены админом
 
         // 1. Обновляем бронь
         updates[`/bookings/${bookingId}/Status`] = newStatus;
-        updates[`/bookings/${bookingId}/CancelledAt`] = timestamp; // Время аннуляции
-        updates[`/bookings/${bookingId}/CancelledBy`] = currentUser.username; // Кто аннулировал
+        updates[`/bookings/${bookingId}/CancelledAt`] = timestamp;
+        updates[`/bookings/${bookingId}/CancelledBy`] = cancellerUser.username;
 
-        // 2. Возвращаем средства арендатору (если сумма > 0 и арендатор существует)
+        let tenant = null;
+        // 2. Возвращаем средства арендатору
         if (refundAmountTenant > 0 && tenantUserId) {
-            const tenant = await firebaseService.getUserByUsername(tenantUserId);
+            tenant = await firebaseService.getUserByUsername(tenantUserId);
             if (tenant) {
                  const currentTenantBalance = tenant.Balance || 0;
                  finalTenantBalance = parseFloat((currentTenantBalance + refundAmountTenant).toFixed(2));
                  updates[`/users/${tenantUserId}/Balance`] = finalTenantBalance;
                  const tenantHistoryKey = db.ref(`users/${tenantUserId}/BalanceHistory`).push().key;
                  if(!tenantHistoryKey) throw new Error("Не удалось сгенерировать ключ истории для арендатора при аннуляции.");
-                 updates[`/users/${tenantUserId}/BalanceHistory/${tenantHistoryKey}`] = { Id: tenantHistoryKey, Date: timestamp, Amount: refundAmountTenant, OperationType: "Возврат (Аннул. адм.)", Description: `Аннул. адм./влад. (${currentUser.username}) брони #${bookingId.substring(0,6)}`, NewBalance: finalTenantBalance };
-                 console.log(`[Rentals Cancel v4] Tenant ${tenantUserId} refund prepared. New balance: ${finalTenantBalance}`);
-            } else {
-                 // Если арендатор удален, деньги "сгорают"? Или нужно обработать иначе? Пока логируем ошибку.
-                 console.error(`[Rentals Cancel v4] Tenant ${tenantUserId} not found! Refund cannot be processed.`);
-                 // Возможно, стоит здесь прервать операцию или просто не обновлять баланс арендатора
-                 // throw new Error(`Арендатор ${tenantUserId} не найден, возврат невозможен.`);
-            }
-        } else {
-            console.log(`[Rentals Cancel v4] No refund needed (Amount: ${refundAmountTenant}) or Tenant UserId missing.`);
-        }
+                 updates[`/users/${tenantUserId}/BalanceHistory/${tenantHistoryKey}`] = { Id: tenantHistoryKey, Date: timestamp, Amount: refundAmountTenant, OperationType: "Возврат (Аннул. адм.)", Description: `Аннул. адм./влад. (${cancellerUser.username}) брони #${bookingId.substring(0,6)}`, NewBalance: finalTenantBalance };
+                 log.info(`[Rentals Cancel v6] Tenant ${tenantUserId} refund prepared. New balance: ${finalTenantBalance}`);
+            } else { log.error(`[Rentals Cancel v6] Tenant ${tenantUserId} not found! Refund cannot be processed.`); }
+        } else { log.info(`[Rentals Cancel v6] No refund needed or Tenant UserId missing.`); }
 
-        // 3. Списываем средства с компании (если были начислены и сумма > 0)
+        // 3. Списываем средства с компании
         if (amountToDebitCompany > 0) {
             const company = await firebaseService.getCompanyById(companyId);
             if (!company) { throw new Error(`Компания ${companyId} не найдена для списания средств.`); }
@@ -308,69 +351,71 @@ router.post('/:id/cancel', isLoggedIn, isCompanyMemberOrAdmin, async (req, res, 
             const companyHistoryKey = db.ref(`companies/${companyId}/balanceHistory`).push().key;
             if(!companyHistoryKey) throw new Error("Не удалось сгенерировать ключ истории для компании при аннуляции.");
             updates[`/companies/${companyId}/Balance`] = newCompanyBalance;
-            updates[`/companies/${companyId}/balanceHistory/${companyHistoryKey}`] = { Id: companyHistoryKey, Date: timestamp, Amount: -amountToDebitCompany, OperationType: "Списание (Аннул. адм.)", Description: `Аннул. адм./влад. (${currentUser.username}) брони #${bookingId.substring(0,6)}`, NewBalance: newCompanyBalance };
-            console.log(`[Rentals Cancel v4] Company ${companyId} debit prepared. New balance: ${newCompanyBalance}.`);
-        } else {
-            console.log(`[Rentals Cancel v4] No company debit needed (Amount: ${amountToDebitCompany}).`);
-        }
+            updates[`/companies/${companyId}/balanceHistory/${companyHistoryKey}`] = { Id: companyHistoryKey, Date: timestamp, Amount: -amountToDebitCompany, OperationType: "Списание (Аннул. адм.)", Description: `Аннул. адм./влад. (${cancellerUser.username}) брони #${bookingId.substring(0,6)}`, NewBalance: newCompanyBalance };
+            log.info(`[Rentals Cancel v6] Company ${companyId} debit prepared. New balance: ${newCompanyBalance}.`);
+        } else { log.info(`[Rentals Cancel v6] No company debit needed.`); }
 
         // Выполняем атомарное обновление
         await db.ref().update(updates);
-        console.log(`[Rentals Cancel v4] SUCCESS. Booking ${bookingId} status changed to: ${newStatus}.`);
+        log.info(`[Rentals Cancel v6] SUCCESS. Booking ${bookingId} status changed to: ${newStatus}.`);
 
-        // Отправляем уведомление арендатору
-        const tenantRoom = `user:${tenantUserId}`;
-        if (finalTenantBalance !== null) { // Отправляем обновленный баланс, если он изменился
-            io.to(tenantRoom).emit('balance_updated', finalTenantBalance);
-        }
-        io.to(tenantRoom).emit('booking_cancelled_by_owner', { // Отправляем событие аннуляции
-             bookingId: bookingId,
-             propertyTitle: property?.Title || 'объекта',
-             cancelledBy: currentUser.username // Кто аннулировал
-        });
-        console.log(`[Rentals Cancel v4] Emitted 'booking_cancelled_by_owner' and potentially 'balance_updated' to room ${tenantRoom}`);
-
-        // Обновляем сессию текущего пользователя, если он каким-то образом оказался арендатором этой брони
-        if (currentUser.username === tenantUserId && finalTenantBalance !== null) {
-             req.session.user.balance = finalTenantBalance;
-             req.session.save(err => { if(err) console.error("[Rentals Cancel v4] Error saving session:", err); });
+        // --- УВЕДОМЛЕНИЯ ---
+        // Арендатору
+        if(tenantUserId) {
+            const tenantNotificationCancel = { type: 'error', title: 'Бронь аннулирована', message: `Ваша активная бронь (#${bookingId.substring(0,6)}) для объекта "<strong>${property?.Title || '?'}</strong>" была аннулирована администрацией (пользователь ${cancellerUser.username}).${finalTenantBalance !== null ? ' Средства возвращены на баланс.' : ''}`, bookingId: bookingId };
+            await firebaseService.addNotification(tenantUserId, tenantNotificationCancel);
+            const tenantSocketIdCancel = userSockets[tenantUserId];
+            if (tenantSocketIdCancel) {
+                if (finalTenantBalance !== null) { io.to(tenantSocketIdCancel).emit('balance_updated', finalTenantBalance); }
+                io.to(tenantSocketIdCancel).emit('booking_cancelled_by_owner', { bookingId: bookingId, propertyTitle: property?.Title || '?', cancelledBy: cancellerUser.username });
+                log.info(`[Rentals Cancel v6] Emitted notifications directly to online tenant ${tenantUserId}`);
+            }
         }
 
-        // Формируем сообщение для ответа
+        // Команде
+        const teamNotificationCancel = {
+             type: 'error', title: 'Бронь аннулирована',
+             message: `Активная бронь (#${bookingId.substring(0,6)}) для "<strong>${property?.Title || '?'}</strong>" (Арендатор: ${tenant?.FullName || tenant?.Username || '?'}) <strong>аннулирована</strong> пользователем ${cancellerUser.username}.`,
+             bookingId: bookingId
+        };
+        const socketDataCancel = { bookingId: bookingId, newStatus: newStatus, changedBy: cancellerUser.username, propertyTitle: property?.Title || '?', tenantName: tenant?.FullName || tenant?.Username || '?' };
+        await notifyCompanyTeam(companyId, 'booking_status_changed', socketDataCancel, cancellerUser.username, io, 'cancel_admin', teamNotificationCancel);
+        // --- КОНЕЦ УВЕДОМЛЕНИЙ ---
+
+        // Обновляем сессию cancellerUser на всякий случай, если он сам себе отменил (хотя это админ)
+        if (cancellerUser.username === tenantUserId && finalTenantBalance !== null) {
+             req.session.user.balance = finalTenantBalance; // Это условие почти никогда не выполнится для админа/владельца
+             req.session.save(err => { if(err) console.error("[Rentals Cancel v6] Error saving session:", err); });
+        }
+
         let successMessage = `Бронирование успешно аннулировано.`;
-        if (refundAmountTenant > 0 && finalTenantBalance !== null) {
-            successMessage += ` Средства (${refundAmountTenant.toFixed(2)} RUB) возвращены арендатору.`;
-        } else if (refundAmountTenant > 0 && finalTenantBalance === null) {
-            successMessage += ` Ошибка возврата средств арендатору (не найден).`;
-        }
-        res.status(200).json({ success: true, message: successMessage, newStatus: newStatus });
+        if (refundAmountTenant > 0 && finalTenantBalance !== null) { successMessage += ` Средства (${refundAmountTenant.toFixed(2)} RUB) возвращены арендатору.`; }
+        else if (refundAmountTenant > 0 && finalTenantBalance === null) { successMessage += ` Ошибка возврата средств арендатору (не найден).`; }
+        res.status(200).json({ success: true, message: successMessage, newStatus: newStatus, tenantName: tenant?.FullName || tenant?.Username || '?', propertyTitle: property?.Title || '?' });
 
     } catch (error) {
-        console.error(`[Rentals Cancel v4] ERROR cancelling booking ${bookingId}:`, error);
+        log.error(`[Rentals Cancel v6] ERROR cancelling booking ${bookingId}:`, error);
         const statusCode = error.message.includes("не найдено") ? 404 : 400;
         res.status(statusCode).json({ success: false, error: error.message || 'Ошибка аннулирования бронирования.' });
     }
 });
 
-
-// POST /:id/delete (Удалить ИСТОРИЮ бронирования - Admin Only)
+// POST /:id/delete (Admin Only)
 router.post('/:id/delete', isLoggedIn, isAdmin, async (req, res, next) => {
     const bookingId = req.params.id;
     const adminUsername = req.session.user.username;
-    console.log(`[Rentals AJAX Delete v4] START: Admin ${adminUsername} deleting booking ${bookingId}`);
+    log.info(`[Rentals AJAX Delete v6] START: Admin ${adminUsername} deleting booking ${bookingId}`);
      try {
          const booking = await firebaseService.getBookingById(bookingId);
          if (!booking) { throw new Error("Запись бронирования не найдена."); }
-         // Запрещаем удалять активные и ожидающие брони
          if (booking.Status === 'Активна' || booking.Status === 'Ожидает подтверждения') {
              throw new Error("Нельзя удалить запись об активном или ожидающем бронировании. Сначала измените его статус (аннулируйте/отклоните).");
          }
-         // Удаляем запись из базы данных
          await firebaseService.deleteBooking(bookingId);
-         console.log(`[Rentals AJAX Delete v4] SUCCESS: Booking ${bookingId} record deleted.`);
+         log.info(`[Rentals AJAX Delete v6] SUCCESS: Booking ${bookingId} record deleted.`);
          res.status(200).json({ success: true, message: 'Запись о бронировании успешно удалена.' });
     } catch (error) {
-        console.error(`[Rentals AJAX Delete v4] ERROR deleting booking ${bookingId}:`, error);
+        log.error(`[Rentals AJAX Delete v6] ERROR deleting booking ${bookingId}:`, error);
         const statusCode = error.message.includes("не найдена") ? 404 : (error.message.includes("Нельзя удалить") ? 400 : 500);
         res.status(statusCode).json({ success: false, error: error.message || 'Ошибка удаления записи о бронировании.' });
     }

@@ -15,25 +15,20 @@
                 <% if (currentUser) { %>
                     <%# Для Арендатора %>
                     <% if (currentUser.role === 'Tenant') { %>
-                        <a href="/bookings">Мои бронирования</a> <%# Сохраняем комментарий %>
+                        <a href="/bookings">Мои бронирования</a>
                     <% } %>
-
                     <%# Управление Арендами (для всех кроме Tenant) %>
                     <% if (currentUser.role === 'Admin' || currentUser.role === 'Owner' || currentUser.role === 'Staff') { %>
                         <a href="/rentals">Упр. Арендами</a>
                     <% } %>
-
                     <%# Добавить объект (для Admin и Owner с завершенным профилем) %>
                     <% if (currentUser.role === 'Admin' || (currentUser.role === 'Owner' && currentUser.companyProfileCompleted)) { %>
-                         <%# Путь к добавлению объекта правильный /properties/add %>
                          <a href="/properties/add">Добавить объект</a>
                     <% } %>
-
                     <%# Управление компанией (для Owner и Staff с привязанным companyId) %>
                     <% if ((currentUser.role === 'Owner' || currentUser.role === 'Staff') && currentUser.companyId) { %>
                           <a href="/company/manage">Моя Компания</a>
                      <% } %>
-
                     <%# Управление пользователями (только для Admin) %>
                     <% if (currentUser.role === 'Admin') { %>
                         <a href="/users">Пользователи</a>
@@ -45,65 +40,73 @@
                 <% } %>
             </div>
 
-            <%# Блок профиля для авторизованных %>
+            <%# Блок профиля и уведомлений для авторизованных %>
             <% if (currentUser) { %>
-                <div class="user-profile">
-                    <a href="/profile" class="profile-link" title="Профиль">
-                        <div class="user-info">
-                            <%# Отображаем имя пользователя, берем из currentUser (res.locals) %>
-                            <span class="user-name" id="headerUserName"><%= currentUser.fullName || currentUser.username %></span>
-                            <div class="user-sub-info">
-                                <span class="user-role" id="headerUserRole"><%= currentUser.role %></span>
-                                <%# Личный баланс только для Tenant %>
-                                <% if (currentUser.role === 'Tenant') { %>
-                                    <%# Отображаем баланс из currentUser (res.locals), который обновляется в middleware server.js %>
-                                    <span class="user-balance profile-sub-optional" id="headerUserBalance"><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(currentUser.balance ?? 0) %></span>
-                                <% } %>
-                                <%# Название компании для Owner/Staff %>
-                                <% if ((currentUser.role === 'Owner' || currentUser.role === 'Staff') && currentUser.companyName) { %>
-                                    <span class="user-company profile-sub-optional" title="<%= currentUser.companyName %>" style="display: inline-flex; align-items: center; background-color: #e9ecef; padding: 1px 6px; border-radius: 4px; font-size: 0.75rem; color: #4a5568; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                        <i class="fas fa-briefcase" style="font-size: 0.8em; margin-right: 4px; opacity: 0.7;"></i>
-                                        <span style="overflow: hidden; text-overflow: ellipsis;"><%= currentUser.companyName %></span>
-                                    </span>
-                                <% } %>
+                <div class="user-profile-wrapper" style="display: flex; align-items: center; position: relative;"> <%# Обёртка %>
+                    <!-- === Кнопка Уведомлений (Колокольчик) === -->
+                    <button id="notificationToggleBtn" type="button" title="Уведомления" style="background: none; border: none; font-size: 1.3rem; color: #64748b; cursor: pointer; padding: 5px 8px; margin-right: 10px; position: relative; line-height: 1;">
+                        <i class="fas fa-bell"></i>
+                        <span id="unreadCountBadgeHeader" class="notification-badge" style="position: absolute; top: 0px; right: 0px; background-color: #dc3545; color: white; font-size: 0.65rem; padding: 1px 4px; border-radius: 50%; min-width: 15px; height: 15px; line-height: 13px; text-align: center; font-weight: bold; display: none;">0</span>
+                    </button>
+                    <!-- === Конец Кнопки Уведомлений === -->
+
+                    <div class="user-profile"> <%# Сам блок профиля %>
+                        <a href="/profile" class="profile-link" title="Профиль">
+                            <div class="user-info">
+                                <span class="user-name" id="headerUserName"><%= currentUser.fullName || currentUser.username %></span>
+                                <div class="user-sub-info">
+                                    <span class="user-role" id="headerUserRole"><%= currentUser.role %></span>
+                                    <% if (currentUser.role === 'Tenant') { %>
+                                        <span class="user-balance profile-sub-optional" id="headerUserBalance"><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(currentUser.balance ?? 0) %></span>
+                                    <% } %>
+                                    <% if ((currentUser.role === 'Owner' || currentUser.role === 'Staff') && currentUser.companyName) { %>
+                                        <span class="user-company profile-sub-optional" title="<%= currentUser.companyName %>" style="display: inline-flex; align-items: center; background-color: #e9ecef; padding: 1px 6px; border-radius: 4px; font-size: 0.75rem; color: #4a5568; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                            <i class="fas fa-briefcase" style="font-size: 0.8em; margin-right: 4px; opacity: 0.7;"></i>
+                                            <span style="overflow: hidden; text-overflow: ellipsis;"><%= currentUser.companyName %></span>
+                                        </span>
+                                    <% } %>
+                                </div>
                             </div>
-                        </div>
-                        <div class="avatar-container" id="headerAvatarContainer">
-                            <%# --- ИСПРАВЛЕННАЯ ЛОГИКА АВАТАРА --- %>
-                            <%
-                                let avatarSrc = '/images/placeholder-avatar.png'; // Плейсхолдер по умолчанию
-                                // Используем currentUser из res.locals, который обновляется в middleware
-                                if (currentUser && currentUser.imageData && typeof currentUser.imageData === 'string') {
-                                    // Убрали проверку размера здесь, т.к. в сессии уже должна быть корректная строка
-                                    try {
-                                        // Определяем тип по началу строки base64
-                                        let imageType = currentUser.imageData.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
-                                        avatarSrc = `data:${imageType};base64,${currentUser.imageData}`;
-                                    } catch (e) {
-                                        console.error("[Header EJS] Error creating avatar data URI:", e);
-                                        // В случае ошибки оставляем плейсхолдер
+                            <div class="avatar-container" id="headerAvatarContainer">
+                                <%
+                                    let avatarSrc = '/images/placeholder-avatar.png';
+                                    if (currentUser && currentUser.imageData && typeof currentUser.imageData === 'string') {
+                                        try { let imageType = currentUser.imageData.startsWith('/9j/')?'image/jpeg':'image/png'; avatarSrc = `data:${imageType};base64,${currentUser.imageData}`; }
+                                        catch (e) { console.error("[Header EJS] Error creating avatar data URI:", e); }
                                     }
-                                }
-                            %>
-                            <img src="<%= avatarSrc %>" alt="Avatar" class="user-avatar" id="headerUserAvatar">
-                             <%# --- КОНЕЦ ИСПРАВЛЕННОЙ ЛОГИКИ АВАТАРА --- %>
+                                %>
+                                <img src="<%= avatarSrc %>" alt="Avatar" class="user-avatar" id="headerUserAvatar">
+                            </div>
+                        </a>
+                        <form action="/logout" method="POST" class="logout-form">
+                            <button type="submit" class="btn btn-logout" title="Выйти">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16 13v-2h-5v-2h5V7l5 5-5 5zM14 20H6c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2h8v2H6v12h8v2z"></path></svg>
+                            </button>
+                        </form>
+                    </div> <%# Конец user-profile %>
+
+                    <!-- === Глобальная Панель Уведомлений (ВНУТРИ WRAPPER) === -->
+                    <div class="notification-panel global-notification-panel" id="globalNotificationPanel">
+                        <div class="notification-header">
+                            <h3><i class="fas fa-bell"></i> Уведомления</h3>
+                            <button id="globalClearNotificationsBtn" class="btn btn-link btn-small" title="Очистить все">Очистить</button>
                         </div>
-                    </a>
-                    <form action="/logout" method="POST" class="logout-form">
-                         <button type="submit" class="btn btn-logout" title="Выйти">
-                             <%# Иконка выхода без изменений %>
-                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16 13v-2h-5v-2h5V7l5 5-5 5zM14 20H6c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2h8v2H6v12h8v2z"></path></svg>
-                         </button>
-                     </form>
-                </div>
-            <% } %>
+                        <div class="notification-list-container" id="globalNotificationListContainer">
+                            <ul class="notification-list" id="globalNotificationList">
+                                <li class="no-notifications">Нет новых уведомлений</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- === Конец Глобальной Панели Уведомлений === -->
+                </div> <%# Конец user-profile-wrapper %>
+             <% } %>
         </div>
-        <%# Кнопка мобильного меню (стилями скрыта/показана) %>
+        <%# Кнопка мобильного меню %>
         <button class="mobile-nav-toggle" aria-label="Открыть меню" style="display: none;">☰</button>
     </nav>
-    <!-- ===== МОДАЛЬНОЕ ОКНО ОБНОВЛЕНИЯ (остается без изменений) ===== -->
+    <!-- ===== Модальное окно обновления ===== -->
     <div id="updateModalOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); z-index: 1050; align-items: center; justify-content: center;">
-        <div id="updateModalContent" class="" style="background-color: #fff; padding: 30px 40px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15); width: 90%; max-width: 550px; text-align: center; border-top: 5px solid #5bc0de;">
+         <div id="updateModalContent" class="" style="background-color: #fff; padding: 30px 40px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15); width: 90%; max-width: 550px; text-align: center; border-top: 5px solid #5bc0de;">
             <h2 id="updateModalTitle" style="margin-top: 0; margin-bottom: 15px; color: #2c3e50; font-size: 1.7rem; font-weight: 600;">Обновление Приложения</h2>
             <p id="updateModalMessage" style="color: #555; margin-bottom: 25px; line-height: 1.6; font-size: 1.05rem;">Проверяем наличие обновлений...</p>
             <div id="updateProgressContainer" style="display: none; margin-bottom: 25px; background-color: #e9ecef; border-radius: 5px; overflow: hidden; height: 12px; border: 1px solid #dee2e6;">
@@ -120,156 +123,202 @@
     <!-- ============================================================= -->
 </header>
 
-<%# --- Подключение и логика Socket.IO клиента И AutoUpdater (остается без изменений) --- %>
+<%# --- Подключение и логика Socket.IO клиента И AutoUpdater --- %>
 <% if (currentUser) { %>
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        // Функция для показа красивых JS-уведомлений (без изменений)
-        function showJsNotification(type, text, duration = 7000, playSound = true) {
-            const container = document.getElementById('js-messages-rentals') || document.getElementById('js-messages-container') || document.getElementById('js-review-messages') || document.getElementById('js-messages-user-list') || document.getElementById('js-messages-user-form') || document.getElementById('js-messages') || document.getElementById('js-company-messages') || document.body.querySelector('main.container') || document.body;
-            if (!container) { console.warn("No suitable container found for JS notification."); return; }
-            if (playSound) { try { const audio = new Audio('/sounds/notification.mp3'); audio.play().catch(e => console.warn("Audio playback failed:", e)); } catch (e) { console.error("Error playing sound:", e); } }
-            const notifDiv = document.createElement('div');
-            notifDiv.className = `flash-message flash-${type}`;
-            notifDiv.style.cssText = 'opacity:0; transform:translateY(-10px); transition: opacity 0.5s ease, transform 0.5s ease; margin-top: 10px; cursor: pointer; z-index: 1056; position: relative;';
-            // Используем innerHTML для возможности вставки HTML (например, ссылок или strong)
-            notifDiv.innerHTML = `${text} <button type="button" class="close-flash" onclick="event.stopPropagation(); this.parentElement.remove()">×</button>`;
-            notifDiv.addEventListener('click', () => notifDiv.remove());
-            if (container.firstChild) { container.insertBefore(notifDiv, container.firstChild); } else { container.appendChild(notifDiv); }
-            requestAnimationFrame(() => { notifDiv.style.opacity = '1'; notifDiv.style.transform = 'translateY(0)'; }); // Используем requestAnimationFrame для плавности
-            setTimeout(() => { notifDiv.style.opacity = '0'; notifDiv.style.transform = 'translateY(-10px)'; setTimeout(() => notifDiv.remove(), 500); }, duration);
-        }
+        // Обертка IIFE
+        (function() {
+            // === Переменные и Константы ===
+            const MAX_GLOBAL_HISTORY_ITEMS = 15; // Лимит для DOM
+            const currentUsernameForStorage = "<%= currentUser.username %>"; // Только для логов теперь
+            let isNotificationPanelOpen = false;
+            let notificationTimeoutId = null;
+            let socket = null;
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- Инициализация Socket.IO (без изменений) ---
-            try {
-                console.log('[Socket.IO Client] Initializing...');
-                const socket = io({ reconnectionAttempts: 5, reconnectionDelay: 3000 });
-                let currentUsername = null;
-                try { currentUsername = decodeURIComponent("<%= encodeURIComponent(currentUser.username) %>"); } catch(e) { console.error("Could not get username from EJS:", e); }
+            // Переменные DOM
+            let globalNotificationList = null;
+            let globalNoNotificationsMsg = null;
+            let notificationToggleButton = null;
+            let globalNotificationPanel = null;
+            let unreadBadgeHeader = null;
+            let globalClearNotificationsBtn = null;
 
-                if (!currentUsername) { console.error("[Socket.IO Client] Username missing."); }
-                else {
-                  socket.on('connect', () => { console.log(`[Socket.IO Client] Connected: ${socket.id}. Registering: ${currentUsername}`); socket.emit('register_user', currentUsername); });
-                  socket.on('disconnect', (reason) => { console.warn(`[Socket.IO Client] Disconnected. Reason: ${reason}`); });
-                  socket.on('connect_error', (err) => { console.error(`[Socket.IO Client] Connection Error: ${err.message}`); });
+            // === Функции Уведомлений ===
 
-                  // --- Обработчики событий Socket.IO ---
-                  // Обработчик баланса (остается без изменений, он обновляет видимую часть)
-                  socket.on('balance_updated', (newBalance) => {
-                    const userRoleElement = document.getElementById('headerUserRole');
-                    const isTenant = userRoleElement && userRoleElement.textContent === 'Tenant';
-                    if (isTenant) {
-                        console.log(`[Socket.IO Client] Event 'balance_updated' received: ${newBalance}`);
-                        const balanceEl = document.getElementById('headerUserBalance');
-                        if (balanceEl && typeof newBalance === 'number') {
-                             try {
-                                 balanceEl.textContent = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(newBalance);
-                                 console.log(`[Socket.IO Client] Header balance updated to: ${balanceEl.textContent}`);
-                            } catch (e) {
-                                 console.error("Error formatting balance in header:", e);
-                                 balanceEl.textContent = "Ошибка";
-                            }
-                        } else {
-                             console.warn("[Socket.IO Client] Header balance element not found or newBalance is not a number.");
-                        }
-                    } else {
-                         console.log("[Socket.IO Client] Ignored 'balance_updated' event for non-tenant user.");
-                    }
-                  });
+            function generateUniqueId() { return '_' + Math.random().toString(36).substring(2, 9) + Date.now(); }
 
-                   // Обработчик аватара (ОБНОВЛЕН - всегда обновляет src)
-                   socket.on('avatar_updated', () => {
-                       console.log(`[Socket.IO Client] Event 'avatar_updated' received for ${currentUsername}. Refreshing avatar image.`);
-                       const avatarImg = document.getElementById('headerUserAvatar');
-                       if (avatarImg) {
-                           // Добавляем временную метку к src, чтобы браузер перезапросил изображение
-                           avatarImg.src = avatarImg.src.split('?')[0] + '?t=' + new Date().getTime();
-                           console.log(`[Socket.IO Client] Updated header avatar src to: ${avatarImg.src}`);
-                       } else {
-                            console.warn("[Socket.IO Client] Header avatar image element (#headerUserAvatar) not found.");
-                       }
-                       // Обновляем аватар на странице профиля, если она открыта
-                       const profileAvatar = document.querySelector('.profile-avatar');
-                       if (profileAvatar && profileAvatar.src !== avatarImg?.src) {
-                           profileAvatar.src = profileAvatar.src.split('?')[0] + '?t=' + new Date().getTime();
-                            console.log(`[Socket.IO Client] Updated profile page avatar src to: ${profileAvatar.src}`);
-                       }
-                   });
+            // Функция показа всплывающих JS-уведомлений (без изменений)
+            function showJsNotification(type, text, duration = 7000, playSound = true, allowHtml = false) { /* ... полная реализация ... */ }
 
-                 // Обработчик обновления данных профиля (без изменений)
-                 socket.on('profile_data_updated', (data) => {
-                     console.log(`[Socket.IO Client] Event 'profile_data_updated' received:`, data);
-                     const nameEl = document.getElementById('headerUserName');
-                     const roleEl = document.getElementById('headerUserRole');
-                     const companyContainer = document.querySelector('.user-sub-info .user-company');
-                     const companyTextSpan = companyContainer?.querySelector('span');
-                     if (nameEl && data?.fullName) { nameEl.textContent = data.fullName; }
-                     if (roleEl && data?.role) { roleEl.textContent = data.role; }
-                      if (companyContainer) {
-                          if (data?.companyName && (data.role === 'Owner' || data.role === 'Staff')) {
-                               if (companyTextSpan) companyTextSpan.textContent = data.companyName;
-                               companyContainer.title = data.companyName; companyContainer.style.display = 'inline-flex';
-                          } else { companyContainer.style.display = 'none'; }
-                      } else if (data?.companyName && (data.role === 'Owner' || data.role === 'Staff')) { console.warn("Header company element not found."); }
-                      // Обновляем видимость ссылки "Добавить объект"
-                      const addPropertyLink = document.querySelector('.main-nav-links a[href="/properties/add"]');
-                      if (addPropertyLink) {
-                          const canAdd = data?.role === 'Admin' || (data?.role === 'Owner' && data?.companyProfileCompleted === true);
-                          addPropertyLink.style.display = canAdd ? 'inline' : 'none';
-                      }
-                 });
+             // Создание HTML элемента для уведомления в панели (без изменений)
+             function createNotificationElement(notification) {
+                 const li = document.createElement('li');
+                 li.className = `notification-item ${notification.type}`;
+                 if (notification.read !== true) { li.classList.add('unread'); } // Используем флаг read
+                 li.dataset.id = notification.id;
+                 li.dataset.bookingId = notification.bookingId || '';
+                 let iconClass = 'fa-info-circle'; /* ... */ if (notification.type === 'success') iconClass = 'fa-check-circle'; else if (notification.type === 'warning') iconClass = 'fa-exclamation-triangle'; else if (notification.type === 'error') iconClass = 'fa-times-circle'; else if (notification.type === 'info') iconClass = 'fa-bell';
+                 let ts = notification.timestamp; if(typeof ts === 'number') ts = new Date(ts); else if(typeof ts === 'string') ts = new Date(ts); else ts = new Date();
+                 li.innerHTML = `
+                     <div class="icon"><i class="fas ${iconClass}"></i></div>
+                     <div class="content"><span class="title">${notification.title||''}</span><div class="message">${notification.message||''}</div><div class="timestamp">${ts.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'})} ${ts.toLocaleTimeString('ru-RU', { hour:'2-digit',minute:'2-digit' })}</div></div>
+                     <button class="close-btn" title="Удалить уведомление">×</button>`;
+                 li.querySelector('.close-btn').addEventListener('click', function(event) { event.stopPropagation(); removeNotificationFromPanel(notification.id); });
+                 return li;
+             }
 
-                 // Обработчик удаления аккаунта (без изменений)
-                 socket.on('account_deleted', (data) => {
-                     console.warn(`[Socket.IO Client] Event 'account_deleted' received:`, data?.message);
-                     if(socket.connected) { socket.disconnect(); }
-                     alert(data?.message || 'Ваш аккаунт был удален администратором.');
-                     // Принудительный выход через форму
-                     const logoutForm = document.createElement('form'); logoutForm.method = 'POST'; logoutForm.action = '/logout';
-                     document.body.appendChild(logoutForm); logoutForm.submit();
-                 });
+             // Отображение НАЧАЛЬНЫХ уведомлений (из Firebase)
+            function displayInitialNotifications(notifications) {
+                if (!globalNotificationList || !globalNoNotificationsMsg || !Array.isArray(notifications)) return;
+                globalNotificationList.innerHTML = ''; // Очищаем
 
-                 // Обработчики уведомлений о бронированиях (без изменений)
-                 socket.on('booking_confirmed', (data) => { console.log("[Socket.IO Client] Event 'booking_confirmed':", data); showJsNotification('success', `✅ Бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>" <strong>подтверждена</strong>!`, 7000, true); const row = document.getElementById(`booking-row-${data.bookingId}`); if (row && window.location.pathname === '/bookings') { const statusCell = row.querySelector('.status-cell .status-label'); const actionsCell = row.querySelector('.actions-cell'); if (statusCell) { statusCell.textContent = 'Активна'; statusCell.className = 'status-label status-active'; statusCell.title = 'Активна'; } if (actionsCell) { const form = actionsCell.querySelector('form'); if(form) form.dataset.currentStatus = 'Активна'; } } });
-                 socket.on('booking_rejected', (data) => { console.log("[Socket.IO Client] Event 'booking_rejected':", data); const reasonText = data.reason ? ` Причина: ${data.reason}` : ''; showJsNotification('warning', `❌ Запрос #${data.bookingId?.substring(0,6)} на "<strong>${data.propertyTitle || '?'}</strong>" <strong>отклонен</strong>.${reasonText}`, 10000, true); const row = document.getElementById(`booking-row-${data.bookingId}`); if (row && window.location.pathname === '/bookings') { const statusCell = row.querySelector('.status-cell'); const actionsCell = row.querySelector('.actions-cell'); if (statusCell) { statusCell.innerHTML = `<span class="status-label status-rejected" title="Отклонена">Отклонена</span>`; if(data.reason) { statusCell.innerHTML += ` <i class="fas fa-info-circle" title="${data.reason}" style="margin-left: 5px; color: #d35400; cursor: help;"></i>`; } } if (actionsCell) { actionsCell.innerHTML = '<span>-</span>'; } } });
-                 socket.on('booking_cancelled_by_owner', (data) => { console.log("[Socket.IO Client] Event 'booking_cancelled_by_owner':", data); showJsNotification('error', `❗ Бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>" была <strong>аннулирована</strong> администрацией.`, 10000, true); const row = document.getElementById(`booking-row-${data.bookingId}`); if (row && window.location.pathname === '/bookings') { const statusCell = row.querySelector('.status-cell .status-label'); const actionsCell = row.querySelector('.actions-cell'); if (statusCell) { statusCell.textContent = 'Аннулирована'; statusCell.className = 'status-label status-annulled'; statusCell.title = 'Аннулирована'; } if (actionsCell) { actionsCell.innerHTML = '<span>-</span>'; } } });
-                 socket.on('new_booking_pending', (data) => { console.log("[Socket.IO Client] Event 'new_booking_pending':", data); if (!window.location.pathname.startsWith('/rentals')) { showJsNotification('info', `📬 Новый запрос на бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>" от ${data.tenantName}. <a href="/rentals" style='color:inherit; font-weight:bold;'>К арендам</a>`, 15000, true); } });
-                 socket.on('pending_booking_cancelled', (data) => { console.log("[Socket.IO Client] Event 'pending_booking_cancelled':", data); showJsNotification('warning', `❌ Арендатор <strong>${data.tenantName}</strong> отменил запрос #${data.bookingId?.substring(0,6)} на "<strong>${data.propertyTitle || '?'}</strong>".`, 7000, true); const row = document.getElementById(`rental-row-${data.bookingId}`); if (row && window.location.pathname.startsWith('/rentals')) { row.remove(); const pendingCountSpan = document.getElementById('pendingCount'); if(pendingCountSpan) { let count = parseInt(pendingCountSpan.textContent || '0') - 1; pendingCountSpan.textContent = Math.max(0, count); } const pendingBody = document.getElementById('pendingBookingsTableBody'); const noPendingMsg = pendingBody?.closest('.rentals-section')?.querySelector('.no-bookings-message'); if(pendingBody && noPendingMsg) { noPendingMsg.style.display = pendingBody.rows.length === 0 ? 'block' : 'none'; } } });
-                 socket.on('active_booking_cancelled', (data) => { console.log("[Socket.IO Client] Event 'active_booking_cancelled':", data); showJsNotification('error', `🚫 Арендатор <strong>${data.tenantName}</strong> отменил активную бронь #${data.bookingId?.substring(0,6)} для "<strong>${data.propertyTitle || '?'}</strong>".`, 10000, true); const row = document.getElementById(`rental-row-${data.bookingId}`); if (row && window.location.pathname.startsWith('/rentals')) { const statusCell = row.querySelector('.status-cell .status-label'); const actionsCell = row.querySelector('.actions-cell'); if (statusCell) { statusCell.textContent = 'Отменена'; statusCell.className = 'status-label status-cancelled'; statusCell.title = 'Отменена'; } row.dataset.status = 'Отменена'; if (actionsCell) { actionsCell.innerHTML = ''; const isAdmin = document.body.querySelector('#pendingBookingsTableBody')?.closest('table')?.parentElement?.dataset?.isAdmin === 'true'; if (isAdmin) { actionsCell.innerHTML = `<form class="rental-action-form" data-action="delete" data-booking-id="${data.bookingId}" action="/rentals/${data.bookingId}/delete" method="POST"><button type="submit" class="btn btn-small btn-delete"> <span class="button-text">Удалить</span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button></form>`; } else { actionsCell.innerHTML = '<span>-</span>'; } } } });
-                 // --- Конец обработчиков Socket.IO ---
-                } // Конец else для currentUsername
-
-            } catch(e) {
-                console.error("[Socket.IO Client] Error setting up listeners:", e);
+                if (notifications.length === 0) {
+                    globalNotificationList.appendChild(globalNoNotificationsMsg);
+                    globalNoNotificationsMsg.style.display = 'block';
+                } else {
+                    globalNoNotificationsMsg.style.display = 'none';
+                    // Отображаем полученные уведомления, используя их статус read
+                    notifications.forEach(notification => {
+                        const li = createNotificationElement(notification);
+                        globalNotificationList.appendChild(li); // Добавляем в конец (они уже отсортированы сервером)
+                    });
+                }
+                // Обновляем счетчик бейджа по количеству `.unread` элементов
+                updateUnreadCountHeader(null, true);
             }
 
-            // --- КОД ДЛЯ УПРАВЛЕНИЯ МОДАЛЬНЫМ ОКНОМ ОБНОВЛЕНИЯ (без изменений) ---
-            const modalOverlay = document.getElementById('updateModalOverlay');
-            const modalContent = document.getElementById('updateModalContent');
-            const modalTitle = document.getElementById('updateModalTitle');
-            const modalMessage = document.getElementById('updateModalMessage');
-            const progressContainer = document.getElementById('updateProgressContainer');
-            const progressBar = document.getElementById('updateProgressBar');
-            const restartButtonModal = document.getElementById('updateModalRestartButton');
-            const closeButtonModal = document.getElementById('updateModalCloseButton');
-            const errorDetails = document.getElementById('updateErrorDetails');
-            let listeners = {}; let updateInfoGlobal = null; // Объявляем updateInfoGlobal здесь
-            function setModalStatusClass(statusClass) { if (modalContent) { modalContent.className = 'modal-content'; modalContent.classList.add(`status-${statusClass}`); const colors = { info: '#5bc0de', available: '#f0ad4e', downloading: '#f0ad4e', ready: '#5cb85c', error: '#d9534f' }; modalContent.style.borderTopColor = colors[statusClass] || '#5bc0de'; } }
-            function showUpdateModal(statusClass = 'info') { if (!modalOverlay || !modalContent) { console.error("Update modal elements not found!"); return; } setModalStatusClass(statusClass); modalOverlay.style.display = 'flex'; requestAnimationFrame(() => { modalOverlay.style.opacity = '1'; modalContent.style.opacity = '1'; modalContent.style.transform = 'none'; }); }
-            function hideUpdateModal() { if (modalOverlay) { modalOverlay.style.opacity = '0'; modalContent.style.opacity = '0'; modalContent.style.transform = 'translateY(-20px)'; setTimeout(() => { modalOverlay.style.display = 'none'; if(progressBar) progressBar.style.width = '0%'; if(progressContainer) progressContainer.style.display = 'none'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) closeButtonModal.style.display = 'none'; if(errorDetails) errorDetails.style.display = 'none'; }, 300); } }
-            if (window.electronUpdater && modalOverlay && modalContent && modalTitle && modalMessage && progressContainer && progressBar && restartButtonModal && closeButtonModal && errorDetails) {
-                console.log('[Renderer Updater] API and modal elements found. Setting up listeners.');
-                closeButtonModal.onclick = hideUpdateModal;
-                restartButtonModal.onclick = () => { console.log('[Renderer Updater] Restart button clicked.'); if(restartButtonModal) { restartButtonModal.textContent = 'Перезапуск...'; restartButtonModal.disabled = true; } if(closeButtonModal) closeButtonModal.disabled = true; window.electronUpdater.send('install-update'); };
-                listeners['update-status'] = window.electronUpdater.on('update-status', (message) => { console.log('[Renderer Updater] Status:', message); if (!message && modalMessage && modalMessage.textContent === 'Установлена последняя версия.') { hideUpdateModal(); return; } if (message !== `Версия ${updateInfoGlobal?.version} загружена. Готово к установке.`) { if(modalMessage) modalMessage.textContent = message; if(modalTitle) modalTitle.textContent = 'Статус обновления'; if(progressContainer) progressContainer.style.display = 'none'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } if(errorDetails) errorDetails.style.display = 'none'; showUpdateModal('info'); } if (message === 'Установлена последняя версия.') { setTimeout(hideUpdateModal, 5000); } });
-                listeners['update-error'] = window.electronUpdater.on('update-error', (message) => { console.error('[Renderer Updater] Error:', message); if(modalTitle) modalTitle.textContent = 'Ошибка обновления'; if(modalMessage) modalMessage.textContent = 'Не удалось проверить или загрузить обновление.'; if(errorDetails) { errorDetails.textContent = `Детали: ${message}`; errorDetails.style.display = 'block'; } if(progressContainer) progressContainer.style.display = 'none'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } showUpdateModal('error'); });
-                listeners['update-available'] = window.electronUpdater.on('update-available', (info) => { console.log('[Renderer Updater] Update available:', info); updateInfoGlobal = info; if(modalTitle) modalTitle.textContent = `Доступна версия ${info.version}`; if(modalMessage) modalMessage.textContent = 'Начинается автоматическая загрузка...'; if(progressBar) progressBar.style.width = '0%'; if(progressContainer) progressContainer.style.display = 'block'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } if(errorDetails) errorDetails.style.display = 'none'; showUpdateModal('available'); });
-                listeners['update-progress'] = window.electronUpdater.on('update-progress', (percent) => { const roundedPercent = Math.round(percent); if (roundedPercent % 5 === 0 || percent > 98 || percent < 2) { console.log('[Renderer Updater] Progress:', percent); } if(modalTitle) modalTitle.textContent = 'Загрузка обновления'; if(modalMessage) modalMessage.textContent = `Пожалуйста, подождите... ${roundedPercent}%`; if(progressBar) progressBar.style.width = `${percent}%`; if(progressContainer) progressContainer.style.display = 'block'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } if(errorDetails) errorDetails.style.display = 'none'; showUpdateModal('downloading'); });
-                listeners['update-ready'] = window.electronUpdater.on('update-ready', (info) => { console.log('%c[Renderer Updater] Update ready!', 'color: green; font-weight: bold;', info); updateInfoGlobal = info; if(modalTitle) modalTitle.textContent = `Обновление ${info.version} готово!`; if(modalMessage) modalMessage.textContent = 'Нажмите кнопку ниже, чтобы перезапустить приложение и установить обновление.'; if(progressContainer) progressContainer.style.display = 'none'; if(errorDetails) errorDetails.style.display = 'none'; if(restartButtonModal) { restartButtonModal.textContent = 'Перезапустить и установить'; restartButtonModal.disabled = false; restartButtonModal.style.display = 'inline-block'; } if(closeButtonModal) { closeButtonModal.style.display = 'none'; } showUpdateModal('ready'); });
-            } else { console.error('[Renderer Updater] Initialization FAILED. API or modal elements are missing.'); }
-            // --- КОНЕЦ КОДА ДЛЯ МОДАЛЬНОГО ОКНА ---
+            // Добавление НОВОГО уведомления (из Socket.IO) - добавляет как unread
+            function addNewNotification(type, title, message, bookingId = null, allowHtmlInPopup = false) {
+                 // Отобразить в панели как НЕПРОЧИТАННОЕ
+                 if (globalNotificationList && globalNoNotificationsMsg) {
+                     globalNoNotificationsMsg.style.display = 'none';
+                     const newNotificationData = { id: generateUniqueId(), type, title, message, timestamp: Date.now(), read: false, bookingId }; // read: false
+                     const li = createNotificationElement(newNotificationData);
+                     globalNotificationList.prepend(li);
+                     while (globalNotificationList.children.length > MAX_GLOBAL_HISTORY_ITEMS + 1) { if (globalNotificationList.lastChild && globalNotificationList.lastChild !== globalNoNotificationsMsg) globalNotificationList.removeChild(globalNotificationList.lastChild); else break; }
+                 }
+                 // Показать всплывающее
+                 showJsNotification(type, message, 7000, true, allowHtmlInPopup);
+                 // Обновить счетчик непрочитанных, если панель закрыта
+                 if (!isNotificationPanelOpen) { updateUnreadCountHeader(1); }
+             }
 
-        }); // Конец DOMContentLoaded
+             // Удаление уведомления (DOM + сервер)
+             function removeNotificationFromPanel(notificationId) {
+                 const item = globalNotificationList ? globalNotificationList.querySelector(`.notification-item[data-id="${notificationId}"]`) : null;
+                 if (!item) return;
+                 const wasUnread = item.classList.contains('unread');
+                 item.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                 item.style.opacity = 0; item.style.transform = 'translateX(20px)';
+                 setTimeout(() => {
+                      item.remove();
+                      if (socket && notificationId && !notificationId.startsWith('_')) { // Отправляем только если есть сокет и это Firebase ID
+                          socket.emit('delete_notification', notificationId);
+                      }
+                      if (globalNotificationList && globalNotificationList.children.length <= 1 && globalNotificationList.querySelector('.no-notifications')) { globalNoNotificationsMsg.style.display = 'block'; }
+                      if (wasUnread) { updateUnreadCountHeader(null, true); }
+                 }, 300);
+             }
+
+             // Очистка всех уведомлений (DOM + сервер)
+             function clearAllNotifications() {
+                  if (globalNotificationList && globalNoNotificationsMsg) { globalNotificationList.innerHTML = ''; globalNotificationList.appendChild(globalNoNotificationsMsg); globalNoNotificationsMsg.style.display = 'block'; }
+                  if (socket) { socket.emit('clear_all_notifications'); }
+                  updateUnreadCountHeader(0, true);
+              }
+
+             // Пометка видимых как прочитанных (DOM + сервер)
+             function markAllVisibleAsReadAndNotifyServer() {
+                 if (!globalNotificationList || !socket) return;
+                 const idsToMark = [];
+                 const items = globalNotificationList.querySelectorAll('.notification-item.unread');
+                 if (items.length === 0) return;
+                 items.forEach(item => {
+                     item.classList.remove('unread');
+                     const id = item.dataset.id;
+                     if (id && !id.startsWith('_')) { idsToMark.push(id); } // Собираем только Firebase ID
+                 });
+                 if (idsToMark.length > 0) {
+                     socket.emit('mark_notifications_read', idsToMark); // Отправляем на сервер
+                     console.log(`[Notifications] Sent 'mark_notifications_read' for IDs:`, idsToMark);
+                 }
+                 updateUnreadCountHeader(0, true); // Сбросить счетчик в UI
+             }
+
+            // Функция обновления счетчика (без изменений)
+            function updateUnreadCountHeader(change = null, forceRecalculate = false) {
+                if (!unreadBadgeHeader || !globalNotificationList) return;
+                let count = 0;
+                // Считаем элементы с классом .unread
+                count = Array.from(globalNotificationList.children).filter(el => el.classList.contains('unread') && !el.classList.contains('no-notifications')).length;
+                count = Math.max(0, count);
+                if (count > 0) { unreadBadgeHeader.textContent = count > 9 ? '9+' : count; unreadBadgeHeader.style.display = 'inline-block'; }
+                else { unreadBadgeHeader.style.display = 'none'; }
+            }
+
+             // Функция переключения панели (без изменений)
+             function toggleNotificationPanel() {
+                 if (!globalNotificationPanel) return;
+                 isNotificationPanelOpen = !globalNotificationPanel.classList.contains('active');
+                 globalNotificationPanel.classList.toggle('active', isNotificationPanelOpen);
+                 if (isNotificationPanelOpen) { markAllVisibleAsReadAndNotifyServer(); }
+             }
+
+            // === Основной Запуск Скрипта ===
+            document.addEventListener('DOMContentLoaded', () => {
+                // Инициализация DOM
+                globalNotificationList = document.getElementById('globalNotificationList');
+                globalNoNotificationsMsg = globalNotificationList ? globalNotificationList.querySelector('.no-notifications') : null;
+                notificationToggleButton = document.getElementById('notificationToggleBtn');
+                globalNotificationPanel = document.getElementById('globalNotificationPanel');
+                unreadBadgeHeader = notificationToggleButton ? notificationToggleButton.querySelector('#unreadCountBadgeHeader') : null;
+                globalClearNotificationsBtn = document.getElementById('globalClearNotificationsBtn');
+
+                // Привязка обработчиков
+                if (notificationToggleButton) { notificationToggleButton.addEventListener('click', (event) => { event.stopPropagation(); toggleNotificationPanel(); }); }
+                if (globalClearNotificationsBtn) { globalClearNotificationsBtn.addEventListener('click', clearAllNotifications); }
+                document.addEventListener('click', (event) => { if (isNotificationPanelOpen && globalNotificationPanel && !globalNotificationPanel.contains(event.target) && event.target !== notificationToggleButton && !notificationToggleButton.contains(event.target)) { toggleNotificationPanel(); } });
+
+                // --- Инициализация Socket.IO ---
+                try {
+                    socket = io({ reconnectionAttempts: 5, reconnectionDelay: 3000 });
+                    if (!currentUsernameForStorage) { console.error("[Socket.IO Client] Username missing."); return; }
+
+                    socket.on('connect', () => { socket.emit('register_user', currentUsernameForStorage); });
+                    socket.on('disconnect', (reason) => { console.warn(`[Socket.IO Client] Disconnected. Reason: ${reason}`); });
+                    socket.on('connect_error', (err) => { console.error(`[Socket.IO Client] Connection Error: ${err.message}`); });
+
+                    // Обработчики базовых событий
+                    socket.on('balance_updated', (newBalance) => { const isTenant = document.getElementById('headerUserRole')?.textContent === 'Tenant'; if(isTenant){ const el = document.getElementById('headerUserBalance'); if(el && typeof newBalance === 'number'){ try{el.textContent = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(newBalance);}catch(e){el.textContent="Ошибка";}} } });
+                    socket.on('avatar_updated', () => { const hAva = document.getElementById('headerUserAvatar'); if(hAva) hAva.src=hAva.src.split('?')[0]+'?t='+Date.now(); const pAva = document.querySelector('.profile-avatar'); if(pAva && pAva.src !== hAva?.src) pAva.src=pAva.src.split('?')[0]+'?t='+Date.now(); });
+                    socket.on('profile_data_updated', (data) => { const n=document.getElementById('headerUserName'),r=document.getElementById('headerUserRole'),c=document.querySelector('.user-sub-info .user-company'),s=c?.querySelector('span'),l=document.querySelector('.main-nav-links a[href="/properties/add"]'); if(n&&data?.fullName)n.textContent=data.fullName;if(r&&data?.role)r.textContent=data.role;if(c){if(data?.companyName&&(data.role==='Owner'||data.role==='Staff')){if(s)s.textContent=data.companyName;c.title=data.companyName;c.style.display='inline-flex';}else{c.style.display='none';}}if(l){const a=data?.role==='Admin'||(data?.role==='Owner'&&data?.companyProfileCompleted===true);l.style.display=a?'inline':'none';}});
+                    socket.on('account_deleted', (data) => { if(socket.connected) socket.disconnect(); alert(data?.message || 'Ваш аккаунт был удален администратором.'); const f=document.createElement('form'); f.method='POST'; f.action='/logout'; document.body.appendChild(f); f.submit(); });
+
+                    // Слушатель для ЗАГРУЖЕННЫХ непрочитанных уведомлений
+                    socket.on('initial_notifications', (initialNotifications) => {
+                         console.log(`[Socket.IO Client] Received ${initialNotifications.length} initial notifications.`);
+                         displayInitialNotifications(initialNotifications);
+                     });
+
+                    // Обработчики НОВЫХ уведомлений о бронировании (вызывают addNewNotification)
+                    socket.on('booking_confirmed', (data) => { const msg = `Ваша бронь (#${data.bookingId?.substring(0,6)}) для объекта "<strong>${data.propertyTitle || '?'}</strong>" (${data.startDate} - ${data.endDate}) была подтверждена.`; addNewNotification('success', 'Бронь подтверждена', msg, data.bookingId, true); });
+                    socket.on('booking_rejected', (data) => { const r=data.reason?` Причина: ${data.reason}`:''; const msg = `Ваш запрос (#${data.bookingId?.substring(0,6)}) на бронирование объекта "<strong>${data.propertyTitle || '?'}</strong>" был отклонен.${r}`; addNewNotification('warning', 'Запрос отклонен', msg, data.bookingId, true); });
+                    socket.on('booking_cancelled_by_owner', (data) => { const msg = `Ваша активная бронь (#${data.bookingId?.substring(0,6)}) для объекта "<strong>${data.propertyTitle || '?'}</strong>" была аннулирована администрацией (пользователь ${data.cancelledBy}). Средства возвращены на баланс.`; addNewNotification('error', 'Бронь аннулирована', msg, data.bookingId, true); });
+                    socket.on('new_booking_pending', (data) => { const msg = `Поступил новый запрос на бронь (#${data.bookingId?.substring(0,6)}) объекта "<strong>${data.propertyTitle || '?'}</strong>" от ${data.tenantName || '?'}.`; if (!window.location.pathname.startsWith('/rentals')) { const pMsg = `📬 Новый запрос на бронь (#${data.bookingId?.substring(0,6)}) для "<strong>${data.propertyTitle || '?'}</strong>" от ${data.tenantName}. <a href="/rentals" style='color:inherit; font-weight:bold;'>К арендам</a>`; showJsNotification('info', pMsg, 15000, true, true); } addNewNotification('info', 'Новый запрос', msg, data.bookingId, true); });
+                    socket.on('pending_booking_cancelled', (data) => { const msg = `Арендатор ${data.tenantName || '?'} отменил свой запрос (#${data.bookingId?.substring(0,6)}) на бронирование объекта "<strong>${data.propertyTitle || '?'}</strong>".`; addNewNotification('warning', 'Запрос отменен', msg, data.bookingId, true); });
+                    socket.on('active_booking_cancelled', (data) => { const msg = `Арендатор ${data.tenantName || '?'} отменил <strong>активную</strong> бронь (#${data.bookingId?.substring(0,6)}) объекта "<strong>${data.propertyTitle || '?'}</strong>".`; addNewNotification('error', 'Активная бронь отменена', msg, data.bookingId, true); });
+                    socket.on('booking_status_changed', (data) => { let t='Статус...',ty='info',m=`Статус брони (#${data.bookingId?.substring(0,6)}) для "<strong>${data.propertyTitle||'?'}</strong>" (Арендатор: ${data.tenantName||'?'}) изменен на "<strong>${data.newStatus}</strong>"`; if(data.newStatus==='Активна'){ty='success';t='Подтверждена';}else if(data.newStatus==='Отклонена'){ty='warning';t='Отклонена';}else if(data.newStatus==='Аннулирована'){ty='error';t='Аннулирована';} if (data.changedBy) m+=` пользователем ${data.changedBy}.`; if (data.reason) m+=` Причина: ${data.reason}.`; if (!window.location.pathname.startsWith('/rentals')) {showJsNotification(ty,m,8000,true,true);} addNewNotification(ty, t, m, data.bookingId, true); });
+
+                } catch(e) { console.error("[Socket.IO Client] Error setting up listeners:", e); }
+
+
+                // --- Код модального окна обновления (полная версия) ---
+                const modalOverlay = document.getElementById('updateModalOverlay'); const modalContent = document.getElementById('updateModalContent'); const modalTitle = document.getElementById('updateModalTitle'); const modalMessage = document.getElementById('updateModalMessage'); const progressContainer = document.getElementById('updateProgressContainer'); const progressBar = document.getElementById('updateProgressBar'); const restartButtonModal = document.getElementById('updateModalRestartButton'); const closeButtonModal = document.getElementById('updateModalCloseButton'); const errorDetails = document.getElementById('updateErrorDetails'); let listeners = {}; let updateInfoGlobal = null; function setModalStatusClass(s){if(modalContent){modalContent.className='modal-content';modalContent.classList.add(`status-${s}`);const c={info:'#5bc0de',available:'#f0ad4e',downloading:'#f0ad4e',ready:'#5cb85c',error:'#d9534f'};modalContent.style.borderTopColor=c[s]||'#5bc0de';}} function showUpdateModal(s='info'){if(!modalOverlay||!modalContent)return;setModalStatusClass(s);modalOverlay.style.display='flex';requestAnimationFrame(()=>{modalOverlay.style.opacity='1';modalContent.style.opacity='1';modalContent.style.transform='none';});} function hideUpdateModal(){if(modalOverlay){modalOverlay.style.opacity='0';modalContent.style.opacity='0';modalContent.style.transform='translateY(-20px)';setTimeout(()=>{modalOverlay.style.display='none';if(progressBar)progressBar.style.width='0%';if(progressContainer)progressContainer.style.display='none';if(restartButtonModal)restartButtonModal.style.display='none';if(closeButtonModal)closeButtonModal.style.display='none';if(errorDetails)errorDetails.style.display='none';},300);}}
+                if(window.electronUpdater && modalOverlay && modalContent && modalTitle && modalMessage && progressContainer && progressBar && restartButtonModal && closeButtonModal && errorDetails){console.log('[Renderer Updater] API elements found. Setting up listeners.');closeButtonModal.onclick=hideUpdateModal;restartButtonModal.onclick=()=>{if(restartButtonModal){restartButtonModal.textContent='Перезапуск...';restartButtonModal.disabled=true;}if(closeButtonModal)closeButtonModal.disabled=true;window.electronUpdater.send('install-update');};listeners['update-status']=window.electronUpdater.on('update-status',(m)=>{if(!m&&modalMessage&&modalMessage.textContent==='Установлена последняя версия.'){hideUpdateModal();return;}if(m!==`Версия ${updateInfoGlobal?.version} загружена. Готово к установке.`){if(modalMessage)modalMessage.textContent=m;if(modalTitle)modalTitle.textContent='Статус обновления';if(progressContainer)progressContainer.style.display='none';if(restartButtonModal)restartButtonModal.style.display='none';if(closeButtonModal){closeButtonModal.style.display='inline-block';closeButtonModal.disabled=false;}if(errorDetails)errorDetails.style.display='none';showUpdateModal('info');}if(m==='Установлена последняя версия.'){setTimeout(hideUpdateModal,5000);}});listeners['update-error']=window.electronUpdater.on('update-error',(m)=>{if(modalTitle)modalTitle.textContent='Ошибка обновления';if(modalMessage)modalMessage.textContent='Не удалось проверить или загрузить обновление.';if(errorDetails){errorDetails.textContent=`Детали: ${m}`;errorDetails.style.display='block';}if(progressContainer)progressContainer.style.display='none';if(restartButtonModal)restartButtonModal.style.display='none';if(closeButtonModal){closeButtonModal.style.display='inline-block';closeButtonModal.disabled=false;}showUpdateModal('error');});listeners['update-available']=window.electronUpdater.on('update-available',(i)=>{updateInfoGlobal=i;if(modalTitle)modalTitle.textContent=`Доступна версия ${i.version}`;if(modalMessage)modalMessage.textContent='Начинается автоматическая загрузка...';if(progressBar)progressBar.style.width='0%';if(progressContainer)progressContainer.style.display='block';if(restartButtonModal)restartButtonModal.style.display='none';if(closeButtonModal){closeButtonModal.style.display='inline-block';closeButtonModal.disabled=false;}if(errorDetails)errorDetails.style.display='none';showUpdateModal('available');});listeners['update-progress']=window.electronUpdater.on('update-progress',(p)=>{const rp=Math.round(p);if(modalTitle)modalTitle.textContent='Загрузка обновления';if(modalMessage)modalMessage.textContent=`Пожалуйста, подождите... ${rp}%`;if(progressBar)progressBar.style.width=`${p}%`;if(progressContainer)progressContainer.style.display='block';if(restartButtonModal)restartButtonModal.style.display='none';if(closeButtonModal){closeButtonModal.style.display='inline-block';closeButtonModal.disabled=false;}if(errorDetails)errorDetails.style.display='none';showUpdateModal('downloading');});listeners['update-ready']=window.electronUpdater.on('update-ready',(i)=>{updateInfoGlobal=i;if(modalTitle)modalTitle.textContent=`Обновление ${i.version} готово!`;if(modalMessage)modalMessage.textContent='Нажмите кнопку ниже, чтобы перезапустить приложение и установить обновление.';if(progressContainer)progressContainer.style.display='none';if(errorDetails)errorDetails.style.display='none';if(restartButtonModal){restartButtonModal.textContent='Перезапустить и установить';restartButtonModal.disabled=false;restartButtonModal.style.display='inline-block';}if(closeButtonModal){closeButtonModal.style.display='none';}showUpdateModal('ready');});}else{console.error('[Renderer Updater] Initialization FAILED.');}
+                // --- Конец Кода модального окна обновления ---
+
+            }); // Конец DOMContentLoaded
+        })(); // Конец IIFE
     </script>
 <% } %>
