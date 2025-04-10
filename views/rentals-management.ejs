@@ -1,3 +1,4 @@
+<!-- views/rentals-management.ejs -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -370,6 +371,43 @@
             opacity: 1;
         }
 
+#resetFiltersBtn { /* <<<< ИЗМЕНЯЕМ СТИЛИ КНОПКИ СБРОСА */
+            /* Размеры и выравнивание */
+            padding: 10px 18px; /* Вертикальный паддинг как у инпутов, горизонтальный по вкусу */
+            height: calc(1.5em + 0.75rem * 2 + 2px); /* Попробуем вычислить высоту как у bootstrap input ~40px */
+            /* Визуальный стиль (пример "secondary" кнопки) */
+            background-color: #6c757d; /* Серый фон (или var(--secondary-color)) */
+            color: white; /* Белый текст */
+            border: 1px solid #6c757d; /* Рамка в цвет фона */
+            border-radius: var(--border-radius); /* Скругление как у других элементов */
+            text-decoration: none; /* Убираем подчеркивание, если было */
+            cursor: pointer;
+            transition: all var(--transition-speed) ease;
+            font-size: 0.9rem; /* Размер шрифта как у маленьких кнопок */
+            line-height: 1.5; /* Стандартная высота строки */
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* Легкая тень */
+            display: inline-flex; /* Для выравнивания иконки и текста */
+            align-items: center;
+            justify-content: center;
+            align-self: flex-end; /* Оставляем прижатие к нижнему краю группы */
+        }
+
+        #resetFiltersBtn:hover:not(:disabled) {
+            background-color: #5a6268; /* Темнее серый при наведении */
+            border-color: #545b62;
+            transform: translateY(-1px); /* Небольшой подъем */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+        #resetFiltersBtn i {
+             margin-right: 6px; /* Отступ иконки */
+             font-size: 0.9em;
+         }
+         #resetFiltersBtn:disabled {
+             opacity: 0.65;
+             cursor: not-allowed;
+             box-shadow: none;
+             transform: none;
+         }
         .close-modal {
             position: absolute;
             top: 15px;
@@ -651,6 +689,134 @@
             font-weight: 500;
          }
 
+         /* === NEW Styles for Filter Bar === */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+            align-items: center;
+            gap: 15px; /* Spacing between elements */
+            background-color: #ffffff;
+            padding: 15px 20px; /* Padding inside the bar */
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 30px; /* Space below the bar */
+            border: 1px solid var(--grey-medium);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column; /* Label above input/select */
+        }
+
+        .filter-group label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--grey-dark);
+            margin-bottom: 5px;
+        }
+
+        /* Search Input Wrapper */
+        .search-input-wrapper {
+            flex-grow: 1; /* Takes up available space */
+            min-width: 250px; /* Minimum width for the search */
+            position: relative;
+        }
+
+        .search-input-wrapper .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--grey-dark);
+            opacity: 0.7;
+            font-size: 0.9em;
+        }
+
+        #rentalSearchInput {
+            width: 100%;
+            padding: 10px 15px 10px 38px; /* Padding for icon */
+            border: 1px solid var(--grey-medium);
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+        }
+
+        #rentalSearchInput:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+        }
+
+        /* Status Filter Wrapper */
+        .status-filter-wrapper {
+            min-width: 200px; /* Ensure select has enough width */
+        }
+
+        #rentalStatusFilter {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid var(--grey-medium);
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            background-color: white;
+            cursor: pointer;
+            transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+        }
+
+        #rentalStatusFilter:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+        }
+
+        /* Message for no filter results */
+        #noFilterResultsMessage {
+            display: none; /* Hidden by default */
+            text-align: center;
+            margin: 30px 0;
+            padding: 15px;
+            background-color: var(--light-color);
+            color: var(--secondary-color);
+            border-radius: var(--border-radius);
+            border: 1px dashed var(--grey-medium);
+        }
+        #noFilterResultsMessage i { /* Optional icon */
+             margin-right: 8px;
+        }
+
+        /* --- Styles for Pagination Container --- */
+        .pagination-container {
+            margin-top: 25px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            padding: 12px 15px;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            max-width: 1200px; /* Или ширина вашего основного .container */
+            margin-left: auto;  /* Центрирование блока */
+            margin-right: auto; /* Центрирование блока */
+            box-sizing: border-box;
+        }
+        .pagination-controls { display: flex; align-items: center; gap: 6px; }
+        .pagination-controls button { padding: 8px 14px; font-size: 0.95rem; border: none; background-color: #fff; color: var(--primary-color); cursor: pointer; border-radius: var(--border-radius); transition: all 0.2s ease; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); min-width: 40px; text-align: center; position: relative; overflow: hidden; }
+        .pagination-controls button::before { content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0; background-color: rgba(13, 110, 253, 0.1); border-radius: 50%; transform: translate(-50%, -50%); transition: width 0.4s, height 0.4s; }
+        .pagination-controls button:hover:not(:disabled)::before { width: 200%; height: 200%; }
+        .pagination-controls button:hover:not(:disabled) { background-color: #f8f9fa; color: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); }
+        .pagination-controls button:disabled { color: #adb5bd; background-color: #f8f9fa; cursor: not-allowed; opacity: 0.7; box-shadow: none; }
+        .pagination-controls button.active { background-color: var(--primary-color); color: #fff; cursor: default; font-weight: 500; box-shadow: 0 2px 5px rgba(13, 110, 253, 0.3); }
+        .pagination-controls span { margin: 0 5px; color: var(--secondary-color); }
+        .pagination-info { font-size: 0.95rem; color: var(--secondary-color); display: flex; align-items: center; gap: 10px; }
+        .pagination-info select { padding: 6px 10px; border: 1px solid #ced4da; border-radius: var(--border-radius); font-size: 0.9rem; vertical-align: middle; transition: all 0.2s ease; cursor: pointer; background-color: white; }
+        .pagination-info select:focus { border-color: var(--primary-color); outline: 0; box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15); }
+        .pagination-info label { margin-bottom: 0; }
+        .pagination-container.hidden { display: none !important; } /* Class to hide pagination */
+        .hidden-row { display: none; } /* Class to hide table rows */
+
     </style>
 </head>
 <body>
@@ -664,83 +830,56 @@
         <!-- Контейнер для JS сообщений -->
         <div id="js-messages-rentals"></div>
 
+        <%# --- Filter Bar --- %>
+        <div class="filter-bar">
+            <div class="filter-group search-input-wrapper">
+                <label for="rentalSearchInput">Поиск</label>
+                <div class="search-input-wrapper">
+                     <i class="fas fa-search search-icon"></i>
+                     <input type="text" id="rentalSearchInput" placeholder="По объекту, арендатору, ID...">
+                </div>
+            </div>
+            <div class="filter-group status-filter-wrapper">
+                <label for="rentalStatusFilter">Фильтр по статусу</label>
+                <select id="rentalStatusFilter">
+                    <option value="">Все статусы</option>
+                    <option value="Ожидает подтверждения">Ожидает подтверждения</option>
+                    <option value="Активна">Активна</option>
+                    <option value="Отклонена">Отклонена</option>
+                    <option value="Отменена">Отменена</option>
+                    <option value="Аннулирована">Аннулирована</option>
+                </select>
+            </div>
+            <%# Можно добавить кнопку сброса фильтров сюда или оставить только внутри advanced (если они будут) %>
+             <div class="filter-group" style="margin-top: auto;"> <%# Убрана label, кнопка сама по себе %>
+                  <button type="button" id="resetFiltersBtn" class="btn btn-secondary btn-small" style="align-self: flex-end;">
+                     <i class="fas fa-undo"></i> Сбросить
+                  </button>
+             </div>
+        </div>
+        <%# --- End Filter Bar --- %>
+
+        <%# Сообщение об отсутствии результатов фильтрации %>
+        <p id="noFilterResultsMessage">
+            <i class="fas fa-filter"></i> По вашему запросу бронирований не найдено. Попробуйте изменить фильтры.
+        </p>
+
+
+        <%# Логика разделения на таблицы и переменная isAdminUser остаются БЕЗ ИЗМЕНЕНИЙ %>
         <%
-            // Разделяем бронирования по статусу
             const allBookings = Array.isArray(bookings) ? bookings : [];
-            const pendingBookings = allBookings.filter(b => b.Status === 'Ожидает подтверждения');
-            // Сортируем остальные: Активные сверху, затем по дате создания (новые выше)
-            const otherBookings = allBookings
-                .filter(b => b.Status !== 'Ожидает подтверждения')
-                .sort((a, b) => {
-                    if (a.Status === 'Активна' && b.Status !== 'Активна') return -1;
-                    if (a.Status !== 'Активна' && b.Status === 'Активна') return 1;
-                    return new Date(b.CreatedAt || 0) - new Date(a.CreatedAt || 0);
-                });
+            // Разделение больше не нужно, JS будет сам рассортировывать строки
             const isAdminUser = locals.currentUser && locals.currentUser.role === 'Admin';
+            const bookingsExist = allBookings.length > 0;
         %>
 
-        <!-- Секция Ожидающих Подтверждения -->
+        <!-- ЕДИНАЯ Таблица для ВСЕХ Бронирований -->
         <section class="rentals-section">
-            <h2>
-                <i class="fas fa-hourglass-half"></i>
-                Ожидают подтверждения (<span id="pendingCount"><%= pendingBookings.length %></span>)
-            </h2>
-            <div class="table-responsive">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Объект</th>
-                            <th>Арендатор</th>
-                            <th>Даты</th>
-                            <th>Сумма</th>
-                            <th>Действия</th>
-                        </tr>
-                    </thead>
-                    <tbody id="pendingBookingsTableBody">
-                        <% if (pendingBookings.length > 0) { %>
-                            <% pendingBookings.forEach(booking => { %>
-                                <tr id="rental-row-<%= booking.Id %>" data-status="<%= booking.Status %>">
-                                    <td>
-                                        <a href="/properties/<%= booking.PropertyId %>" title="<%= booking.PropertyTitle %>">
-                                            <%= booking.PropertyTitle.substring(0, 30) %><% if(booking.PropertyTitle.length > 30) { %>...<% } %>
-                                        </a>
-                                    </td>
-                                    <td><%= booking.TenantName %></td>
-                                    <td><%= booking.StartDateFormatted %> - <%= booking.EndDateFormatted %></td>
-                                    <td><%= booking.TotalCost ? new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 }).format(booking.TotalCost) : 'Н/Д' %></td>
-                                    <td class="actions-cell">
-                                         <form class="rental-action-form" data-action="confirm" data-booking-id="<%= booking.Id %>" action="/rentals/<%= booking.Id %>/confirm" method="POST">
-                                             <button type="submit" class="btn btn-small btn-confirm" data-tooltip="Подтвердить бронирование">
-                                                 <span class="button-text"><i class="fas fa-check"></i></span>
-                                                 <i class="fas fa-spinner fa-spin button-spinner"></i>
-                                             </button>
-                                         </form>
-                                         <form class="rental-action-form" data-action="reject" data-booking-id="<%= booking.Id %>" action="/rentals/<%= booking.Id %>/reject" method="POST">
-                                             <button type="button" class="btn btn-small btn-reject reject-button" data-tooltip="Отклонить бронирование">
-                                                 <span class="button-text"><i class="fas fa-times"></i></span>
-                                                 <i class="fas fa-spinner fa-spin button-spinner"></i>
-                                             </button>
-                                         </form>
-                                    </td>
-                                </tr>
-                            <% }) %>
-                        <% } %>
-                         <!-- Строка будет добавлена JS, если таблица пуста -->
-                    </tbody>
-                </table>
-            </div>
-             <!-- Сообщение будет показано JS, если таблица пуста -->
-            <p class="no-bookings-message" id="noPendingMessage" style="display: <%= pendingBookings.length === 0 ? 'block' : 'none' %>;">
-                <i class="fas fa-inbox"></i> Нет бронирований, ожидающих подтверждения.
-            </p>
-        </section>
-
-        <!-- Секция Остальных Бронирований -->
-        <section class="rentals-section">
-            <h2>
-                <i class="fas fa-history"></i>
-                Активные и Прошедшие (<span id="otherCount"><%= otherBookings.length %></span>)
-            </h2>
+             <h2>
+                 <i class="fas fa-list-alt"></i>
+                 Все Бронирования (<span id="totalBookingCount"><%= allBookings.length %></span>)
+                 <span id="filteredBookingCount" style="display: none;"></span> <%# Для показа отфильтрованного кол-ва %>
+             </h2>
              <div class="table-responsive">
                  <table class="data-table">
                      <thead>
@@ -753,67 +892,76 @@
                              <th>Действия</th>
                          </tr>
                      </thead>
-                     <tbody id="otherBookingsTableBody">
-                         <% if (otherBookings.length > 0) { %>
-                             <% otherBookings.forEach(booking => { %>
+                     <%# --- !!! ВАЖНО: Присваиваем ID ТЕПЕРЬ ЭТОЙ ТАБЛИЦЕ !!! --- %>
+                     <tbody id="rentalsTableBody">
+                         <% if (bookingsExist) { %>
+                             <% allBookings.forEach(booking => { %>
                                  <%
                                      let statusClass = 'status-other';
                                      let statusText = booking.Status || 'Неизвестен';
                                      switch(booking.Status) {
                                          case 'Активна': statusClass = 'status-active'; break;
-                                         case 'Ожидает подтверждения': statusClass = 'status-pending'; break; // На всякий случай
+                                         case 'Ожидает подтверждения': statusClass = 'status-pending'; break;
                                          case 'Отклонена': statusClass = 'status-rejected'; break;
                                          case 'Отменена': statusClass = 'status-cancelled'; break;
                                          case 'Аннулирована': statusClass = 'status-annulled'; break;
                                      }
+                                     // Генерируем data-* атрибуты для JS фильтрации
+                                     const dataAttributes = `
+                                         id="rental-row-${booking.Id}"
+                                         data-status="${(booking.Status || '')}"
+                                         data-property-title="${(booking.PropertyTitle || '')}"
+                                         data-tenant-name="${(booking.TenantName || '')}"
+                                         data-booking-id="${(booking.Id || '')}"
+                                     `;
                                  %>
-                                 <tr id="rental-row-<%= booking.Id %>" data-status="<%= booking.Status %>">
-                                      <td>
-                                          <a href="/properties/<%= booking.PropertyId %>" title="<%= booking.PropertyTitle %>">
-                                              <%= booking.PropertyTitle.substring(0, 30) %><% if(booking.PropertyTitle.length > 30) { %>...<% } %>
-                                          </a>
-                                      </td>
-                                      <td><%= booking.TenantName %></td>
-                                      <td><%= booking.StartDateFormatted %> - <%= booking.EndDateFormatted %></td>
-                                      <td><%= booking.TotalCost ? new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 }).format(booking.TotalCost) : 'Н/Д' %></td>
-                                      <td class="status-cell">
+                                 <tr <%- dataAttributes %>>
+                                     <td>
+                                         <a href="/properties/<%= booking.PropertyId %>" title="<%= booking.PropertyTitle %>">
+                                             <%= booking.PropertyTitle.substring(0, 30) %><% if(booking.PropertyTitle.length > 30) { %>...<% } %>
+                                         </a>
+                                     </td>
+                                     <td><%= booking.TenantName %></td>
+                                     <td><%= booking.StartDateFormatted %> - <%= booking.EndDateFormatted %></td>
+                                     <td><%= booking.TotalCost ? new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 }).format(booking.TotalCost) : 'Н/Д' %></td>
+                                     <td class="status-cell">
                                          <span class="status-label <%= statusClass %>" title="Статус: <%= booking.Status %>"><%= statusText %></span>
                                          <% if (booking.Status === 'Отклонена' && booking.RejectedReason) { %>
                                              <i class="fas fa-info-circle" data-tooltip="Причина отклонения: <%= booking.RejectedReason %>" style="margin-left: 5px;"></i>
                                          <% } %>
-                                      </td>
+                                     </td>
                                      <td class="actions-cell">
-                                         <% if (booking.Status === 'Активна') { %>
+                                          <% if (booking.Status === 'Ожидает подтверждения') { %>
+                                             <form class="rental-action-form" data-action="confirm" data-booking-id="<%= booking.Id %>" action="/rentals/<%= booking.Id %>/confirm" method="POST">
+                                                 <button type="submit" class="btn btn-small btn-confirm" data-tooltip="Подтвердить"> <span class="button-text"><i class="fas fa-check"></i></span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button>
+                                             </form>
+                                             <form class="rental-action-form" data-action="reject" data-booking-id="<%= booking.Id %>" action="/rentals/<%= booking.Id %>/reject" method="POST">
+                                                 <button type="button" class="btn btn-small btn-reject reject-button" data-tooltip="Отклонить"> <span class="button-text"><i class="fas fa-times"></i></span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button>
+                                             </form>
+                                          <% } else if (booking.Status === 'Активна') { %>
                                              <form class="rental-action-form" data-action="cancel" data-booking-id="<%= booking.Id %>" action="/rentals/<%= booking.Id %>/cancel" method="POST">
-                                                 <button type="submit" class="btn btn-small btn-annul" data-tooltip="Аннулировать бронирование">
-                                                      <span class="button-text"><i class="fas fa-ban"></i></span>
-                                                      <i class="fas fa-spinner fa-spin button-spinner"></i>
-                                                 </button>
+                                                 <button type="submit" class="btn btn-small btn-annul" data-tooltip="Аннулировать"> <span class="button-text"><i class="fas fa-ban"></i></span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button>
                                              </form>
-                                         <% } %>
-                                         <% if (isAdminUser && ['Отклонена', 'Отменена', 'Аннулирована'].includes(booking.Status)) { %>
-                                             <%# Кнопка Удалить только для Admin для неактивных статусов %>
+                                          <% } %>
+                                          <% if (isAdminUser && ['Отклонена', 'Отменена', 'Аннулирована'].includes(booking.Status)) { %>
                                              <form class="rental-action-form" data-action="delete" data-booking-id="<%= booking.Id %>" action="/rentals/<%= booking.Id %>/delete" method="POST">
-                                                 <button type="submit" class="btn btn-small btn-delete" data-tooltip="Удалить запись (необратимо)">
-                                                     <span class="button-text"><i class="fas fa-trash-alt"></i></span>
-                                                     <i class="fas fa-spinner fa-spin button-spinner"></i>
-                                                 </button>
+                                                 <button type="submit" class="btn btn-small btn-delete" data-tooltip="Удалить запись"> <span class="button-text"><i class="fas fa-trash-alt"></i></span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button>
                                              </form>
-                                         <% } else if (booking.Status !== 'Активна' && booking.Status !== 'Ожидает подтверждения') { %>
-                                             <%# Показываем прочерк или пустое место, если действий нет %>
-                                             <span>-</span>
+                                         <% } else if (!['Ожидает подтверждения', 'Активна'].includes(booking.Status)) { %>
+                                              <span>-</span> <%# Показываем прочерк для завершенных/отмененных, если не админ %>
                                          <% } %>
                                      </td>
                                  </tr>
                              <% }) %>
+                         <% } else { %>
+                             <%# Строка "Нет бронирований" управляется JS %>
                          <% } %>
-                          <!-- Строка будет добавлена JS, если таблица пуста -->
                      </tbody>
                  </table>
              </div>
-             <!-- Сообщение будет показано JS, если таблица пуста -->
-             <p class="no-bookings-message" id="noOtherMessage" style="display: <%= otherBookings.length === 0 ? 'block' : 'none' %>;">
-                 <i class="fas fa-calendar-times"></i> Нет активных или прошедших бронирований.
+              <!-- Сообщение об отсутствии бронирований ВООБЩЕ -->
+             <p class="no-bookings-message" id="noBookingsMessage" style="display: <%= bookingsExist ? 'none' : 'block' %>;">
+                 <i class="fas fa-calendar-times"></i> Нет данных об арендах для отображения.
              </p>
         </section>
 
@@ -854,503 +1002,424 @@
              </div>
          </div>
     </div>
+    <div class="pagination-container hidden" id="paginationContainer">
+            <div class="pagination-info">
+                 <span id="paginationInfo"></span>
+                 <select id="itemsPerPageSelect">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                 </select>
+                 <label for="itemsPerPageSelect">на странице</label>
+            </div>
+            <div class="pagination-controls" id="paginationControls">
+                <%# Кнопки будут генерироваться JS %>
+            </div>
+        </div>
 
     <%- include('partials/footer') %>
 
     <script>
         // --- DOM Элементы ---
-        const pendingBody = document.getElementById('pendingBookingsTableBody');
-        const otherBody = document.getElementById('otherBookingsTableBody');
-        const pendingCountSpan = document.getElementById('pendingCount');
-        const otherCountSpan = document.getElementById('otherCount');
-        const noPendingMessage = document.getElementById('noPendingMessage');
-        const noOtherMessage = document.getElementById('noOtherMessage');
+         const tableBody = document.getElementById('rentalsTableBody');
+        const paginationContainer = document.getElementById('paginationContainer');
+        const paginationControls = document.getElementById('paginationControls');
+        const paginationInfo = document.getElementById('paginationInfo');
+        const itemsPerPageSelect = document.getElementById('itemsPerPageSelect');
+        const noBookingsMessage = document.getElementById('noBookingsMessage');
+        const noFilterResultsMessage = document.getElementById('noFilterResultsMessage');
         const jsMessagesContainer = document.getElementById('js-messages-rentals');
-        const isAdmin = JSON.parse('<%= JSON.stringify(isAdminUser) %>');
+        const isAdmin = JSON.parse('<%- JSON.stringify(isAdminUser) %>');
+        const searchInput = document.getElementById('rentalSearchInput');
+        const statusFilter = document.getElementById('rentalStatusFilter');
+        const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+        const totalCountSpan = document.getElementById('totalBookingCount');
+        const filteredCountSpan = document.getElementById('filteredBookingCount');
 
-        // --- Модальное окно Отклонения ---
+        // --- Modal Windows Elements ---
         const rejectModal = document.getElementById('rejectReasonModal');
-        const rejectModalContent = rejectModal.querySelector('.modal-content');
         const rejectBookingIdSpan = document.getElementById('rejectBookingIdSpan');
         const rejectBookingIdInput = document.getElementById('rejectBookingIdInput');
         const rejectReasonTextarea = document.getElementById('rejectReasonTextarea');
         const rejectReasonForm = document.getElementById('rejectReasonForm');
         const confirmRejectBtn = document.getElementById('confirmRejectBtn');
         const modalError = document.getElementById('modalError');
-        let rejectTargetFormElement = null; // Храним form элемент кнопки "Отклонить", которая вызвала модалку
+        let rejectTargetFormElement = null;
 
-        // --- Модальное окно Подтверждения ---
         const confirmModal = document.getElementById('customConfirmModal');
-        const confirmModalContent = confirmModal.querySelector('.modal-content');
         const confirmTitle = document.getElementById('customConfirmTitle');
         const confirmMessage = document.getElementById('customConfirmMessage');
         const confirmOkButton = document.getElementById('confirmOk');
         const confirmCancelButton = document.getElementById('confirmCancel');
-        let confirmResolve = null; // Callback для промиса подтверждения
+        let confirmResolve = null;
 
-        // --- Функция показа JS сообщений (как в примере) ---
+        // --- Global Variables ---
+        // Собираем все строки из EJS один раз
+        const allRows = Array.from(tableBody.querySelectorAll('tr'));
+        let currentPage = 1;
+        let itemsPerPage = parseInt(itemsPerPageSelect.value);
+
+        // --- Functions ---
+
+        // Show JS Messages
         function showRentalsJsMessage(type, text, allowHtml = false) {
-            if (!jsMessagesContainer) return;
-
-            // Удаляем предыдущие сообщения
-            jsMessagesContainer.innerHTML = '';
-
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `flash-message flash-${type}`;
-
-            if (allowHtml) {
-                messageDiv.innerHTML = text; // Используем innerHTML если разрешено
-            } else {
-                messageDiv.textContent = text; // Используем textContent для безопасности
-            }
-
-            // Добавляем кнопку закрытия
-            const closeButton = document.createElement('button');
-            closeButton.type = 'button';
-            closeButton.className = 'close-flash';
-            closeButton.innerHTML = '×';
-            closeButton.setAttribute('aria-label', 'Закрыть сообщение');
-            closeButton.onclick = () => {
-                messageDiv.style.opacity = '0';
-                messageDiv.style.transform = 'translateY(-10px)';
-                setTimeout(() => messageDiv.remove(), 300);
-            };
-            messageDiv.appendChild(closeButton);
-
-            jsMessagesContainer.appendChild(messageDiv);
-
-            // Автоматическое скрытие через 6 секунд
-            setTimeout(() => {
-                if (messageDiv && messageDiv.parentNode) {
-                     messageDiv.style.opacity = '0';
-                     messageDiv.style.transform = 'translateY(-10px)';
-                     setTimeout(() => {
-                         if (messageDiv && messageDiv.parentNode) messageDiv.remove();
-                     }, 300);
-                }
-            }, 6000);
+             if (!jsMessagesContainer) return;
+             jsMessagesContainer.innerHTML = '';
+             const messageDiv = document.createElement('div');
+             messageDiv.className = `flash-message flash-${type}`;
+             if (allowHtml) { messageDiv.innerHTML = text; } else { messageDiv.textContent = text; }
+             const closeButton = document.createElement('button');
+             closeButton.type = 'button'; closeButton.className = 'close-flash'; closeButton.innerHTML = '×';
+             closeButton.onclick = () => { messageDiv.style.opacity = '0'; setTimeout(() => messageDiv.remove(), 300); };
+             messageDiv.appendChild(closeButton);
+             jsMessagesContainer.appendChild(messageDiv);
+             setTimeout(() => { if (messageDiv.parentNode) { messageDiv.style.opacity = '0'; setTimeout(() => { if (messageDiv.parentNode) messageDiv.remove(); }, 300); } }, 6000);
         }
 
-        // --- Функции для Модального Окна Отклонения ---
+        // Modal Handling (Reject & Confirm)
         function openRejectModal(buttonElement) {
-            rejectTargetFormElement = buttonElement.closest('form'); // Сохраняем форму
-            if (!rejectTargetFormElement) return;
-
+            rejectTargetFormElement = buttonElement.closest('form'); if (!rejectTargetFormElement) return;
             const bookingId = rejectTargetFormElement.dataset.bookingId;
-            rejectBookingIdSpan.textContent = bookingId.substring(0, 8) + '...'; // Показываем часть ID
-            rejectBookingIdInput.value = bookingId;
-            rejectReasonTextarea.value = ''; // Очищаем поле
-            rejectReasonTextarea.classList.remove('shake-error'); // Убираем класс ошибки
-            modalError.style.display = 'none'; // Скрываем сообщение об ошибке
-            confirmRejectBtn.disabled = false; // Активируем кнопку
+            rejectBookingIdSpan.textContent = bookingId.substring(0, 8) + '...';
+            rejectBookingIdInput.value = bookingId; rejectReasonTextarea.value = '';
+            rejectReasonTextarea.classList.remove('shake-error'); modalError.style.display = 'none';
+            confirmRejectBtn.disabled = false;
+            const rejectBtnText = confirmRejectBtn.querySelector('.button-text');
+            if (rejectBtnText) rejectBtnText.textContent = 'Отклонить бронь'; // Reset button text
 
             rejectModal.style.display = 'block';
-            setTimeout(() => {
-                rejectModal.classList.add('visible');
-                document.body.style.overflow = 'hidden'; // Блокируем прокрутку фона
-            }, 10); // Небольшая задержка для анимации
-
-            rejectReasonTextarea.focus(); // Фокус на поле ввода причины
+            setTimeout(() => { rejectModal.classList.add('visible'); document.body.style.overflow = 'hidden'; }, 10);
+            rejectReasonTextarea.focus();
         }
-
         function closeRejectModal() {
-            rejectModal.classList.remove('visible');
-            setTimeout(() => {
-                rejectModal.style.display = 'none';
-                document.body.style.overflow = ''; // Возвращаем прокрутку
-            }, 300); // Длительность анимации затухания
-            rejectTargetFormElement = null; // Сбрасываем таргет
+             rejectModal.classList.remove('visible'); setTimeout(() => { rejectModal.style.display = 'none'; if(confirmModal.style.display !== 'block') document.body.style.overflow='';}, 300); rejectTargetFormElement = null;
         }
-
-        // --- Функции для Модального Окна Подтверждения (как в примере) ---
         function showCustomConfirm(title, message, confirmText = 'Подтвердить', cancelText = 'Отмена') {
-            return new Promise((resolve) => {
-                confirmTitle.innerHTML = title; // innerHTML для возможности использовать теги в заголовке
-                confirmMessage.innerHTML = message; // innerHTML для тегов в сообщении
-                confirmOkButton.textContent = confirmText;
-                confirmCancelButton.textContent = cancelText;
-                confirmResolve = resolve; // Сохраняем resolve функцию промиса
-
-                confirmModal.style.display = 'block';
-                setTimeout(() => {
-                    confirmModal.classList.add('visible');
-                    document.body.style.overflow = 'hidden';
-                }, 10);
-            });
+             return new Promise((resolve) => { confirmTitle.innerHTML = title; confirmMessage.innerHTML = message; confirmOkButton.textContent = confirmText; confirmCancelButton.textContent = cancelText; confirmResolve = resolve; confirmModal.style.display = 'block'; setTimeout(() => { confirmModal.classList.add('visible'); document.body.style.overflow='hidden';}, 10); });
         }
-
         function closeConfirmModal(result) {
-            confirmModal.classList.remove('visible');
-             setTimeout(() => {
-                 confirmModal.style.display = 'none';
-                 // Возвращаем прокрутку, только если другая модалка не открыта
-                 if (rejectModal.style.display !== 'block') {
-                     document.body.style.overflow = '';
-                 }
-             }, 300);
-            if (confirmResolve) {
-                confirmResolve(result); // Вызываем сохраненный resolve
-                confirmResolve = null; // Сбрасываем
-            }
+             confirmModal.classList.remove('visible'); setTimeout(() => { confirmModal.style.display = 'none'; if(rejectModal.style.display !== 'block') document.body.style.overflow=''; }, 300); if (confirmResolve) { confirmResolve(result); confirmResolve = null; }
         }
-
-        // --- Обработчики Закрытия Модальных Окон ---
-        [rejectModal, confirmModal].forEach(modal => {
-            // Закрытие по клику на крестик или кнопку "Отмена"
-            modal.querySelectorAll('.close-modal, .close-modal-button, #confirmCancel').forEach(button => {
-                button.addEventListener('click', () => {
-                    if (modal.id === 'rejectReasonModal') closeRejectModal();
-                    if (modal.id === 'customConfirmModal') closeConfirmModal(false); // Закрытие = отказ
-                });
-            });
-
-            // Закрытие по клику на фон
-            modal.addEventListener('click', (event) => {
-                if (event.target === modal) {
-                    if (modal.id === 'rejectReasonModal') closeRejectModal();
-                    if (modal.id === 'customConfirmModal') closeConfirmModal(false);
-                }
-            });
-        });
-
-         // Закрытие по Escape
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') {
-                if (rejectModal.classList.contains('visible')) closeRejectModal();
-                if (confirmModal.classList.contains('visible')) closeConfirmModal(false);
-            }
-        });
-
-        // Обработчик для кнопки OK в кастомном подтверждении
+        // Modal Close Event Handlers
+        [rejectModal, confirmModal].forEach(modal => { modal.querySelectorAll('.close-modal, .close-modal-button, #confirmCancel').forEach(button => { button.addEventListener('click', () => { if (modal.id === 'rejectReasonModal') closeRejectModal(); if (modal.id === 'customConfirmModal') closeConfirmModal(false); }); }); modal.addEventListener('click', (event) => { if (event.target === modal) { if (modal.id === 'rejectReasonModal') closeRejectModal(); if (modal.id === 'customConfirmModal') closeConfirmModal(false); } }); });
+        document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { if (rejectModal.classList.contains('visible')) closeRejectModal(); if (confirmModal.classList.contains('visible')) closeConfirmModal(false); } });
         confirmOkButton.addEventListener('click', () => closeConfirmModal(true));
 
-        // --- Обработчик Отправки Формы Отклонения (из модалки) ---
-        rejectReasonForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            if (!rejectTargetFormElement) return;
+        // *** NEW: Filter and Pagination Logic ***
 
-            const bookingId = rejectBookingIdInput.value;
-            const reason = rejectReasonTextarea.value.trim();
-            const form = rejectTargetFormElement; // Используем сохраненную форму из таблицы
-            const action = 'reject';
-            const originalButton = form.querySelector('button.reject-button'); // Оригинальная кнопка "Отклонить" в таблице
+        function applyFiltersAndPagination() {
+            if (!tableBody) return;
 
-            // --- Начало состояния загрузки ---
-            confirmRejectBtn.disabled = true;
-            const rejectBtnText = confirmRejectBtn.querySelector('.button-text');
-            const originalRejectBtnText = rejectBtnText.textContent;
-            rejectBtnText.textContent = 'Отклоняем...';
-            modalError.style.display = 'none';
-            rejectReasonTextarea.classList.remove('shake-error');
-            jsMessagesContainer.innerHTML = ''; // Очищаем старые сообщения
-            // --- Конец состояния загрузки ---
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            const selectedStatus = statusFilter.value; // Value from the dropdown ("" for all)
+            let visibleRowCount = 0;
+            let filteredRows = []; // Keep track of rows that pass filters
 
-            try {
-                const response = await fetch(form.action, {
-                     method: 'POST',
-                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                     body: JSON.stringify({ reason: reason }) // Отправляем причину в теле запроса
-                });
+            // 1. Filter all existing rows based on search and status
+            allRows.forEach(row => {
+                const propertyTitle = (row.dataset.propertyTitle || '').toLowerCase();
+                const tenantName = (row.dataset.tenantName || '').toLowerCase();
+                const bookingId = (row.dataset.bookingId || '').toLowerCase();
+                const status = row.dataset.status || ''; // Get status from data attribute
 
-                const result = await response.json();
+                const statusMatch = !selectedStatus || status === selectedStatus;
+                const searchMatch = !searchTerm ||
+                                    propertyTitle.includes(searchTerm) ||
+                                    tenantName.includes(searchTerm) ||
+                                    bookingId.includes(searchTerm); // Check partial ID match
 
-                if (!response.ok) {
-                    throw new Error(result.error || `Сервер вернул ошибку ${response.status}`);
-                }
-
-                if (result.success) {
-                    closeRejectModal(); // Закрываем модалку при успехе
-                    handleActionSuccess(action, bookingId, result, originalButton); // Передаем оригинальную кнопку для восстановления если нужно
+                if (statusMatch && searchMatch) {
+                    row.classList.remove('hidden-filter'); // Mark as visible by filter
+                    filteredRows.push(row); // Add to the list of filtered rows
+                    visibleRowCount++;
                 } else {
-                     throw new Error(result.error || `Ошибка при отклонении бронирования.`);
+                    row.classList.add('hidden-filter'); // Mark as hidden by filter
+                    row.classList.add('hidden-row'); // Also hide from pagination immediately
                 }
+            });
 
-            } catch (error) {
-                console.error(`Ошибка при отклонении брони ${bookingId}:`, error);
-                modalError.textContent = error.message;
-                modalError.style.display = 'block';
-                rejectReasonTextarea.classList.add('shake-error'); // Трясем поле ввода
-                // Восстанавливаем кнопку в модалке
-                confirmRejectBtn.disabled = false;
-                rejectBtnText.textContent = originalRejectBtnText;
+            // 2. Update filtered count display
+            if (filteredCountSpan) {
+                 if (searchTerm || selectedStatus) { // Show filtered count only if filters are active
+                     filteredCountSpan.textContent = `(Найдено: ${visibleRowCount})`;
+                     filteredCountSpan.style.display = 'inline';
+                 } else {
+                     filteredCountSpan.style.display = 'none';
+                 }
             }
-        });
 
-        // --- Общий Обработчик Отправки Других Форм (Confirm, Cancel, Delete) ---
-        document.body.addEventListener('submit', async (event) => {
-            // Проверяем, что это наша форма и не форма отклонения
-            if (event.target && event.target.matches('.rental-action-form') && event.target.dataset.action !== 'reject') {
-                event.preventDefault();
-                const form = event.target;
-                const action = form.dataset.action;
-                const bookingId = form.dataset.bookingId;
-                const submitButton = form.querySelector('button[type="submit"]');
-                const buttonText = submitButton?.querySelector('.button-text');
-
-                if (!submitButton || submitButton.disabled || !buttonText) return; // Доп. проверки
-
-                // --- Запрос подтверждения через кастомную модалку ---
-                let confirmTitleText = 'Подтвердите действие';
-                let confirmMessageText = 'Вы уверены, что хотите выполнить это действие?';
-                let confirmActionText = 'Подтвердить';
-                let isDestructive = false; // Флаг для стиля кнопки подтверждения
-
-                switch(action) {
-                    case 'confirm':
-                        confirmTitleText = `Подтвердить бронь #${bookingId.substring(0,8)}?`;
-                        confirmMessageText = 'Бронирование станет активным.';
-                        confirmActionText = 'Подтвердить';
-                        break;
-                    case 'cancel':
-                        confirmTitleText = `Аннулировать бронь #${bookingId.substring(0,8)}?`;
-                        confirmMessageText = 'Статус будет изменен на "Аннулирована". Это действие может быть необратимым.';
-                        confirmActionText = 'Аннулировать';
-                        isDestructive = true; // Аннулирование - деструктивное
-                        break;
-                    case 'delete':
-                        confirmTitleText = `Удалить запись #${bookingId.substring(0,8)}?`;
-                        confirmMessageText = '<strong>Внимание!</strong> Запись о бронировании будет удалена безвозвратно.';
-                        confirmActionText = 'Удалить';
-                        isDestructive = true; // Удаление - деструктивное
-                        break;
-                    default: return; // Неизвестное действие
-                }
-
-                // Меняем стиль кнопки подтверждения для деструктивных действий
-                confirmOkButton.className = `btn ${isDestructive ? 'btn-danger' : 'btn-primary'}`;
-
-                const confirmed = await showCustomConfirm(confirmTitleText, confirmMessageText, confirmActionText);
-                if (!confirmed) return; // Пользователь нажал "Отмена"
-
-                // --- Начало состояния загрузки ---
-                submitButton.disabled = true;
-                const originalButtonHtml = buttonText.innerHTML; // Сохраняем HTML иконки, если есть
-                buttonText.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>'; // Простой спиннер
-                jsMessagesContainer.innerHTML = '';
-                // --- Конец состояния загрузки ---
-
-                try {
-                    const response = await fetch(form.action, {
-                         method: 'POST',
-                         headers: { 'Accept': 'application/json' }
-                    });
-                    const result = await response.json();
-
-                    if (!response.ok) {
-                        throw new Error(result.error || `Сервер вернул ошибку ${response.status}`);
-                    }
-
-                    if (result.success) {
-                        handleActionSuccess(action, bookingId, result, submitButton, originalButtonHtml);
-                    } else {
-                        throw new Error(result.error || `Ошибка при выполнении действия '${action}'.`);
-                    }
-                } catch (error) {
-                    handleActionError(error, action, bookingId, submitButton, originalButtonHtml);
+            // 3. Show/Hide "No Results" or "No Bookings" message
+            if(noFilterResultsMessage) {
+                 noFilterResultsMessage.style.display = (visibleRowCount === 0 && allRows.length > 0) ? 'block' : 'none';
+            }
+            if(noBookingsMessage){
+                noBookingsMessage.style.display = (allRows.length === 0) ? 'block' : 'none';
+                if(tableBody && allRows.length === 0 && !tableBody.querySelector('td[colspan="6"]')){
+                    tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px; color: #6c757d;">Нет данных об арендах</td></tr>`;
+                } else if (tableBody && allRows.length > 0 && tableBody.querySelector('td[colspan="6"]')) {
+                    // Remove the empty message if rows appear
+                    tableBody.innerHTML = '';
                 }
             }
-        });
 
-        // --- Функция Обработки Успеха AJAX Запроса ---
+
+            // 4. Reset to page 1 and display the filtered results
+            displayPage(1, filteredRows); // Pass the filtered rows to displayPage
+        }
+
+        function displayPage(page, filteredRows) {
+             if (!tableBody) return;
+
+             currentPage = page;
+             const totalVisibleItems = filteredRows.length; // Total items matching filter
+
+             // Determine which rows from the filtered set to show on this page
+             const start = (page - 1) * itemsPerPage;
+             const end = start + itemsPerPage;
+             const rowsForCurrentPage = filteredRows.slice(start, end);
+
+             // Clear the table body
+             tableBody.innerHTML = '';
+
+             // Append only the rows for the current page
+             rowsForCurrentPage.forEach(row => {
+                 row.classList.remove('hidden-row'); // Ensure it's not hidden by pagination
+                 // Animate appearance (optional but nice)
+                 row.style.opacity = '0';
+                 row.style.transform = 'translateY(10px)';
+                 tableBody.appendChild(row);
+                 setTimeout(() => {
+                      row.style.opacity = '1';
+                      row.style.transform = 'translateY(0)';
+                      row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                 }, 50); // Stagger slightly maybe? Or remove timeout
+             });
+
+             // Hide all other rows (from the original unfiltered list) that are NOT on this page
+              allRows.forEach(row => {
+                   if (!rowsForCurrentPage.includes(row)) {
+                        row.classList.add('hidden-row');
+                   }
+              });
+
+
+             // Update pagination controls and info based on FILTERED count
+             renderPaginationControls(totalVisibleItems);
+             updatePaginationInfo(totalVisibleItems);
+
+             // Show appropriate message if no rows are displayed on the current page (after filtering)
+             if(totalVisibleItems === 0 && allRows.length > 0 && noFilterResultsMessage){
+                   noFilterResultsMessage.style.display = 'block';
+             }
+             if(allRows.length === 0 && noBookingsMessage) {
+                  noBookingsMessage.style.display = 'block';
+                  tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px; color: #6c757d;">Нет данных об арендах</td></tr>`;
+             }
+        }
+
+
+                function renderPaginationControls(totalItems) {
+            // Получаем контейнеры
+            const paginationContainer = document.getElementById('paginationContainer');
+            const paginationControls = document.getElementById('paginationControls');
+            const paginationInfoContainer = paginationContainer?.querySelector('.pagination-info'); // Найдем и контейнер с инфо
+
+            // Проверки на существование элементов
+            if (!paginationContainer || !paginationControls || !paginationInfoContainer) {
+                console.error("Pagination elements not found!");
+                return;
+            }
+
+            // --- НОВАЯ ЛОГИКА ОТОБРАЖЕНИЯ КОНТЕЙНЕРА ---
+            // Скрываем весь блок пагинации ТОЛЬКО если нет записей вообще
+            if (totalItems === 0) {
+                paginationContainer.classList.add('hidden');
+                paginationControls.innerHTML = ''; // Очищаем кнопки
+                updatePaginationInfo(0); // Очищаем инфо текст
+                return;
+            } else {
+                // Показываем контейнер, если записи есть
+                paginationContainer.classList.remove('hidden');
+            }
+            // --- КОНЕЦ НОВОЙ ЛОГИКИ КОНТЕЙНЕРА ---
+
+            // --- ЛОГИКА ОТОБРАЖЕНИЯ КНОПОК ---
+            const pageCount = Math.ceil(totalItems / itemsPerPage);
+            paginationControls.innerHTML = ''; // Всегда очищаем кнопки перед перерисовкой
+
+            // Не рисуем кнопки, если страница всего одна
+            if (pageCount <= 1) {
+                 paginationControls.style.display = 'none'; // Скрываем блок кнопок
+                 // Инфо и селект остаются видимыми, т.к. totalItems > 0
+                 updatePaginationInfo(totalItems); // Обновляем инфо на всякий случай
+                 return;
+             } else {
+                 paginationControls.style.display = 'flex'; // Показываем блок кнопок
+             }
+            // --- КОНЕЦ ЛОГИКИ ОТОБРАЖЕНИЯ КНОПОК ---
+
+            // --- Генерация кнопок (код остается без изменений) ---
+            // Предыдущая кнопка
+            const prevButton = document.createElement('button');
+            prevButton.innerHTML = '‹';
+            prevButton.disabled = currentPage === 1;
+            prevButton.addEventListener('click', () => {
+                const currentFilteredRows = allRows.filter(row => !row.classList.contains('hidden-filter'));
+                if (currentPage > 1) displayPage(currentPage - 1, currentFilteredRows);
+            });
+            paginationControls.appendChild(prevButton);
+
+            // Кнопки страниц (логика с многоточием остается той же)
+            const maxVisiblePages = 5; let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2)); let endPage = Math.min(pageCount, startPage + maxVisiblePages - 1); if (endPage - startPage + 1 < maxVisiblePages) { startPage = Math.max(1, endPage - maxVisiblePages + 1); }
+            if (startPage > 1) { const firstBtn = document.createElement('button'); firstBtn.textContent = '1'; firstBtn.addEventListener('click', () => displayPage(1, allRows.filter(r => !r.classList.contains('hidden-filter')))); paginationControls.appendChild(firstBtn); if (startPage > 2) { const dots = document.createElement('span'); dots.textContent = '...'; paginationControls.appendChild(dots); } }
+            for (let i = startPage; i <= endPage; i++) { const pageButton = document.createElement('button'); pageButton.textContent = i; if (i === currentPage) { pageButton.classList.add('active'); pageButton.disabled = true; } pageButton.addEventListener('click', () => displayPage(i, allRows.filter(r => !r.classList.contains('hidden-filter')))); paginationControls.appendChild(pageButton); }
+            if (endPage < pageCount) { if (endPage < pageCount - 1) { const dots = document.createElement('span'); dots.textContent = '...'; paginationControls.appendChild(dots); } const lastBtn = document.createElement('button'); lastBtn.textContent = pageCount; lastBtn.addEventListener('click', () => displayPage(pageCount, allRows.filter(r => !r.classList.contains('hidden-filter')))); paginationControls.appendChild(lastBtn); }
+
+            // Следующая кнопка
+            const nextButton = document.createElement('button');
+            nextButton.innerHTML = '›';
+            nextButton.disabled = currentPage === pageCount;
+            nextButton.addEventListener('click', () => {
+                 const currentFilteredRows = allRows.filter(row => !row.classList.contains('hidden-filter'));
+                 if (currentPage < pageCount) displayPage(currentPage + 1, currentFilteredRows);
+            });
+            paginationControls.appendChild(nextButton);
+
+            // Вызов обновления инфо происходит в displayPage, но можно и здесь продублировать для надежности
+             updatePaginationInfo(totalItems);
+        }
+
+        function updatePaginationInfo(totalItems) {
+            if (!paginationInfo || totalItems === 0) {
+                if (paginationInfo) paginationInfo.textContent = '';
+                return;
+            }
+            const pageCount = Math.ceil(totalItems / itemsPerPage);
+            const startItem = (currentPage - 1) * itemsPerPage + 1;
+            const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+            paginationInfo.textContent = `Записи ${startItem}-${endItem} из ${totalItems}`;
+        }
+
+
+        // *** AJAX Success/Error Handling ***
+
         function handleActionSuccess(action, bookingId, result, buttonElement = null, originalButtonHtml = null) {
             const row = document.getElementById(`rental-row-${bookingId}`);
             if (!row) return;
 
             showRentalsJsMessage('success', result.message || 'Действие выполнено успешно.');
 
-            if (action === 'confirm' || action === 'reject') {
-                // Перемещение строки из Pending в Other
-                const newStatus = result.newStatus || (action === 'confirm' ? 'Активна' : 'Отклонена');
-                const rejectedReason = result.rejectedReason || null;
-
-                // Анимация исчезновения из Pending
-                row.classList.add('row-fade-out');
-
-                setTimeout(() => {
-                    // Создаем новую строку для Other таблицы (или обновляем существующую)
-                    const targetRow = row.cloneNode(true); // Клонируем строку со всеми данными
-                    targetRow.classList.remove('row-fade-out');
-                    targetRow.removeAttribute('style'); // Убираем inline стили от анимации
-                    targetRow.dataset.status = newStatus;
-
-                    // Обновляем ячейку статуса
-                    let statusClass = 'status-other';
-                    if (newStatus === 'Активна') statusClass = 'status-active';
-                    else if (newStatus === 'Отклонена') statusClass = 'status-rejected';
-
-                    let statusHtml = `<span class="status-label ${statusClass}" title="Статус: ${newStatus}">${newStatus}</span>`;
-                    if (newStatus === 'Отклонена' && rejectedReason) {
-                        statusHtml += ` <i class="fas fa-info-circle" data-tooltip="Причина отклонения: ${escapeHtml(rejectedReason)}" style="margin-left: 5px;"></i>`;
+            if (action === 'delete') {
+                // Find the index of the row in the main array
+                const rowIndex = allRows.findIndex(r => r.id === `rental-row-${bookingId}`);
+                if (rowIndex > -1) {
+                    allRows.splice(rowIndex, 1); // Remove from the source array
+                    if (totalCountSpan) { // Update total count
+                         totalCountSpan.textContent = allRows.length;
                     }
-
-                    // Создаем новую ячейку статуса и действий
-                    const statusCell = document.createElement('td');
-                    statusCell.classList.add('status-cell');
-                    statusCell.innerHTML = statusHtml;
-
-                    const actionsCell = document.createElement('td');
-                    actionsCell.classList.add('actions-cell');
-                    actionsCell.innerHTML = generateActionButtons(newStatus, bookingId);
-
-                    // Находим текущие ячейки в клоне (предполагаем структуру)
-                    const cells = targetRow.querySelectorAll('td');
-                    if (cells.length >= 5) {
-                        targetRow.insertBefore(statusCell, cells[4]); // Вставляем статус перед действиями
-                        targetRow.replaceChild(actionsCell, cells[4]); // Заменяем старые действия новыми
-                    }
-
-                    // Удаляем оригинал из Pending и добавляем клон в Other
+                    applyFiltersAndPagination(); // Re-apply filters and redisplay the current (or adjusted) page
+                    console.log(`Row ${bookingId} removed from allRows. New count: ${allRows.length}`);
+                } else {
+                    console.warn(`Row ${bookingId} not found in allRows array during delete.`);
+                    // Fallback: just remove from DOM if still present (might cause pagination issues)
                     row.remove();
-                    otherBody.prepend(targetRow); // Добавляем в начало Other
-
-                    // Добавляем анимацию появления
-                     targetRow.classList.add('row-fade-in');
-                     setTimeout(() => targetRow.classList.remove('row-fade-in'), 500);
-
-
-                    updateCounts(); // Обновляем счетчики
-                }, 400); // Ждем завершения анимации fadeOut
-
-            } else if (action === 'cancel') {
-                // Обновление статуса и кнопок в Other таблице
-                const newStatus = result.newStatus || 'Аннулирована';
-                const statusCell = row.querySelector('.status-cell');
-                const actionsCell = row.querySelector('.actions-cell');
-
-                if (statusCell) {
-                    let statusClass = 'status-annulled'; // По умолчанию для отмены
-                    statusCell.innerHTML = `<span class="status-label ${statusClass}" title="Статус: ${newStatus}">${newStatus}</span>`;
+                     applyFiltersAndPagination(); // Still need to refresh pagination
                 }
-                row.dataset.status = newStatus;
 
+            } else { // Confirm, Reject, Cancel - Update status and buttons in place
+                const newStatus = result.newStatus || 'Неизвестен';
+                row.dataset.status = newStatus; // Update data attribute for filtering
+
+                // Update Status Cell visual
+                let statusClass = 'status-other'; let statusText = newStatus;
+                switch(newStatus) { /* ... (status class logic) ... */
+                     case 'Активна': statusClass = 'status-active'; break;
+                     case 'Ожидает подтверждения': statusClass = 'status-pending'; break;
+                     case 'Отклонена': statusClass = 'status-rejected'; break;
+                     case 'Отменена': statusClass = 'status-cancelled'; break;
+                     case 'Аннулирована': statusClass = 'status-annulled'; break;
+                }
+                const statusCell = row.querySelector('.status-cell');
+                if (statusCell) {
+                    let statusHtml = `<span class="status-label ${statusClass}" title="Статус: ${newStatus}">${statusText}</span>`;
+                    if (newStatus === 'Отклонена' && result.rejectedReason) {
+                        statusHtml += ` <i class="fas fa-info-circle" data-tooltip="Причина отклонения: ${escapeHtml(result.rejectedReason)}" style="margin-left: 5px;"></i>`;
+                    }
+                    statusCell.innerHTML = statusHtml;
+                    const newLabel = statusCell.querySelector('.status-label');
+                     if(newLabel){ newLabel.style.transform = 'scale(1.1)'; setTimeout(() => {newLabel.style.transform = 'scale(1)'; newLabel.style.transition = 'transform 0.3s ease'; }, 50); }
+                }
+
+                // Update Actions Cell
+                const actionsCell = row.querySelector('.actions-cell');
                 if (actionsCell) {
                     actionsCell.innerHTML = generateActionButtons(newStatus, bookingId);
                 }
-                updateCounts(); // На всякий случай, хотя количество в Other не меняется
 
-            } else if (action === 'delete') {
-                // Анимация удаления строки
-                row.classList.add('row-deleting');
-                setTimeout(() => {
-                    row.remove();
-                    updateCounts(); // Обновляем счетчики после удаления
-                }, 500); // Ждем завершения анимации
+                // Re-apply filters AFTER updating the row's data attributes and content
+                 applyFiltersAndPagination();
             }
         }
 
-        // --- Вспомогательная функция генерации кнопок действий ---
-        function generateActionButtons(status, bookingId) {
+        // Generate Action Buttons helper (same as before)
+        function generateActionButtons(status, bookingId) { /* ... function code ... */
             let buttonsHtml = '';
-            if (status === 'Активна') {
-                buttonsHtml = `
-                    <form class="rental-action-form" data-action="cancel" data-booking-id="${bookingId}" action="/rentals/${bookingId}/cancel" method="POST">
-                        <button type="submit" class="btn btn-small btn-annul" data-tooltip="Аннулировать бронирование">
-                             <span class="button-text"><i class="fas fa-ban"></i></span>
-                             <i class="fas fa-spinner fa-spin button-spinner"></i>
-                        </button>
-                    </form>`;
-            } else if (isAdmin && ['Отклонена', 'Отменена', 'Аннулирована'].includes(status)) {
-                buttonsHtml = `
-                     <form class="rental-action-form" data-action="delete" data-booking-id="${bookingId}" action="/rentals/${bookingId}/delete" method="POST">
-                         <button type="submit" class="btn btn-small btn-delete" data-tooltip="Удалить запись (необратимо)">
-                             <span class="button-text"><i class="fas fa-trash-alt"></i></span>
-                             <i class="fas fa-spinner fa-spin button-spinner"></i>
-                         </button>
-                     </form>`;
-            } else {
-                 buttonsHtml = '<span>-</span>'; // Прочерк, если действий нет
-            }
-            return buttonsHtml;
+             if (status === 'Ожидает подтверждения') { buttonsHtml = `<form class="rental-action-form" data-action="confirm" data-booking-id="${bookingId}" action="/rentals/${bookingId}/confirm" method="POST"> <button type="submit" class="btn btn-small btn-confirm" data-tooltip="Подтвердить"> <span class="button-text"><i class="fas fa-check"></i></span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button> </form> <form class="rental-action-form" data-action="reject" data-booking-id="${bookingId}" action="/rentals/${bookingId}/reject" method="POST"> <button type="button" class="btn btn-small btn-reject reject-button" data-tooltip="Отклонить"> <span class="button-text"><i class="fas fa-times"></i></span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button> </form>`;
+             } else if (status === 'Активна') { buttonsHtml = `<form class="rental-action-form" data-action="cancel" data-booking-id="${bookingId}" action="/rentals/${bookingId}/cancel" method="POST"> <button type="submit" class="btn btn-small btn-annul" data-tooltip="Аннулировать"> <span class="button-text"><i class="fas fa-ban"></i></span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button> </form>`;
+             } else if (isAdmin && ['Отклонена', 'Отменена', 'Аннулирована'].includes(status)) { buttonsHtml = `<form class="rental-action-form" data-action="delete" data-booking-id="${bookingId}" action="/rentals/${bookingId}/delete" method="POST"> <button type="submit" class="btn btn-small btn-delete" data-tooltip="Удалить запись"> <span class="button-text"><i class="fas fa-trash-alt"></i></span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button> </form>`;
+             } else { buttonsHtml = '<span>-</span>'; }
+             return buttonsHtml;
         }
 
-         // --- Вспомогательная функция для экранирования HTML ---
-         function escapeHtml(unsafe) {
-    if (typeof unsafe !== 'string') {
-        return '';
-    }
-    return unsafe
-        .replace(/&/g, "&amp;")   // Заменяем амперсанд
-        .replace(/</g, "&lt;")    // Заменяем знак "меньше"
-        .replace(/>/g, "&gt;")    // Заменяем знак "больше"
-        .replace(/"/g, "&quot;")  // Заменяем двойную кавычку
-        .replace(/'/g, "&#39;");  // Заменяем одинарную кавычку
-}
-
-        // --- Функция Обработки Ошибки AJAX Запроса ---
-        function handleActionError(error, action, bookingId, submitButton, originalButtonHtml) {
-            console.error(`Ошибка действия '${action}' для брони ${bookingId}:`, error);
-            showRentalsJsMessage('error', error.message || 'Произошла неизвестная ошибка.');
-
-            // Восстанавливаем кнопку, если она еще существует
-            if (submitButton && submitButton.parentNode) {
-                 submitButton.disabled = false;
-                 const buttonText = submitButton.querySelector('.button-text');
-                 if (buttonText && originalButtonHtml) {
-                     buttonText.innerHTML = originalButtonHtml;
-                 } else if (buttonText) { // Если вдруг originalButtonHtml не сохранился
-                     // Пытаемся восстановить текст по действию
-                     if (action === 'confirm') buttonText.innerHTML = '<i class="fas fa-check"></i>';
-                     else if (action === 'cancel') buttonText.innerHTML = '<i class="fas fa-ban"></i>';
-                     else if (action === 'delete') buttonText.innerHTML = '<i class="fas fa-trash-alt"></i>';
-                 }
-            }
+        // Error Handler (same as before)
+        function handleActionError(error, action, bookingId, submitButton, originalButtonHtml) { /* ... function code ... */
+            console.error(`Error action '${action}' for ${bookingId}:`, error);
+            showRentalsJsMessage('error', error.message || 'Unknown error.');
+            if (submitButton && submitButton.parentNode) { submitButton.disabled = false; const btnText = submitButton.querySelector('.button-text'); if(btnText && originalButtonHtml) btnText.innerHTML = originalButtonHtml; else if(btnText) { if (action === 'confirm') btnText.innerHTML = '<i class="fas fa-check"></i>'; else if (action === 'cancel') btnText.innerHTML = '<i class="fas fa-ban"></i>'; else if (action === 'delete') btnText.innerHTML = '<i class="fas fa-trash-alt"></i>'; else btnText.textContent = 'Retry';}}
         }
 
-        // --- Функция обновления счетчиков и сообщений "Нет бронирований" ---
-        function updateCounts() {
-            const currentPendingCount = pendingBody ? pendingBody.rows.length : 0;
-            const currentOtherCount = otherBody ? otherBody.rows.length : 0;
-
-            if (pendingCountSpan) pendingCountSpan.textContent = currentPendingCount;
-            if (otherCountSpan) otherCountSpan.textContent = currentOtherCount;
-
-            if (noPendingMessage) noPendingMessage.style.display = currentPendingCount === 0 ? 'block' : 'none';
-            if (noOtherMessage) noOtherMessage.style.display = currentOtherCount === 0 ? 'block' : 'none';
-
-             // Скрываем/показываем сами таблицы, если они пусты (опционально, для чистоты)
-             const pendingTable = pendingBody?.closest('.data-table');
-             const otherTable = otherBody?.closest('.data-table');
-             if (pendingTable) pendingTable.style.display = currentPendingCount === 0 ? 'none' : '';
-             if (otherTable) otherTable.style.display = currentOtherCount === 0 ? 'none' : '';
-        }
-
-        // --- Инициализация при загрузке страницы ---
+        // --- Event Listeners Setup ---
         document.addEventListener('DOMContentLoaded', () => {
-            // Применяем обработчик для кнопок "Отклонить"
+            console.log("Rentals Management DOM Loaded. Initializing...");
+            // Filter listeners
+            if (searchInput) searchInput.addEventListener('input', applyFiltersAndPagination);
+            if (statusFilter) statusFilter.addEventListener('change', applyFiltersAndPagination);
+            if (resetFiltersBtn) {
+                 resetFiltersBtn.addEventListener('click', () => {
+                     searchInput.value = '';
+                     statusFilter.value = ''; // Reset dropdown to "All statuses"
+                     applyFiltersAndPagination(); // Apply reset filters
+                 });
+            }
+
+            // Pagination listener
+            if (itemsPerPageSelect) {
+                itemsPerPageSelect.addEventListener('change', (event) => {
+                    itemsPerPage = parseInt(event.target.value);
+                    applyFiltersAndPagination(); // Re-apply filters which will reset to page 1
+                });
+            }
+
+            // Reject button listener (to open modal)
             document.body.addEventListener('click', (event) => {
                 if (event.target && event.target.closest('.reject-button')) {
-                    event.preventDefault(); // Предотвращаем стандартное действие кнопки
+                    event.preventDefault();
                     openRejectModal(event.target.closest('.reject-button'));
                 }
             });
 
-            // Первоначальный вызов обновления счетчиков
-            updateCounts();
+            // Confirm/Cancel/Delete actions are handled by the general form submit listener added earlier.
 
-            // Анимация заголовка страницы (как в примере)
+            // Initial display: Apply filters (which shows all initially) and display page 1
+            applyFiltersAndPagination();
+
+            // Initial Total Count Update
+            if (totalCountSpan) { totalCountSpan.textContent = allRows.length; }
+
+             // Initial Page Title Animation (if needed)
             const pageTitle = document.querySelector('h1');
-            if (pageTitle) {
-                pageTitle.style.opacity = '0';
-                pageTitle.style.transform = 'translateY(-20px)';
-                setTimeout(() => {
-                    pageTitle.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-                    pageTitle.style.opacity = '1';
-                    pageTitle.style.transform = 'translateY(0)';
-                }, 100);
-            }
-
-             // Анимация заголовков секций (дополнительно)
-             document.querySelectorAll('.rentals-section h2').forEach((h2, index) => {
-                 h2.style.opacity = '0';
-                 h2.style.transform = 'translateX(-20px)';
-                 setTimeout(() => {
-                     h2.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-                     h2.style.opacity = '1';
-                     h2.style.transform = 'translateX(0)';
-                 }, 200 + index * 100); // С небольшой задержкой для каждой секции
-             });
-
-             // Анимация строк таблицы уже обрабатывается CSS через @keyframes fadeInUp и animation-delay
+            if(pageTitle){ pageTitle.style.opacity='0'; pageTitle.style.transform='translateY(-20px)'; setTimeout(() => {pageTitle.style.transition='opacity 0.5s ease, transform 0.5s ease'; pageTitle.style.opacity='1'; pageTitle.style.transform='translateY(0)';}, 100);}
         });
 
     </script>

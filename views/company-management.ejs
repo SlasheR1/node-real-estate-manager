@@ -10,6 +10,597 @@
     <link rel="stylesheet" href="/css/tables.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/css/company.css">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --primary-dark: #2980b9;
+            --secondary-color: #7f8c8d;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --light-gray: #f5f5f5;
+            --mid-gray: #e0e0e0;
+            --dark-gray: #555;
+            --text-color: #333;
+            --border-radius: 8px;
+            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --transition-speed: 0.3s;
+        }
+
+        body {
+            background-color: #f9f9f9;
+            color: var(--text-color);
+            line-height: 1.6;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        .company-management-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        /* Улучшенные сообщения */
+        .flash-message {
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            position: relative;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .flash-error {
+            background-color: #ffebee;
+            border-left: 4px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        .flash-success {
+            background-color: #e8f5e9;
+            border-left: 4px solid var(--success-color);
+            color: var(--success-color);
+        }
+
+        .close-flash {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity var(--transition-speed);
+        }
+
+        .close-flash:hover {
+            opacity: 1;
+        }
+
+        /* Улучшенный хедер компании */
+        .company-header {
+            display: flex;
+            align-items: center;
+            background: white;
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .company-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 150px;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), transparent 70%);
+            z-index: 0;
+        }
+
+        .company-logo-container {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--light-gray);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-right: 1.5rem;
+            border: 3px solid white;
+            transition: transform var(--transition-speed);
+        }
+
+        .company-logo-container:hover {
+            transform: scale(1.05);
+        }
+
+        .company-logo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .company-logo-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: var(--secondary-color);
+        }
+
+        .company-title-section {
+            flex: 1;
+            z-index: 1;
+        }
+
+        .company-title-section h1 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-color);
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        .company-id {
+            margin: 0;
+            color: var(--secondary-color);
+            font-size: 0.9rem;
+        }
+
+        .company-divider {
+            border: none;
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--mid-gray), transparent);
+            margin: 1.5rem 0;
+        }
+
+        /* Стилизация секций */
+        .company-section {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--card-shadow);
+            transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+            overflow: hidden;
+        }
+
+        .company-section:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .company-section h2 {
+            margin-top: 0;
+            font-size: 1.4rem;
+            color: var(--text-color);
+            border-bottom: 2px solid var(--mid-gray);
+            padding-bottom: 0.75rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .company-section h2 i {
+            color: var(--primary-color);
+            margin-right: 0.75rem;
+            font-size: 1.25rem;
+        }
+
+        .company-section h4 {
+            font-size: 1.1rem;
+            margin: 1.5rem 0 1rem;
+            color: var(--dark-gray);
+        }
+
+        /* Секция баланса */
+        .company-balance-section {
+            text-align: center;
+            background: linear-gradient(to bottom right, #ffffff, #f8f9fa);
+        }
+
+        .balance-value {
+            font-size: 2.2rem;
+            font-weight: 600;
+            color: var(--success-color);
+            margin: 1.5rem 0;
+            animation: fadeIn 1s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Улучшенные кнопки */
+        .btn {
+            border-radius: var(--border-radius);
+            padding: 0.6rem 1.2rem;
+            font-weight: 500;
+            text-transform: none;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%);
+            transform-origin: 50% 50%;
+        }
+
+        .btn:focus:not(:active)::after {
+            animation: ripple 1s ease-out;
+        }
+
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(100, 100);
+                opacity: 0;
+            }
+        }
+
+        .btn i {
+            margin-right: 0.5rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #6c7a7a;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #219a52;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-warning {
+            background-color: var(--warning-color);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background-color: #e67e22;
+            transform: translateY(-2px);
+        }
+
+        .btn-edit {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-delete {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background-color: #c0392b;
+        }
+
+        .btn-small {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+        }
+
+        /* Анимация для спиннера */
+        .button-spinner {
+            display: none;
+            margin-left: 0.5rem;
+        }
+
+        button:disabled .button-spinner {
+            display: inline-block;
+            animation: spinner 1s linear infinite;
+        }
+
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        button:disabled .button-text {
+            opacity: 0.7;
+        }
+
+        /* Улучшение форм */
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--dark-gray);
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--mid-gray);
+            border-radius: var(--border-radius);
+            background-color: white;
+            transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+            outline: none;
+        }
+
+        .form-actions {
+            margin-top: 1.5rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* Улучшение таблиц */
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: white;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .data-table th {
+            background-color: #f5f7fa;
+            padding: 1rem 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--dark-gray);
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .data-table td {
+            padding: 0.9rem 0.75rem;
+            border-bottom: 1px solid #edf2f7;
+            color: var(--text-color);
+            vertical-align: middle;
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table tbody tr {
+            transition: background-color var(--transition-speed);
+        }
+
+        .data-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        /* Метки статуса */
+        .status-label {
+            display: inline-block;
+            padding: 0.3rem 0.7rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .status-active {
+            background-color: #e3fcef;
+            color: #16a34a;
+        }
+
+        .status-cancelled {
+            background-color: #fee2e2;
+            color: #dc2626;
+        }
+
+        .status-other {
+            background-color: #e5e7eb;
+            color: #4b5563;
+        }
+
+        /* Улучшение секции редактирования */
+        .company-edit-section {
+            opacity: 1;
+            max-height: 2000px;
+            transform: translateY(0);
+            transition: opacity var(--transition-speed), max-height var(--transition-speed), transform var(--transition-speed);
+        }
+
+        .company-edit-section.hidden {
+            opacity: 0;
+            max-height: 0;
+            transform: translateY(-20px);
+            overflow: hidden;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-top: 0;
+            margin-bottom: 0;
+        }
+
+        .company-edit-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-gap: 1.5rem;
+        }
+
+        .form-group-full {
+            grid-column: 1 / -1;
+        }
+
+        .edit-company-btn {
+            position: relative;
+            z-index: 2;
+            transition: all var(--transition-speed);
+        }
+
+        /* Лого превью */
+        .logo-preview-container {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .company-logo-preview {
+            max-width: 150px;
+            max-height: 150px;
+            display: none;
+            margin: 0.5rem auto;
+            border: 1px solid var(--mid-gray);
+            border-radius: var(--border-radius);
+            padding: 0.25rem;
+            background: white;
+        }
+
+        /* Адаптивность для мобильных устройств */
+        @media (max-width: 768px) {
+            .company-header {
+                flex-direction: column;
+                text-align: center;
+                padding: 1rem;
+            }
+
+            .company-logo-container {
+                margin-right: 0;
+                margin-bottom: 1rem;
+            }
+
+            .edit-company-btn {
+                margin-top: 1rem;
+            }
+
+            .company-edit-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .form-actions button {
+                width: 100%;
+                margin-top: 0.5rem;
+            }
+        }
+
+        /* Анимации при загрузке */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .company-section {
+            animation: fadeInUp 0.5s ease-out forwards;
+        }
+
+        .company-balance-section { animation-delay: 0.1s; }
+        .company-edit-section { animation-delay: 0.2s; }
+        .company-staff-section { animation-delay: 0.3s; }
+        .company-properties-section { animation-delay: 0.4s; }
+        .company-rentals-section { animation-delay: 0.5s; }
+
+        /* Доп улучшения для стаффа и аренд */
+        .add-staff-form {
+            background-color: #f8f9fa;
+            border-radius: var(--border-radius);
+            padding: 1.2rem;
+            margin-top: 1.5rem;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .add-staff-form h4 {
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .add-staff-form h4:before {
+            content: '\f234';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            margin-right: 0.5rem;
+            color: var(--primary-color);
+        }
+
+        .add-staff-form small {
+            display: block;
+            margin-top: 0.75rem;
+            color: var(--dark-gray);
+            font-style: italic;
+        }
+
+        /* Доработка отступов иконок */
+        .company-section h2 i, 
+        .btn i, 
+        form h4:before {
+            margin-right: 0.75rem !important;
+        }
+    </style>
 </head>
 <body>
     <%- include('partials/header') %>
@@ -22,7 +613,7 @@
         <%# Проверяем наличие ошибки или компании для отображения %>
         <% if (locals.error) { %>
             <div class="flash-message flash-error"><%= error %></div>
-            <a href="/" class="btn btn-secondary">На главную</a>
+            <a href="/" class="btn btn-secondary"><i class="fas fa-home"></i> На главную</a>
         <% } else if (locals.company && company.companyId) { %>
             <div class="company-header">
                 <div class="company-logo-container">
@@ -39,7 +630,7 @@
                 </div>
                  <%# Кнопка редактирования только для Owner'а этой компании %>
                  <% if (currentUser && currentUser.role === 'Owner' && currentUser.companyId === company.companyId) { %>
-                    <button type="button" class="btn btn-edit btn-small edit-company-btn" onclick="toggleEditMode(true)">Редактировать</button>
+                    <button type="button" class="btn btn-edit btn-small edit-company-btn" onclick="toggleEditMode(true)"><i class="fas fa-pencil-alt"></i> Редактировать</button>
                  <% } %>
             </div>
 
@@ -49,9 +640,8 @@
             <section class="company-section company-balance-section">
                 <h2><i class="fas fa-wallet"></i> Баланс Компании</h2>
                 <p class="balance-value"><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(company.Balance || 0) %></p>
-                <%# Исправленная и раскомментированная ссылка %>
                 <div style="text-align: center; margin-top: 15px;">
-                   <a href="/company/balance-history?id=<%= company.companyId %>" class="btn btn-secondary btn-small">История баланса</a>
+                   <a href="/company/balance-history?id=<%= company.companyId %>" class="btn btn-secondary btn-small"><i class="fas fa-history"></i> История баланса</a>
                 </div>
            </section>
 
@@ -61,22 +651,43 @@
                     <h2><i class="fas fa-pencil-alt"></i> Редактировать данные компании</h2>
                     <form id="companyEditForm" action="/company/edit" method="POST" enctype="multipart/form-data">
                         <div class="form-grid company-edit-grid">
-                            <div class="form-group form-group-full"> <label for="editCompanyName">Название компании *</label> <input type="text" id="editCompanyName" name="companyName" value="<%= company.companyName %>" required> </div>
-                            <div class="form-group"> <label for="editCompanyContactEmail">Контактный Email</label> <input type="email" id="editCompanyContactEmail" name="companyContactEmail" value="<%= company.companyContactEmail || '' %>"> </div>
-                            <div class="form-group"> <label for="editCompanyContactPhone">Контактный Телефон</label> <input type="tel" id="editCompanyContactPhone" name="companyContactPhone" value="<%= company.companyContactPhone || '' %>"> </div>
-                            <div class="form-group form-group-full"> <label for="editCompanyWebsite">Веб-сайт</label> <input type="url" id="editCompanyWebsite" name="companyWebsite" value="<%= company.companyWebsite || '' %>" placeholder="https://..."> </div>
+                            <div class="form-group form-group-full"> 
+                                <label for="editCompanyName">Название компании *</label> 
+                                <input type="text" id="editCompanyName" name="companyName" value="<%= company.companyName %>" required> 
+                            </div>
+                            <div class="form-group"> 
+                                <label for="editCompanyContactEmail">Контактный Email</label> 
+                                <input type="email" id="editCompanyContactEmail" name="companyContactEmail" value="<%= company.companyContactEmail || '' %>"> 
+                            </div>
+                            <div class="form-group"> 
+                                <label for="editCompanyContactPhone">Контактный Телефон</label> 
+                                <input type="tel" id="editCompanyContactPhone" name="companyContactPhone" value="<%= company.companyContactPhone || '' %>"> 
+                            </div>
+                            <div class="form-group form-group-full"> 
+                                <label for="editCompanyWebsite">Веб-сайт</label> 
+                                <input type="url" id="editCompanyWebsite" name="companyWebsite" value="<%= company.companyWebsite || '' %>" placeholder="https://..."> 
+                            </div>
                             <div class="form-group form-group-full logo-upload-section">
                                 <label for="editCompanyLogo">Новый Логотип (макс. 1MB)</label>
                                 <input type="file" id="editCompanyLogo" name="companyLogo" accept="image/*">
                                 <% if (company.companyLogoData) { %>
-                                    <div class="checkbox-group" style="margin-top: 5px;"> <input type="checkbox" id="removeLogo" name="removeLogo" value="1"> <label for="removeLogo" style="font-weight: normal;">Удалить текущий логотип</label> </div>
+                                    <div class="checkbox-group" style="margin-top: 5px;"> 
+                                        <input type="checkbox" id="removeLogo" name="removeLogo" value="1"> 
+                                        <label for="removeLogo" style="font-weight: normal;">Удалить текущий логотип</label> 
+                                    </div>
                                 <% } %>
-                                <div class="logo-preview-container" style="margin-top: 10px;"> <label style="font-size:0.9em;">Предпросмотр нового:</label> <img id="editLogoPreview" src="#" alt="Предпросмотр нового логотипа" class="company-logo-preview"> </div>
+                                <div class="logo-preview-container"> 
+                                    <label style="font-size:0.9em;">Предпросмотр нового:</label> 
+                                    <img id="editLogoPreview" src="#" alt="Предпросмотр нового логотипа" class="company-logo-preview"> 
+                                </div>
                             </div>
                         </div>
                         <div class="form-actions">
-                            <button type="submit" class="btn btn-primary"> <span class="button-text">Сохранить</span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button>
-                            <button type="button" class="btn btn-secondary" onclick="toggleEditMode(false)">Отмена</button>
+                            <button type="submit" class="btn btn-primary"> 
+                                <span class="button-text"><i class="fas fa-save"></i> Сохранить</span> 
+                                <i class="fas fa-spinner fa-spin button-spinner"></i> 
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="toggleEditMode(false)"><i class="fas fa-times"></i> Отмена</button>
                         </div>
                     </form>
                 </section>
@@ -88,7 +699,15 @@
                 <% if (locals.staffList && staffList.length > 0) { %>
                     <div class="table-responsive">
                         <table class="data-table staff-table">
-                            <thead> <tr> <th>Логин</th> <th>ФИО</th> <% if (currentUser && currentUser.role === 'Owner' && currentUser.companyId === company.companyId) { %><th>Действие</th><% } %> </tr> </thead>
+                            <thead> 
+                                <tr> 
+                                    <th>Логин</th> 
+                                    <th>ФИО</th> 
+                                    <% if (currentUser && currentUser.role === 'Owner' && currentUser.companyId === company.companyId) { %>
+                                        <th>Действие</th>
+                                    <% } %> 
+                                </tr> 
+                            </thead>
                             <tbody>
                                 <% staffList.forEach(staff => { %>
                                     <tr>
@@ -98,7 +717,10 @@
                                             <td>
                                                 <form id="removeStaffForm-<%= staff.Username %>" action="/company/staff/remove" method="POST" onsubmit="return confirm('Удалить помощника <%= staff.Username %>?')">
                                                      <input type="hidden" name="staffUsername" value="<%= staff.Username %>">
-                                                     <button type="submit" class="btn btn-delete btn-small"> <span class="button-text">Удалить</span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button>
+                                                     <button type="submit" class="btn btn-delete btn-small"> 
+                                                         <span class="button-text"><i class="fas fa-user-minus"></i> Удалить</span> 
+                                                         <i class="fas fa-spinner fa-spin button-spinner"></i> 
+                                                     </button>
                                                  </form>
                                             </td>
                                          <% } %>
@@ -114,8 +736,14 @@
                 <% if (currentUser && currentUser.role === 'Owner' && currentUser.companyId === company.companyId) { %>
                     <form id="addStaffForm" action="/company/staff/add" method="POST" class="add-staff-form">
                          <h4>Добавить помощника</h4>
-                         <div class="form-group"> <label for="staffUsername">Логин пользователя *</label> <input type="text" id="staffUsername" name="staffUsername" required placeholder="Логин существующего пользователя"> </div>
-                         <button type="submit" class="btn btn-primary btn-small"> <span class="button-text">Добавить</span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button>
+                         <div class="form-group"> 
+                             <label for="staffUsername">Логин пользователя *</label> 
+                             <input type="text" id="staffUsername" name="staffUsername" required placeholder="Логин существующего пользователя"> 
+                         </div>
+                         <button type="submit" class="btn btn-primary btn-small"> 
+                             <span class="button-text"><i class="fas fa-user-plus"></i> Добавить</span> 
+                             <i class="fas fa-spinner fa-spin button-spinner"></i> 
+                         </button>
                          <small>Пользователь должен быть зарегистрирован и не Owner/Admin.</small>
                     </form>
                  <% } %>
@@ -127,7 +755,15 @@
                  <% if (locals.properties && properties.length > 0) { %>
                      <div class="table-responsive">
                          <table class="data-table">
-                            <thead><tr><th>Название</th><th>Тип</th><th>Адрес</th><th>Статус</th><th>Действия</th></tr></thead>
+                            <thead>
+                                <tr>
+                                    <th>Название</th>
+                                    <th>Тип</th>
+                                    <th>Адрес</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
                              <tbody>
                                  <% properties.forEach(prop => { %>
                                      <tr>
@@ -135,7 +771,7 @@
                                          <td><%= prop.Type %></td>
                                          <td><%= prop.Address %></td>
                                          <td><span class="status-label <%= prop.IsAvailable ? 'status-active' : 'status-other' %>"><%= prop.IsAvailable ? 'Доступен' : 'Недоступен' %></span></td>
-                                         <td><a href="/properties/edit/<%= prop.Id %>" class="btn btn-edit btn-small">Правка</a></td>
+                                         <td><a href="/properties/edit/<%= prop.Id %>" class="btn btn-edit btn-small"><i class="fas fa-edit"></i> Правка</a></td>
                                      </tr>
                                  <% }) %>
                              </tbody>
@@ -146,7 +782,7 @@
                  <% } %>
                  <% if (currentUser && (currentUser.role === 'Owner' || currentUser.role === 'Staff') && currentUser.companyId === company.companyId) { %>
                     <div style="margin-top: 20px;">
-                        <a href="/properties/add" class="btn btn-success">Добавить новый объект</a>
+                        <a href="/properties/add" class="btn btn-success"><i class="fas fa-plus-circle"></i> Добавить новый объект</a>
                     </div>
                  <% } %>
              </section>
@@ -157,7 +793,16 @@
                  <% if (locals.bookings && bookings.length > 0) { %>
                     <div class="table-responsive">
                          <table class="data-table">
-                             <thead><tr><th>Объект</th><th>Арендатор</th><th>Даты</th><th>Статус</th><th>Сумма</th><th>Действия</th></tr></thead>
+                             <thead>
+                                 <tr>
+                                     <th>Объект</th>
+                                     <th>Арендатор</th>
+                                     <th>Даты</th>
+                                     <th>Статус</th>
+                                     <th>Сумма</th>
+                                     <th>Действия</th>
+                                 </tr>
+                             </thead>
                              <tbody>
                                  <% bookings.forEach(booking => { %>
                                      <% let statusClass = 'status-other'; if (booking.Status === 'Активна') statusClass = 'status-active'; else if (booking.Status === 'Отменена' || booking.Status === 'Аннулирована') statusClass = 'status-cancelled'; %>
@@ -174,11 +819,17 @@
                                          <td>
                                              <% if (booking.Status === 'Активна' && currentUser && (currentUser.role === 'Owner' || currentUser.role === 'Staff') && currentUser.companyId === company.companyId) { %>
                                                 <form id="cancelRentalForm-<%= booking.Id %>" action="/rentals/<%= booking.Id %>/cancel" method="POST" onsubmit="return confirm('Аннулировать аренду?')" style="display: inline;">
-                                                     <button type="submit" class="btn btn-warning btn-small"> <span class="button-text">Аннул.</span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button>
+                                                     <button type="submit" class="btn btn-warning btn-small"> 
+                                                         <span class="button-text"><i class="fas fa-ban"></i> Аннул.</span> 
+                                                         <i class="fas fa-spinner fa-spin button-spinner"></i> 
+                                                     </button>
                                                  </form>
                                              <% } else if (currentUser.role === 'Admin' && booking.Status !== 'Активна') { %>
                                                  <form id="deleteRentalForm-<%= booking.Id %>" action="/rentals/<%= booking.Id %>/delete" method="POST" onsubmit="return confirm('Удалить запись?')" style="display: inline;">
-                                                     <button type="submit" class="btn btn-delete btn-small"> <span class="button-text">Удалить</span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button>
+                                                     <button type="submit" class="btn btn-delete btn-small"> 
+                                                         <span class="button-text"><i class="fas fa-trash-alt"></i> Удалить</span> 
+                                                         <i class="fas fa-spinner fa-spin button-spinner"></i> 
+                                                     </button>
                                                  </form>
                                              <% } else { %> - <% } %>
                                          </td>
@@ -191,26 +842,326 @@
                      <p>По объектам компании еще не было аренд.</p>
                  <% } %>
                  <div style="margin-top: 20px;">
-                    <a href="/rentals" class="btn btn-secondary">Перейти к общему управлению арендами</a>
+                    <a href="/rentals" class="btn btn-secondary"><i class="fas fa-tasks"></i> Перейти к общему управлению арендами</a>
                  </div>
              </section>
 
         <% } else { %>
              <p>Не удалось загрузить данные компании.</p>
-             <a href="/" class="btn btn-secondary">На главную</a>
+             <a href="/" class="btn btn-secondary"><i class="fas fa-home"></i> На главную</a>
         <% } %>
     </main>
 
     <%- include('partials/footer') %>
     <script>
-        function toggleEditMode(isEditing) { const editSection = document.getElementById('editCompanySection'); const editButton = document.querySelector('.edit-company-btn'); if(editSection) editSection.classList.toggle('hidden', !isEditing); if(editButton) editButton.style.display = isEditing ? 'none' : 'inline-block'; }
-        const editLogoInput = document.getElementById('editCompanyLogo'); const editLogoPreview = document.getElementById('editLogoPreview'); if (editLogoInput && editLogoPreview) { editLogoInput.addEventListener('change', function(event) { const file = event.target.files[0]; if (file && file.type.startsWith('image/')) { if (file.size > 1048576) { alert('Файл > 1MB'); event.target.value = null; editLogoPreview.style.display = 'none'; return; } const reader = new FileReader(); reader.onload = (e) => { editLogoPreview.src = e.target.result; editLogoPreview.style.display = 'block'; }; reader.readAsDataURL(file); } else { editLogoPreview.src = '#'; editLogoPreview.style.display = 'none'; if(file) event.target.value = null; } }); }
-        function setupFormSpinner(formId, buttonTextLoading = 'Обработка...') { const form = document.getElementById(formId); if (!form) return; const button = form.querySelector('button[type="submit"]'); if (!button) return; const buttonTextSpan = button.querySelector('.button-text'); const originalText = buttonTextSpan?.textContent || button.textContent; form.addEventListener('submit', (event) => { if (event.submitter && event.submitter !== button) return; if (form.checkValidity()) { if(buttonTextSpan) buttonTextSpan.textContent = buttonTextLoading; button.disabled = true; } else { setTimeout(() => { if(buttonTextSpan) buttonTextSpan.textContent = originalText; button.disabled = false; }, 100); } }); } // Добавлен setTimeout для сброса при невалидности
+        // Функция для переключения режима редактирования
+        function toggleEditMode(isEditing) { 
+            const editSection = document.getElementById('editCompanySection'); 
+            const editButton = document.querySelector('.edit-company-btn'); 
+            
+            if(editSection) {
+                editSection.classList.toggle('hidden', !isEditing);
+                
+                // Плавная прокрутка к форме редактирования при открытии
+                if (isEditing) {
+                    setTimeout(() => {
+                        editSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 300);
+                }
+            }
+            
+            if(editButton) {
+                editButton.style.display = isEditing ? 'none' : 'inline-block';
+            }
+        }
+        
+        // Обработка предпросмотра логотипа
+        const editLogoInput = document.getElementById('editCompanyLogo'); 
+        const editLogoPreview = document.getElementById('editLogoPreview'); 
+        
+        if (editLogoInput && editLogoPreview) { 
+            editLogoInput.addEventListener('change', function(event) { 
+                const file = event.target.files[0]; 
+                
+                if (file && file.type.startsWith('image/')) { 
+                    if (file.size > 1048576) { 
+                        showCompanyJsMessage('error', 'Файл превышает 1MB. Выберите изображение меньшего размера.');
+                        event.target.value = null; 
+                        editLogoPreview.style.display = 'none'; 
+                        return; 
+                    } 
+                    
+                    const reader = new FileReader(); 
+                    reader.onload = (e) => { 
+                        editLogoPreview.src = e.target.result; 
+                        editLogoPreview.style.display = 'block'; 
+                        
+                        // Добавляем анимацию для предпросмотра
+                        editLogoPreview.style.animation = 'fadeIn 0.5s';
+                    }; 
+                    reader.readAsDataURL(file); 
+                } else { 
+                    editLogoPreview.src = '#'; 
+                    editLogoPreview.style.display = 'none'; 
+                    if(file) {
+                        showCompanyJsMessage('error', 'Пожалуйста, выберите изображение.');
+                        event.target.value = null;
+                    }
+                } 
+            }); 
+        }
+        
+        // Улучшенная функция для обработки индикатора загрузки на кнопках форм
+        function setupFormSpinner(formId, buttonTextLoading = 'Обработка...') { 
+            const form = document.getElementById(formId); 
+            if (!form) return; 
+            
+            const button = form.querySelector('button[type="submit"]'); 
+            if (!button) return; 
+            
+            const buttonTextSpan = button.querySelector('.button-text'); 
+            const originalText = buttonTextSpan?.textContent || button.textContent; 
+            
+            form.addEventListener('submit', (event) => { 
+                if (event.submitter && event.submitter !== button) return; 
+                
+                if (form.checkValidity()) { 
+                    if(buttonTextSpan) buttonTextSpan.textContent = buttonTextLoading; 
+                    button.disabled = true; 
+                    
+                    // Добавляем класс для анимации нажатия
+                    button.classList.add('button-submitting');
+                } else { 
+                    setTimeout(() => { 
+                        if(buttonTextSpan) buttonTextSpan.textContent = originalText; 
+                        button.disabled = false;
+                        button.classList.remove('button-submitting');
+                    }, 100); 
+                } 
+            }); 
+        }
+        
+        // Настраиваем все спиннеры форм
         setupFormSpinner('companyEditForm', 'Сохранение...');
         setupFormSpinner('addStaffForm', 'Добавление...');
-        document.querySelectorAll('.staff-table form').forEach(form => setupFormSpinner(form.id || `form-staff-remove-${Math.random().toString(36).substring(7)}`, 'Удаление...')); // Добавлен ID для уникальности
-        document.querySelectorAll('.company-rentals-section form').forEach(form => setupFormSpinner(form.id || `form-rental-action-${Math.random().toString(36).substring(7)}`, '...')); // Для кнопок аренд
-        function showCompanyJsMessage(type, text) { const container = document.getElementById('js-company-messages'); if (!container) return; const messageDiv = document.createElement('div'); messageDiv.className = `flash-message flash-${type}`; messageDiv.innerHTML = `${text} <button type="button" class="close-flash" onclick="this.parentElement.remove()">×</button>`; container.innerHTML = ''; container.appendChild(messageDiv); setTimeout(() => { if(messageDiv) messageDiv.remove(); }, 5000); }
+        
+        // Для форм в таблице персонала
+        document.querySelectorAll('.staff-table form').forEach(form => {
+            setupFormSpinner(form.id || `form-staff-remove-${Math.random().toString(36).substring(7)}`, 'Удаление...');
+        });
+        
+        // Для форм в таблице аренд
+        document.querySelectorAll('.company-rentals-section form').forEach(form => {
+            setupFormSpinner(form.id || `form-rental-action-${Math.random().toString(36).substring(7)}`, '...');
+        });
+        
+        // Улучшенная функция показа сообщений JavaScript
+        function showCompanyJsMessage(type, text) { 
+            const container = document.getElementById('js-company-messages'); 
+            if (!container) return; 
+            
+            // Удаляем предыдущие сообщения
+            container.innerHTML = ''; 
+            
+            // Создаем новое сообщение
+            const messageDiv = document.createElement('div'); 
+            messageDiv.className = `flash-message flash-${type}`; 
+            messageDiv.innerHTML = `
+                ${text} 
+                <button type="button" class="close-flash" onclick="this.parentElement.remove()">×</button>
+            `;
+            
+            // Добавляем сообщение в контейнер
+            container.appendChild(messageDiv); 
+            
+            // Добавляем анимации
+            messageDiv.style.animation = 'slideIn 0.4s ease-out';
+            
+            // Автоматически скрываем сообщение через 5 секунд
+            setTimeout(() => { 
+                if(messageDiv && messageDiv.parentNode) {
+                    messageDiv.style.animation = 'fadeOut 0.5s ease-out forwards';
+                    setTimeout(() => messageDiv.remove(), 500);
+                }
+            }, 5000); 
+        }
+        
+        // Добавляем анимацию при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            // Последовательно показываем секции с небольшой задержкой
+            const sections = document.querySelectorAll('.company-section');
+            sections.forEach((section, index) => {
+                section.style.opacity = '0';
+                setTimeout(() => {
+                    section.style.animation = 'fadeInUp 0.5s ease-out forwards';
+                }, 100 * index);
+            });
+            
+            // Добавляем "ripple" эффект на все кнопки
+            const buttons = document.querySelectorAll('.btn');
+            buttons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    const rect = button.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    const ripple = document.createElement('span');
+                    ripple.className = 'ripple';
+                    ripple.style.left = `${x}px`;
+                    ripple.style.top = `${y}px`;
+                    
+                    button.appendChild(ripple);
+                    
+                    setTimeout(() => {
+                        ripple.remove();
+                    }, 600);
+                });
+            });
+        });
+        
+        // Добавляем плавную прокрутку для всех внутренних ссылок
+        document.querySelectorAll('a[href^="/"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                // Добавляем прозрачность для имитации клика
+                this.style.opacity = '0.7';
+                setTimeout(() => {
+                    this.style.opacity = '1';
+                }, 300);
+            });
+        });
     </script>
+    
+    <style>
+        /* Добавляем стили для ripple-эффекта на кнопках */
+        .btn {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.4);
+            transform: scale(0);
+            animation: ripple-effect 0.6s linear;
+            pointer-events: none;
+            width: 100px;
+            height: 100px;
+            transform-origin: center;
+        }
+        
+        @keyframes ripple-effect {
+            from {
+                transform: scale(0);
+                opacity: 1;
+            }
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+        
+        /* Улучшаем анимацию для мобильных устройств */
+        @media (max-width: 768px) {
+            .company-section {
+                animation-duration: 0.3s;
+            }
+            
+            @keyframes fadeInUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        }
+        
+        /* Дополнительная анимация для исчезновения сообщений */
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-20px); }
+        }
+        
+        /* Улучшаем стиль для разделов при наведении */
+        .company-section:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        /* Улучшаем стиль для ячеек таблицы */
+        .data-table tbody td {
+            transition: background-color 0.2s;
+        }
+        
+        .data-table tbody tr:hover td {
+            background-color: rgba(52, 152, 219, 0.05);
+        }
+        
+        /* Добавляем стиль для ссылок в таблицах */
+        .data-table a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s, text-decoration 0.2s;
+        }
+        
+        .data-table a:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+        
+        /* Улучшаем стиль для выбора файла логотипа */
+        input[type="file"] {
+            padding: 10px;
+            border: 1px dashed var(--mid-gray);
+            border-radius: var(--border-radius);
+            background-color: #f8f9fa;
+            cursor: pointer;
+            transition: border-color 0.3s, background-color 0.3s;
+        }
+        
+        input[type="file"]:hover {
+            border-color: var(--primary-color);
+            background-color: #f0f4f8;
+        }
+        
+        /* Улучшаем дизайн checkbox */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+            accent-color: var(--primary-color);
+        }
+        
+        /* Улучшаем подсветку строки при наведении */
+        .data-table tbody tr {
+            position: relative;
+        }
+        
+        .data-table tbody tr::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            background-color: transparent;
+            pointer-events: none;
+            transition: background-color 0.2s;
+        }
+        
+        .data-table tbody tr:hover::after {
+            background-color: rgba(52, 152, 219, 0.03);
+        }
+    </style>
 </body>
 </html>

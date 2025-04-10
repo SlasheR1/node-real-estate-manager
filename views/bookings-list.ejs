@@ -1,3 +1,4 @@
+<!-- views/bookings-list.ejs -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -9,6 +10,7 @@
     <!-- Font Awesome для иконок и спиннера -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
+        /* --- Улучшенные стили страницы --- */
         :root {
             --primary-color: #0d6efd;
             --primary-dark: #0b5ed7;
@@ -34,7 +36,6 @@
             padding: 20px;
         }
 
-        /* Улучшенные стили заголовка */
         h1 {
             position: relative;
             font-weight: 600;
@@ -59,7 +60,6 @@
             width: 100%;
         }
 
-        /* Модернизированные стили таблицы */
         .data-table {
             width: 100%;
             background-color: white;
@@ -116,373 +116,340 @@
             vertical-align: middle;
         }
 
-        /* Улучшенные стили для кнопок */
-        .btn {
+        /* Улучшенные стили для кнопок (копируем из users-list для консистентности) */
+        .btn { display: inline-flex; align-items: center; justify-content: center; padding: 8px 16px; border-radius: var(--border-radius); font-weight: 500; transition: all var(--transition-speed) ease; border: none; cursor: pointer; position: relative; overflow: hidden; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+        .btn::before { content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0; background: rgba(255, 255, 255, 0.2); border-radius: 50%; transform: translate(-50%, -50%); transition: width 0.5s, height 0.5s; z-index: 1; }
+        .btn:hover::before { width: 300%; height: 300%; }
+        .btn:active { transform: translateY(1px); }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-primary:hover { background-color: var(--primary-dark); }
+        .btn-secondary { background-color: var(--secondary-color); color: white; }
+        .btn-secondary:hover { background-color: #5a6268; }
+        .btn-warning { background-color: var(--warning-color); color: #212529; }
+        .btn-warning:hover { background-color: #e0a800; }
+        .btn-cancel { background-color: var(--danger-color); color: white; }
+        .btn-cancel:hover { background-color: #c82333; }
+        .btn-small { padding: 6px 12px; font-size: 0.875rem; }
+        .btn .button-text { position: relative; z-index: 2; }
+        .btn:disabled { opacity: 0.65; cursor: not-allowed; box-shadow: none; }
+        .btn:disabled::before { display: none; }
+
+        /* Стили для статусов (копируем из users-list для консистентности) */
+        .status-label { padding: 6px 10px; border-radius: var(--border-radius); font-size: 0.85em; font-weight: 500; display: inline-block; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); }
+        .status-label:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+        .status-active { background-color: #e6f9f0; color: #27ae60; border-left: 3px solid #27ae60; }
+        .status-pending { background-color: #fff8e1; color: #f39c12; border-left: 3px solid #f39c12; }
+        .status-rejected { background-color: #fbeee6; color: #d35400; border-left: 3px solid #d35400; }
+        .status-cancelled { background-color: #fdeded; color: #e74c3c; border-left: 3px solid #e74c3c; }
+        .status-annulled { background-color: #eaeded; color: #7f8c8d; border-left: 3px solid #7f8c8d; }
+        .status-other { background-color: #f8f9fa; color: #6c757d; border-left: 3px solid #6c757d; }
+        .status-cell .fa-info-circle { cursor: help; transition: all 0.3s ease; margin-left: 8px; }
+        .status-cell .fa-info-circle:hover { transform: scale(1.2); }
+
+        .actions-cell { display: flex; gap: 8px; flex-wrap: wrap; }
+        .actions-cell form { margin: 0; }
+        .cancel-booking-form { display: inline-block; }
+
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+            align-items: center;
+            gap: 15px; /* Spacing between elements */
+            background-color: #ffffff;
+            padding: 15px 20px; /* Padding inside the bar */
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 30px; /* Space below the bar */
+            border: 1px solid var(--grey-medium);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column; /* Label above input/select */
+        }
+
+        .filter-group label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--grey-dark);
+            margin-bottom: 5px;
+        }
+
+        /* Search Input Wrapper */
+        .search-input-wrapper {
+            flex-grow: 1; /* Takes up available space */
+            min-width: 250px; /* Minimum width for the search */
+            position: relative;
+        }
+
+        .search-input-wrapper .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--grey-dark);
+            opacity: 0.7;
+            font-size: 0.9em;
+        }
+
+        /* Apply to #bookingSearchInput */
+        #bookingSearchInput {
+            width: 100%;
+            padding: 10px 15px 10px 38px; /* Padding for icon */
+            border: 1px solid var(--grey-medium);
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+        }
+
+        #bookingSearchInput:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+        }
+
+        /* Status Filter Wrapper */
+        .status-filter-wrapper {
+            min-width: 200px; /* Ensure select has enough width */
+        }
+
+        /* Apply to #bookingStatusFilter */
+        #bookingStatusFilter {
+            width: 100%;
+            padding: 10px 15px; /* Consistent padding */
+            border: 1px solid var(--grey-medium);
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            background-color: white;
+            cursor: pointer;
+            transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+            height: calc(1.5em + 0.75rem * 2 + 2px + 2px); /* Match input height (~42px based on padding+border) */
+            line-height: 1.5;
+        }
+
+        #bookingStatusFilter:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+        }
+
+        /* Apply to #resetFiltersBtn */
+        #resetFiltersBtn {
+            /* Размеры и выравнивание */
+            padding: 10px 18px;
+            height: calc(1.5em + 0.75rem * 2 + 2px + 2px); /* Match input height */
+            /* Визуальный стиль (secondary) */
+            background-color: #6c757d;
+            color: white;
+            border: 1px solid #6c757d;
+            border-radius: var(--border-radius);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all var(--transition-speed) ease;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 8px 16px;
+            align-self: flex-end;
+        }
+        #resetFiltersBtn:hover:not(:disabled) { background-color: #5a6268; border-color: #545b62; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
+        #resetFiltersBtn i { margin-right: 6px; font-size: 0.9em; }
+        #resetFiltersBtn:disabled { opacity: 0.65; cursor: not-allowed; box-shadow: none; transform: none; }
+
+        /* Message for no filter results */
+        #noFilterResultsMessage {
+            display: none;
+            text-align: center;
+            margin: 30px 0;
+            padding: 15px;
+            background-color: var(--light-color);
+            color: var(--secondary-color);
             border-radius: var(--border-radius);
-            font-weight: 500;
-            transition: all var(--transition-speed) ease;
-            border: none;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px dashed var(--grey-medium);
+        }
+        #noFilterResultsMessage i { margin-right: 8px; }
+
+        /* Улучшенные стили для JS сообщений (копируем из users-list) */
+        #js-messages-container { margin-bottom: 20px; }
+        #js-messages-container .flash-message { padding: 16px 20px; margin-bottom: 20px; border-radius: var(--border-radius); border-left: 4px solid transparent; position: relative; font-size: 0.95rem; box-shadow: var(--box-shadow); animation: slideInDown 0.4s forwards; opacity: 0; transform: translateY(-20px); }
+        @keyframes slideInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        #js-messages-container .flash-success { color: #0f5132; background-color: #d1e7dd; border-left-color: #20c997; }
+        #js-messages-container .flash-error { color: #842029; background-color: #f8d7da; border-left-color: #dc3545; }
+        #js-messages-container .flash-warning { color: #664d03; background-color: #fff3cd; border-left-color: #ffc107; }
+        #js-messages-container .flash-info { color: #055160; background-color: #cff4fc; border-left-color: #0dcaf0; }
+        #js-messages-container .flash-message .close-flash { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); background: none; border: none; font-size: 1.5rem; line-height: 1; color: inherit; opacity: 0.6; cursor: pointer; padding: 0 5px; transition: all 0.2s ease; }
+        #js-messages-container .flash-message .close-flash:hover { opacity: 1; transform: translateY(-50%) rotate(90deg); }
+
+        /* Спиннер (копируем из users-list) */
+        .button-spinner { margin-left: 5px; display: none; font-size: 0.9em; color: inherit; }
+        button:disabled .button-spinner { display: inline-block; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Стили для ссылок (копируем из users-list) */
+        .data-table a { color: var(--primary-color); text-decoration: none; font-weight: 500; transition: all 0.3s ease; position: relative; }
+        .data-table a::after { content: ''; position: absolute; width: 0; height: 1.5px; bottom: -2px; left: 0; background-color: var(--primary-color); transition: width 0.3s ease; }
+        .data-table a:hover { color: var(--primary-dark); }
+        .data-table a:hover::after { width: 100%; }
+
+        /* Анимация строк (копируем из users-list) */
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        #bookingsTableBody tr { opacity: 0; animation: fadeInUp 0.5s forwards; }
+        /* Динамическая задержка не нужна при клиентской пагинации, т.к. строки будут добавляться/удаляться */
+
+        /* Тултипы (копируем из users-list) */
+        [data-tooltip] { position: relative; }
+        [data-tooltip]::after { content: attr(data-tooltip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); padding: 6px 10px; background-color: rgba(0, 0, 0, 0.8); color: white; font-size: 0.8rem; border-radius: 4px; white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.3s ease; pointer-events: none; z-index: 10; }
+        [data-tooltip]::before { content: ''; position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%) translateY(100%); border-width: 5px; border-style: solid; border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent; opacity: 0; visibility: hidden; transition: all 0.3s ease; pointer-events: none; z-index: 10; }
+        [data-tooltip]:hover::after, [data-tooltip]:hover::before { opacity: 1; visibility: visible; bottom: 135%; }
+
+        /* --- Стили Пагинации (как в users-list) --- */
+        .pagination-container {
+            margin-top: 25px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between; /* Разносим по краям */
+            align-items: center;
+            flex-wrap: wrap; /* Перенос на малых экранах */
+            gap: 15px;
+            padding: 12px 15px;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
         }
 
-        .btn::before {
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px; /* Расстояние между кнопками */
+        }
+
+        .pagination-controls button {
+            padding: 8px 14px; /* Размеры кнопок */
+            font-size: 0.95rem;
+            border: none; /* Убираем рамку */
+            background-color: #fff;
+            color: var(--primary-color);
+            cursor: pointer;
+            border-radius: var(--border-radius);
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            min-width: 40px; /* Минимальная ширина */
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pagination-controls button::before {
             content: '';
             position: absolute;
             top: 50%;
             left: 50%;
             width: 0;
             height: 0;
-            background: rgba(255, 255, 255, 0.2);
+            background-color: rgba(13, 110, 253, 0.1); /* Легкая волна */
             border-radius: 50%;
             transform: translate(-50%, -50%);
-            transition: width 0.5s, height 0.5s;
-            z-index: 1;
+            transition: width 0.4s, height 0.4s;
         }
 
-        .btn:hover::before {
-            width: 300%;
-            height: 300%;
+        .pagination-controls button:hover:not(:disabled)::before {
+            width: 200%;
+            height: 200%;
         }
 
-        .btn:active {
-            transform: translateY(1px);
-        }
-
-        .btn-primary {
-            background-color: var(--primary-color);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--primary-dark);
-        }
-
-        .btn-secondary {
-            background-color: var(--secondary-color);
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background-color: #5a6268;
-        }
-
-        .btn-warning {
-            background-color: var(--warning-color);
-            color: #212529;
-        }
-
-        .btn-warning:hover {
-            background-color: #e0a800;
-        }
-
-        .btn-cancel {
-            background-color: var(--danger-color);
-            color: white;
-        }
-
-        .btn-cancel:hover {
-            background-color: #c82333;
-        }
-
-        .btn-small {
-            padding: 6px 12px;
-            font-size: 0.875rem;
-        }
-
-        .btn .button-text {
-            position: relative;
-            z-index: 2;
-        }
-
-        .btn:disabled {
-            opacity: 0.65;
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-
-        .btn:disabled::before {
-            display: none;
-        }
-
-        /* Стили для статусов с улучшенным дизайном */
-        .status-label {
-            padding: 6px 10px;
-            border-radius: var(--border-radius);
-            font-size: 0.85em;
-            font-weight: 500;
-            display: inline-block;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .status-label:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .status-active {
-            background-color: #e6f9f0;
-            color: #27ae60;
-            border-left: 3px solid #27ae60;
-        }
-
-        .status-pending {
-            background-color: #fff8e1;
-            color: #f39c12;
-            border-left: 3px solid #f39c12;
-        }
-
-        .status-rejected {
-            background-color: #fbeee6;
-            color: #d35400;
-            border-left: 3px solid #d35400;
-        }
-
-        .status-cancelled {
-            background-color: #fdeded;
-            color: #e74c3c;
-            border-left: 3px solid #e74c3c;
-        }
-
-        .status-annulled {
-            background-color: #eaeded;
-            color: #7f8c8d;
-            border-left: 3px solid #7f8c8d;
-        }
-
-        .status-other {
-            background-color: #f8f9fa;
-            color: #6c757d;
-            border-left: 3px solid #6c757d;
-        }
-
-        /* Стили для действий в таблице */
-        .actions-cell {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .actions-cell form {
-            margin: 0;
-        }
-
-        .cancel-booking-form {
-            display: inline-block;
-        }
-
-        /* Улучшенные стили для JS сообщений */
-        #js-messages-container {
-            margin-bottom: 20px;
-        }
-
-        .flash-message {
-            padding: 16px 20px;
-            margin-bottom: 20px;
-            border-radius: var(--border-radius);
-            border-left: 4px solid transparent;
-            position: relative;
-            font-size: 0.95rem;
-            box-shadow: var(--box-shadow);
-            animation: slideInDown 0.4s forwards;
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-
-        @keyframes slideInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .flash-success {
-            color: #0f5132;
-            background-color: #d1e7dd;
-            border-left-color: #20c997;
-        }
-
-        .flash-error {
-            color: #842029;
-            background-color: #f8d7da;
-            border-left-color: #dc3545;
-        }
-
-        .flash-warning {
-            color: #664d03;
-            background-color: #fff3cd;
-            border-left-color: #ffc107;
-        }
-
-        .flash-info {
-            color: #055160;
-            background-color: #cff4fc;
-            border-left-color: #0dcaf0;
-        }
-
-        .flash-message .close-flash {
-            position: absolute;
-            top: 50%;
-            right: 15px;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            line-height: 1;
-            color: inherit;
-            opacity: 0.6;
-            cursor: pointer;
-            padding: 0 5px;
-            transition: all 0.2s ease;
-        }
-
-        .flash-message .close-flash:hover {
-            opacity: 1;
-            transform: translateY(-50%) rotate(90deg);
-        }
-
-        /* Спиннер с улучшенным стилем */
-        .button-spinner {
-            margin-left: 5px;
-            display: none;
-            font-size: 0.9em;
-            color: inherit;
-        }
-
-        button:disabled .button-spinner {
-            display: inline-block;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Улучшенные стили для ссылок */
-        .data-table a {
-            color: var(--primary-color);
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .data-table a::after {
-            content: '';
-            position: absolute;
-            width: 0;
-            height: 1.5px;
-            bottom: -2px;
-            left: 0;
-            background-color: var(--primary-color);
-            transition: width 0.3s ease;
-        }
-
-        .data-table a:hover {
+        .pagination-controls button:hover:not(:disabled) {
+            background-color: #f8f9fa; /* Слегка выделить при наведении */
             color: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
-        .data-table a:hover::after {
-            width: 100%;
+        .pagination-controls button:disabled {
+            color: #adb5bd; /* Серый цвет для неактивных */
+            background-color: #f8f9fa; /* Светлый фон */
+            cursor: not-allowed;
+            opacity: 0.7;
+            box-shadow: none; /* Убираем тень у неактивных */
         }
 
-        /* Стиль для иконки информации */
-        .fa-info-circle {
-            cursor: help;
-            transition: all 0.3s ease;
-            margin-left: 8px;
+        .pagination-controls button.active {
+            background-color: var(--primary-color);
+            color: #fff;
+            cursor: default;
+            font-weight: 500;
+            box-shadow: 0 2px 5px rgba(13, 110, 253, 0.3); /* Тень для активной */
+        }
+        .pagination-controls span { /* Стили для многоточия */
+            margin: 0 5px;
+            color: var(--secondary-color);
         }
 
-        .fa-info-circle:hover {
-            transform: scale(1.2);
+        .pagination-info {
+            font-size: 0.95rem;
+            color: var(--secondary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px; /* Отступ между элементами */
         }
 
-        /* Анимация для строк таблицы при загрузке страницы */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .data-table tbody tr {
-            opacity: 0;
-            animation: fadeInUp 0.5s forwards;
-        }
-
-        .data-table tbody tr:nth-child(1) { animation-delay: 0.05s; }
-        .data-table tbody tr:nth-child(2) { animation-delay: 0.1s; }
-        .data-table tbody tr:nth-child(3) { animation-delay: 0.15s; }
-        .data-table tbody tr:nth-child(4) { animation-delay: 0.2s; }
-        .data-table tbody tr:nth-child(5) { animation-delay: 0.25s; }
-        .data-table tbody tr:nth-child(6) { animation-delay: 0.3s; }
-        .data-table tbody tr:nth-child(7) { animation-delay: 0.35s; }
-        .data-table tbody tr:nth-child(8) { animation-delay: 0.4s; }
-        .data-table tbody tr:nth-child(9) { animation-delay: 0.45s; }
-        .data-table tbody tr:nth-child(10) { animation-delay: 0.5s; }
-
-        /* Тултипы для кнопок */
-        [data-tooltip] {
-            position: relative;
-        }
-
-        [data-tooltip]::after {
-            content: attr(data-tooltip);
-            position: absolute;
-            bottom: 125%;
-            left: 50%;
-            transform: translateX(-50%);
+        .pagination-info select {
             padding: 6px 10px;
-            background-color: rgba(0, 0, 0, 0.8);
-            color: white;
-            font-size: 0.8rem;
-            border-radius: 4px;
-            white-space: nowrap;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-            pointer-events: none;
-            z-index: 10;
+            border: 1px solid #ced4da;
+            border-radius: var(--border-radius);
+            font-size: 0.9rem;
+            vertical-align: middle;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            background-color: white; /* Белый фон для селекта */
         }
 
-        [data-tooltip]::before {
-            content: '';
-            position: absolute;
-            bottom: 125%;
-            left: 50%;
-            transform: translateX(-50%) translateY(100%);
-            border-width: 5px;
-            border-style: solid;
-            border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-            pointer-events: none;
-            z-index: 10;
+        .pagination-info select:focus {
+            border-color: var(--primary-color);
+            outline: 0;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
         }
 
-        [data-tooltip]:hover::after,
-        [data-tooltip]:hover::before {
-            opacity: 1;
-            visibility: visible;
-            bottom: 135%;
+        .pagination-info label {
+            margin-bottom: 0; /* Убираем отступ у лейбла */
         }
+
+        /* Класс для скрытых строк таблицы при пагинации */
+        .hidden-row {
+            display: none;
+        }
+
+        /* Стили для сообщения "Нет бронирований" */
+        .no-bookings-message {
+            text-align: center;
+            margin-top: 30px;
+            color: #7f8c8d;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: var(--border-radius);
+        }
+        .no-bookings-message i { /* Иконка для сообщения */
+             display: block;
+             font-size: 2rem;
+             margin-bottom: 10px;
+             color: #ced4da;
+         }
+
+         /* Класс для скрытия контейнера пагинации */
+         .pagination-container.hidden {
+             display: none;
+         }
+
+         /* Анимация обновления баланса в шапке (если нужна) */
+         @keyframes balanceUpdate {
+             0%, 100% { color: inherit; }
+             50% { color: var(--success-color); font-weight: bold; transform: scale(1.05); }
+         }
+         .header-balance.updated {
+            animation: balanceUpdate 1s ease;
+         }
+
     </style>
 </head>
 <body>
@@ -497,6 +464,43 @@
         <!-- Контейнер для сообщений от JS -->
         <div id="js-messages-container"></div>
 
+        <% const bookingsExist = typeof bookings !== 'undefined' && Array.isArray(bookings) && bookings.length > 0; %>
+
+        <%# --- Filter Bar --- %>
+        <div class="filter-bar">
+            <div class="filter-group search-input-wrapper">
+                <label for="bookingSearchInput">Поиск</label> <%# Новый ID %>
+                <div class="search-input-wrapper">
+                     <i class="fas fa-search search-icon"></i>
+                     <input type="text" id="bookingSearchInput" placeholder="По названию объекта..."> <%# Новый ID %>
+                </div>
+            </div>
+            <div class="filter-group status-filter-wrapper">
+                <label for="bookingStatusFilter">Фильтр по статусу</label> <%# Новый ID %>
+                <select id="bookingStatusFilter"> <%# Новый ID %>
+                    <option value="">Все статусы</option>
+                    <option value="Ожидает подтверждения">Ожидает подтверждения</option>
+                    <option value="Активна">Активна</option>
+                    <option value="Отклонена">Отклонена</option>
+                    <option value="Отменена">Отменена</option>
+                    <%# 'Аннулирована' здесь не нужна, т.к. арендатор сам не аннулирует %>
+                </select>
+            </div>
+             <div class="filter-group" style="margin-top: auto;">
+                  <button type="button" id="resetFiltersBtn" class="btn btn-secondary btn-small" style="align-self: flex-end;"> <%# Новый ID %>
+                     <i class="fas fa-undo"></i> Сбросить
+                  </button>
+             </div>
+        </div>
+        <%# --- End Filter Bar --- %>
+
+        <%# Сообщение об отсутствии результатов фильтрации %>
+        <p id="noFilterResultsMessage" style="display: none;"> <%# Новый ID %>
+            <i class="fas fa-filter"></i> Бронирований, соответствующих вашему запросу, не найдено.
+        </p>
+
+        <%# --- Table --- %>
+
         <div class="table-responsive">
             <table class="data-table">
                 <thead>
@@ -509,38 +513,41 @@
                         <th>Действия</th>
                     </tr>
                 </thead>
-                <tbody>
+                                <tbody id="bookingsTableBody">
                     <% if (typeof bookings !== 'undefined' && bookings.length > 0) { %>
                         <% bookings.forEach(booking => { %>
-                            <%
+                             <%
                                 let statusClass = 'status-other';
-                                let statusText = booking.Status || 'Неизвестен'; // Текст для отображения
-                                let fullStatusTitle = booking.Status || 'Неизвестен'; // Полный текст для title
-
-                                // Определяем класс и текст статуса
+                                let statusText = booking.Status || 'Неизвестен';
+                                let fullStatusTitle = booking.Status || 'Неизвестен';
                                 switch(booking.Status) {
                                     case 'Активна': statusClass = 'status-active'; break;
-                                    case 'Ожидает подтверждения': statusClass = 'status-pending'; statusText = 'Ожидает'; break; // Короткий текст
+                                    case 'Ожидает подтверждения': statusClass = 'status-pending'; statusText = 'Ожидает'; break;
                                     case 'Отклонена': statusClass = 'status-rejected'; break;
-                                    case 'Отменена': statusClass = 'status-cancelled'; break; // Отменена арендатором
-                                    case 'Аннулирована': statusClass = 'status-annulled'; break; // Аннулирована админом
-                                    // case 'Удержан': statusClass = 'status-hold'; break; // Если будет
+                                    case 'Отменена': statusClass = 'status-cancelled'; break;
+                                    case 'Аннулирована': statusClass = 'status-annulled'; break; // Маловероятно, но оставим
                                 }
+                                // Генерируем data-* атрибуты БЕЗ escapeHtml
+                                const dataAttributes = `
+                                    id="booking-row-${booking.Id}"
+                                    data-status="${booking.Status || ''}"
+                                    data-property-title="${booking.PropertyTitle || ''}"
+                                    data-booking-id="${booking.Id || ''}"
+                                `;
                             %>
-                            <tr id="booking-row-<%= booking.Id %>">
+                            <tr <%- dataAttributes %>> <%# Вставляем атрибуты %>
+                                <%# Остальное содержимое строки (<td>) без изменений %>
                                 <td><a href="/properties/<%= booking.PropertyId %>"><%= booking.PropertyTitle %></a></td>
                                 <td><%= booking.StartDateFormatted %></td>
                                 <td><%= booking.EndDateFormatted %></td>
                                 <td><%= booking.TotalCost ? new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(booking.TotalCost) : '?' %></td>
                                 <td class="status-cell">
                                     <span class="status-label <%= statusClass %>" title="<%= fullStatusTitle %>"><%= statusText %></span>
-                                    <%# Показываем причину отклонения, если есть %>
                                     <% if (booking.Status === 'Отклонена' && booking.RejectedReason) { %>
-                                        <i class="fas fa-info-circle" title="<%= booking.RejectedReason %>" style="color: #d35400;"></i>
+                                        <i class="fas fa-info-circle" data-tooltip="Причина отклонения: <%= booking.RejectedReason %>" style="color: #d35400;"></i>
                                     <% } %>
                                 </td>
                                 <td class="actions-cell">
-                                    <%# Кнопку "Отменить" показываем только для Активных и Ожидающих %>
                                     <% if (booking.Status === 'Активна' || booking.Status === 'Ожидает подтверждения') { %>
                                         <form class="cancel-booking-form" data-booking-id="<%= booking.Id %>" data-current-status="<%= booking.Status %>" action="/bookings/<%= booking.Id %>/cancel" method="POST">
                                             <button type="submit" class="btn btn-small btn-cancel" data-tooltip="Отменить бронирование">
@@ -554,166 +561,430 @@
                                 </td>
                             </tr>
                         <% }) %>
-                    <% } else { %>
-                        <tr> <td colspan="6" style="text-align: center;">У вас пока нет бронирований.</td> </tr>
                     <% } %>
                 </tbody>
             </table>
         </div>
+
+         <!-- Сообщение, если изначально нет бронирований -->
+        <p class="no-bookings-message" id="noBookingsMessage" style="<%= bookingsExist ? 'display: none;' : '' %>">
+             <i class="fas fa-folder-open"></i>
+             У вас пока нет бронирований.
+        </p>
+
+         <!-- === Контейнер для пагинации (скрыт по умолчанию, если строк мало) === -->
+         <div class="pagination-container hidden" id="paginationContainer">
+            <div class="pagination-info">
+                 <span id="paginationInfo"></span> <%# Информация будет вставлена JS %>
+                 <select id="itemsPerPageSelect">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                 </select>
+                <label for="itemsPerPageSelect">на странице</label>
+            </div>
+            <div class="pagination-controls" id="paginationControls">
+                <%# Кнопки пагинации будут добавлены JS %>
+            </div>
+        </div>
+        <!-- === Конец контейнера пагинации === -->
+
     </main>
-    
+
     <%- include('partials/footer') %>
 
     <script>
-        // Улучшенная функция показа JS сообщений
-        function showJsMessage(type, text) {
-            const container = document.getElementById('js-messages-container');
-            if (!container) return;
-            
+        // --- Pagination and AJAX Script ---
+        const tableBody = document.getElementById('bookingsTableBody');
+        const paginationContainer = document.getElementById('paginationContainer');
+        const paginationControls = document.getElementById('paginationControls');
+        const paginationInfo = document.getElementById('paginationInfo');
+        const itemsPerPageSelect = document.getElementById('itemsPerPageSelect');
+        const noBookingsMessage = document.getElementById('noBookingsMessage');
+        const jsMessagesContainer = document.getElementById('js-messages-container');
+
+        // Собираем все строки таблицы один раз при загрузке
+        const allRows = tableBody ? Array.from(tableBody.querySelectorAll('tr')) : [];
+        let currentPage = 1;
+        let itemsPerPage = parseInt(itemsPerPageSelect.value);
+
+        // Функция показа JS сообщений
+        function showJsMessage(type, text, allowHtml = false) {
+            if (!jsMessagesContainer) return;
             const messageDiv = document.createElement('div');
             messageDiv.className = `flash-message flash-${type}`;
-            messageDiv.innerHTML = `${text} <button type="button" class="close-flash" onclick="this.parentElement.remove()">×</button>`;
-            
-            // Добавляем перед существующими сообщениями, если они есть
-            if (container.firstChild) { 
-                container.insertBefore(messageDiv, container.firstChild);
-            } else { 
-                container.appendChild(messageDiv);
-            }
-            
-            // Автоматическое скрытие сообщения через 6 секунд
-            setTimeout(() => { 
-                if(messageDiv && messageDiv.parentNode) {
-                    // Добавляем анимацию исчезновения
-                    messageDiv.style.opacity = '0';
-                    messageDiv.style.transform = 'translateY(-20px)';
-                    messageDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-                    
-                    // После анимации удаляем элемент
-                    setTimeout(() => {
-                        if(messageDiv && messageDiv.parentNode) {
-                            messageDiv.remove();
-                        }
-                    }, 300);
+            if (allowHtml) { messageDiv.innerHTML = text; }
+            else { messageDiv.textContent = text; }
+            const closeButton = document.createElement('button');
+            closeButton.type = 'button';
+            closeButton.className = 'close-flash';
+            closeButton.innerHTML = '×';
+            closeButton.onclick = () => { messageDiv.style.opacity = '0'; setTimeout(() => messageDiv.remove(), 300); };
+            messageDiv.appendChild(closeButton);
+            jsMessagesContainer.innerHTML = ''; // Clear previous messages
+            jsMessagesContainer.appendChild(messageDiv);
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                     messageDiv.style.opacity = '0';
+                     setTimeout(() => { if (messageDiv.parentNode) messageDiv.remove(); }, 300);
                 }
-            }, 6000);
+            }, 6000); // Auto-hide after 6 seconds
         }
 
-        // Обработка форм отмены бронирования
-        const cancelForms = document.querySelectorAll('.cancel-booking-form');
-        cancelForms.forEach(form => {
-            form.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                const bookingId = form.dataset.bookingId;
-                const currentStatus = form.dataset.currentStatus;
-                const submitButton = form.querySelector('button[type="submit"]');
-                const buttonText = submitButton.querySelector('.button-text');
-                const originalButtonText = buttonText.textContent;
+        // Функция отображения нужной страницы
+               // *** ИСПРАВЛЕННАЯ ЛОГИКА ФИЛЬТРАЦИИ И ПАГИНАЦИИ ***
 
-                let confirmMsg = 'Вы уверены, что хотите отменить?';
-                if (currentStatus === 'Ожидает подтверждения') {
-                    confirmMsg = 'Вы уверены, что хотите отменить ЗАПРОС на бронирование?';
-                } else if (currentStatus === 'Активна') {
-                    confirmMsg = 'Вы уверены, что хотите отменить АКТИВНОЕ бронирование? Средства будут возвращены на баланс.';
+        function applyFiltersAndPagination() {
+            if (!tableBody || !searchInput || !statusFilter) {
+                 console.error("Filter/Pagination elements or table body not found!");
+                 return;
+            }
+            console.log("Applying filters..."); // Лог для отладки
+
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            const selectedStatus = statusFilter.value;
+            let visibleRowCount = 0;
+            let filteredRows = []; // Массив для строк, прошедших фильтр
+
+            // 1. Проходим по ВСЕМ ИСХОДНЫМ строкам (allRows)
+            allRows.forEach(row => {
+                // Читаем данные из data-атрибутов
+                const propertyTitle = (row.dataset.propertyTitle || '').toLowerCase();
+                const bookingId = (row.dataset.bookingId || '').toLowerCase(); // Используем ID брони для поиска
+                const status = row.dataset.status || '';
+
+                // Проверяем соответствие фильтрам
+                const statusMatch = !selectedStatus || status === selectedStatus;
+                const searchMatch = !searchTerm ||
+                                    propertyTitle.includes(searchTerm) ||
+                                    bookingId.includes(searchTerm); // Ищем по названию или ID брони
+
+                // Применяем класс `hidden-filter` и собираем видимые строки
+                if (statusMatch && searchMatch) {
+                    row.classList.remove('hidden-filter'); // Видимая по фильтру
+                    filteredRows.push(row);
+                    visibleRowCount++;
+                } else {
+                    row.classList.add('hidden-filter'); // Скрытая по фильтру
+                    row.classList.add('hidden-row');    // Сразу скроем и от пагинации
                 }
+            });
 
-                if (!confirm(confirmMsg)) { return; }
+            console.log(`Filtering complete. Visible rows: ${visibleRowCount}`); // Лог для отладки
 
-                submitButton.disabled = true;
-                buttonText.textContent = 'Отмена...';
-                document.getElementById('js-messages-container').innerHTML = '';
+            // 2. Обновляем сообщения о результатах
+            if(noFilterResultsMessage) {
+                noFilterResultsMessage.style.display = (visibleRowCount === 0 && allRows.length > 0) ? 'block' : 'none';
+            }
+            if(noBookingsMessage){
+                noBookingsMessage.style.display = (allRows.length === 0) ? 'block' : 'none';
+                 // Очистка сообщения "нет данных", если фильтры сброшены и строки есть
+                 if(tableBody && visibleRowCount > 0 && tableBody.querySelector('td[colspan="6"]')) {
+                     tableBody.innerHTML = '';
+                 } else if (tableBody && allRows.length === 0 && !tableBody.querySelector('td[colspan="6"]')) {
+                     tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px; color: #6c757d;"><i class="fas fa-folder-open" style="display: block; font-size: 2rem; margin-bottom: 10px;"></i>У вас пока нет бронирований.</td></tr>`;
+                 }
+            }
 
-                try {
-                    const response = await fetch(form.action, { 
-                        method: 'POST', 
-                        headers: { 'Accept': 'application/json' } 
-                    });
-                    
-                    const result = await response.json();
-                    
-                    if (response.ok && result.success) {
-                        const row = document.getElementById(`booking-row-${bookingId}`);
-                        if (row) {
-                            // Анимация строки перед обновлением
-                            row.style.transition = 'background-color 0.5s ease';
-                            row.style.backgroundColor = 'rgba(220, 53, 69, 0.1)';
-                            
-                            setTimeout(() => {
-                                // Обновляем статус
-                                const statusCell = row.querySelector('.status-cell .status-label');
-                                if (statusCell) {
-                                    statusCell.textContent = 'Отменена';
-                                    statusCell.className = 'status-label status-cancelled';
-                                    statusCell.title = 'Отменена';
-                                    
-                                    // Анимация обновления статуса
-                                    statusCell.style.transform = 'scale(1.1)';
-                                    setTimeout(() => {
-                                        statusCell.style.transform = 'scale(1)';
-                                    }, 300);
-                                    
-                                    // Удаляем иконку с причиной, если она была
-                                    const infoIcon = row.querySelector('.status-cell .fa-info-circle');
-                                    if(infoIcon) infoIcon.remove();
-                                }
-                                
-                                // Удаляем кнопку действий
-                                const actionsCell = row.querySelector('.actions-cell');
-                                if (actionsCell) { 
-                                    actionsCell.innerHTML = '<span>-</span>'; 
-                                }
-                                
-                                // Восстанавливаем фон строки
-                                row.style.backgroundColor = '';
-                            }, 500);
+            // 3. Вызываем отображение ПЕРВОЙ страницы с ОТФИЛЬТРОВАННЫМИ строками
+            // Передаем `filteredRows` вместо `allRows`
+            displayPage(1, filteredRows);
+        }
+
+        // ИСПРАВЛЕННАЯ ФУНКЦИЯ ОТОБРАЖЕНИЯ СТРАНИЦЫ
+        function displayPage(page, rowsToPaginate) {
+             if (!tableBody) return; // Проверка таблицы
+
+             // Если rowsToPaginate не передан (например, при смене кол-ва на странице),
+             // то берем текущие отфильтрованные строки
+             if (!rowsToPaginate) {
+                  rowsToPaginate = allRows.filter(row => !row.classList.contains('hidden-filter'));
+             }
+
+             currentPage = page;
+             const totalVisibleItems = rowsToPaginate.length;
+
+             const start = (page - 1) * itemsPerPage;
+             const end = start + itemsPerPage;
+             const rowsForCurrentPage = rowsToPaginate.slice(start, end);
+
+             console.log(`Displaying page ${page}. Items ${start + 1}-${Math.min(end, totalVisibleItems)} of ${totalVisibleItems} filtered.`); // Лог для отладки
+
+             // Очищаем tbody перед вставкой
+             tableBody.innerHTML = '';
+
+             // Добавляем только нужные строки для текущей страницы
+             if (rowsForCurrentPage.length > 0) {
+                rowsForCurrentPage.forEach(row => {
+                    row.classList.remove('hidden-row'); // Убираем класс скрытия пагинации
+                    row.style.opacity = '0';
+                    row.style.transform = 'translateY(10px)';
+                    tableBody.appendChild(row); // Добавляем строку в таблицу
+                    // Плавное появление
+                    setTimeout(() => {
+                        row.style.opacity = '1';
+                        row.style.transform = 'translateY(0)';
+                        row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                    }, 10); // Небольшая задержка
+                });
+             } else if (allRows.length > 0 && totalVisibleItems === 0) {
+                  // Если после фильтрации строк 0, но изначально они были - показываем сообщение "не найдено"
+                  // (Это дублирует логику в applyFiltersAndPagination, но для надежности)
+                  if(noFilterResultsMessage) noFilterResultsMessage.style.display = 'block';
+             } else if (allRows.length === 0) {
+                  // Если строк не было изначально
+                  if(noBookingsMessage) noBookingsMessage.style.display = 'block';
+                  if (tableBody && !tableBody.querySelector('td[colspan="6"]')) {
+                     tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px; color: #6c757d;"><i class="fas fa-folder-open" style="display: block; font-size: 2rem; margin-bottom: 10px;"></i>У вас пока нет бронирований.</td></tr>`;
+                  }
+             }
+
+             // Скрываем ВСЕ строки, которые НЕ должны быть на этой странице
+             allRows.forEach(row => {
+                  if (!rowsForCurrentPage.includes(row)) {
+                       row.classList.add('hidden-row');
+                  }
+             });
+
+
+             // Обновляем контролы и инфо пагинации на основе ОТФИЛЬТРОВАННОГО количества
+             renderPaginationControls(totalVisibleItems);
+             updatePaginationInfo(totalVisibleItems);
+        }
+
+        // Функция отрисовки кнопок пагинации
+        function renderPaginationControls(totalItems) {
+            if (!paginationControls || totalItems === 0) return;
+
+            paginationControls.innerHTML = ''; // Clear existing buttons
+            const pageCount = Math.ceil(totalItems / itemsPerPage);
+
+            if (pageCount <= 1) return; // No controls needed for single page
+
+            // Previous Button
+            const prevButton = document.createElement('button');
+            prevButton.innerHTML = '‹';
+            prevButton.disabled = currentPage === 1;
+            prevButton.addEventListener('click', () => displayPage(currentPage - 1));
+            paginationControls.appendChild(prevButton);
+
+            // Page Number Buttons (with ellipsis)
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(pageCount, startPage + maxVisiblePages - 1);
+            if (endPage - startPage + 1 < maxVisiblePages) { startPage = Math.max(1, endPage - maxVisiblePages + 1); }
+
+            if (startPage > 1) {
+                const firstBtn = document.createElement('button'); firstBtn.textContent = '1';
+                firstBtn.addEventListener('click', () => displayPage(1));
+                paginationControls.appendChild(firstBtn);
+                if (startPage > 2) { const dots = document.createElement('span'); dots.textContent = '...'; paginationControls.appendChild(dots); }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const pageButton = document.createElement('button');
+                pageButton.textContent = i;
+                if (i === currentPage) { pageButton.classList.add('active'); pageButton.disabled = true; }
+                pageButton.addEventListener('click', () => displayPage(i));
+                paginationControls.appendChild(pageButton);
+            }
+
+            if (endPage < pageCount) {
+                if (endPage < pageCount - 1) { const dots = document.createElement('span'); dots.textContent = '...'; paginationControls.appendChild(dots); }
+                const lastBtn = document.createElement('button'); lastBtn.textContent = pageCount;
+                lastBtn.addEventListener('click', () => displayPage(pageCount));
+                paginationControls.appendChild(lastBtn);
+            }
+
+            // Next Button
+            const nextButton = document.createElement('button');
+            nextButton.innerHTML = '›';
+            nextButton.disabled = currentPage === pageCount;
+            nextButton.addEventListener('click', () => displayPage(currentPage + 1));
+            paginationControls.appendChild(nextButton);
+        }
+
+        // Функция обновления текста "Показано X-Y из Z"
+        function updatePaginationInfo(totalItems) {
+             if (!paginationInfo || totalItems === 0) {
+                 if(paginationInfo) paginationInfo.textContent = '';
+                 return;
+             };
+            const pageCount = Math.ceil(totalItems / itemsPerPage);
+            const startItem = (currentPage - 1) * itemsPerPage + 1;
+            const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+            paginationInfo.textContent = `Записи ${startItem}-${endItem} из ${totalItems}`;
+        }
+
+        // --- Обработка отмены брони (с перезагрузкой) ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const cancelForms = document.querySelectorAll('.cancel-booking-form');
+            cancelForms.forEach(form => {
+                form.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const bookingId = form.dataset.bookingId;
+                    const currentStatus = form.dataset.currentStatus;
+                    const submitButton = form.querySelector('button[type="submit"]');
+                    const buttonText = submitButton.querySelector('.button-text');
+                    const originalButtonText = buttonText.textContent;
+
+                    let confirmMsg = 'Вы уверены, что хотите отменить?';
+                    if (currentStatus === 'Ожидает подтверждения') { confirmMsg = 'Отменить ЗАПРОС на бронирование?'; }
+                    else if (currentStatus === 'Активна') { confirmMsg = 'Отменить АКТИВНОЕ бронирование? Средства вернутся на баланс.'; }
+
+                    if (!confirm(confirmMsg)) { return; }
+
+                    submitButton.disabled = true;
+                    buttonText.textContent = 'Отмена...';
+                    jsMessagesContainer.innerHTML = ''; // Clear previous messages
+
+                    try {
+                        const response = await fetch(form.action, {
+                            method: 'POST',
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        const result = await response.json();
+
+                        if (response.ok && result.success) {
+                            // ИЗМЕНЕНО: Просто перезагружаем страницу при успехе
+                            showJsMessage('success', result.message || 'Действие выполнено. Обновление страницы...');
+                            setTimeout(() => { window.location.reload(); }, 1500); // Небольшая задержка перед перезагрузкой
+                        } else {
+                            throw new Error(result.error || 'Не удалось отменить.');
                         }
-                        
-                        showJsMessage('success', result.message || 'Действие выполнено.');
-                        
-                        // Обновляем баланс в шапке, если он изменился
-                        if (typeof result.newBalance === 'number') {
-                            const balanceEl = document.getElementById('headerUserBalance');
-                            if (balanceEl) {
-                                try { 
-                                    const oldBalance = balanceEl.textContent;
-                                    const newBalanceFormatted = new Intl.NumberFormat('ru-RU', { 
-                                        style: 'currency', 
-                                        currency: 'RUB', 
-                                        minimumFractionDigits: 0, 
-                                        maximumFractionDigits: 0 
-                                    }).format(result.newBalance);
-                                    
-                                    balanceEl.textContent = newBalanceFormatted;
-                                    
-                                    // Анимация обновления баланса
-                                    balanceEl.classList.add('updated');
-                                    setTimeout(() => {
-                                        balanceEl.classList.remove('updated');
-                                    }, 1000);
-                                } catch(e){}
-                            }
-                        }
-                    } else { 
-                        throw new Error(result.error || 'Не удалось отменить.'); 
+                    } catch (error) {
+                        console.error(`Error cancelling booking ${bookingId}:`, error);
+                        showJsMessage('error', error.message || 'Произошла ошибка.');
+                        submitButton.disabled = false; // Restore button on error
+                        buttonText.textContent = originalButtonText;
                     }
-                } catch (error) {
-                    console.error(`Error cancelling booking ${bookingId}:`, error);
-                    showJsMessage('error', error.message || 'Произошла ошибка.');
-                    submitButton.disabled = false;
-                    buttonText.textContent = originalButtonText;
+                });
+            });
+
+             // --- Инициализация пагинации ---
+             itemsPerPageSelect.addEventListener('change', (event) => {
+                itemsPerPage = parseInt(event.target.value);
+                displayPage(1); // Go to first page when changing items per page
+             });
+
+             // Initial display
+             displayPage(1);
+        }); // Конец DOMContentLoaded
+
+        // Анимация при загрузке строк таблицы (необязательно при пагинации, но оставим)
+        document.addEventListener('DOMContentLoaded', function() {
+            const tableRows = document.querySelectorAll('#bookingsTableBody tr');
+            tableRows.forEach((row, index) => {
+                // Применим только к строкам, которые видимы на ПЕРВОЙ странице
+                if (index < itemsPerPage) {
+                     row.style.animationDelay = `${index * 0.05}s`; // Маленькая задержка
+                } else {
+                     row.style.animation = 'none'; // Убираем анимацию у скрытых
+                     row.style.opacity = '1'; // Убедимся, что они не прозрачные
                 }
             });
         });
 
-        // Добавляем анимацию при загрузке страницы для строк таблицы
-        document.addEventListener('DOMContentLoaded', function() {
-            const tableRows = document.querySelectorAll('.data-table tbody tr');
-            tableRows.forEach((row, index) => {
-                setTimeout(() => {
-                    row.style.opacity = '1';
-                }, 50 * index);
+         // --- Кастомный стиль обновления баланса в шапке (если нужно) ---
+         // Эта функция вызывается ИЗ `bookings-list.ejs`
+         // Она будет работать, если структура header.ejs не меняется
+         function updateHeaderBalance(newBalance) {
+              const balanceEl = document.getElementById('headerUserBalance');
+              if (balanceEl && typeof newBalance === 'number') {
+                  try {
+                      const oldBalanceText = balanceEl.textContent; // Запомним старый текст
+                      const newBalanceFormatted = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(newBalance);
+                      balanceEl.textContent = newBalanceFormatted;
+
+                      // Анимация только если значение изменилось
+                      if (balanceEl.textContent !== oldBalanceText) {
+                          balanceEl.classList.add('updated');
+                          // Убираем класс анимации после завершения
+                          setTimeout(() => { balanceEl.classList.remove('updated'); }, 1000); // Длительность анимации 1с
+                      }
+                  } catch(e){ console.error("Error updating header balance:", e); }
+              }
+         }
+         const searchInput = document.getElementById('bookingSearchInput');
+        const statusFilter = document.getElementById('bookingStatusFilter');
+        const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+        const noFilterResultsMessage = document.getElementById('noFilterResultsMessage');
+
+        // --- Функция Фильтрации (взаимодействует с существующей пагинацией) ---
+          function applyFiltersAndPagination() {
+            if (!tableBody || !searchInput || !statusFilter) {
+                 console.error("Filter/Pagination elements or table body not found!");
+                 return;
+            }
+            console.log("Applying filters..."); // Лог для отладки
+
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            const selectedStatus = statusFilter.value;
+            let visibleRowCount = 0;
+            let filteredRows = []; // Массив для строк, прошедших фильтр
+
+            // 1. Проходим по ВСЕМ ИСХОДНЫМ строкам (allRows)
+            allRows.forEach(row => {
+                // Читаем данные из data-атрибутов
+                const propertyTitle = (row.dataset.propertyTitle || '').toLowerCase();
+                const bookingId = (row.dataset.bookingId || '').toLowerCase(); // Используем ID брони для поиска
+                const status = row.dataset.status || '';
+
+                // Проверяем соответствие фильтрам
+                const statusMatch = !selectedStatus || status === selectedStatus;
+                const searchMatch = !searchTerm ||
+                                    propertyTitle.includes(searchTerm) ||
+                                    bookingId.includes(searchTerm); // Ищем по названию или ID брони
+
+                // Применяем класс `hidden-filter` и собираем видимые строки
+                if (statusMatch && searchMatch) {
+                    row.classList.remove('hidden-filter'); // Видимая по фильтру
+                    filteredRows.push(row);
+                    visibleRowCount++;
+                } else {
+                    row.classList.add('hidden-filter'); // Скрытая по фильтру
+                    row.classList.add('hidden-row');    // Сразу скроем и от пагинации
+                }
             });
-        });
+
+            console.log(`Filtering complete. Visible rows: ${visibleRowCount}`); // Лог для отладки
+
+            // 2. Обновляем сообщения о результатах
+            if(noFilterResultsMessage) {
+                noFilterResultsMessage.style.display = (visibleRowCount === 0 && allRows.length > 0) ? 'block' : 'none';
+            }
+            if(noBookingsMessage){
+                noBookingsMessage.style.display = (allRows.length === 0) ? 'block' : 'none';
+                 // Очистка сообщения "нет данных", если фильтры сброшены и строки есть
+                 if(tableBody && visibleRowCount > 0 && tableBody.querySelector('td[colspan="6"]')) {
+                     tableBody.innerHTML = '';
+                 } else if (tableBody && allRows.length === 0 && !tableBody.querySelector('td[colspan="6"]')) {
+                     tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px; color: #6c757d;"><i class="fas fa-folder-open" style="display: block; font-size: 2rem; margin-bottom: 10px;"></i>У вас пока нет бронирований.</td></tr>`;
+                 }
+            }
+
+            // 3. Вызываем отображение ПЕРВОЙ страницы с ОТФИЛЬТРОВАННЫМИ строками
+            // Передаем `filteredRows` вместо `allRows`
+            displayPage(1, filteredRows);
+        }
+
+        // --- Назначение Обработчиков Событий ---
+        // Добавляем это внутрь существующего `DOMContentLoaded` или в конец блока `<script>`
+
+        if (searchInput) {
+            searchInput.addEventListener('input', applyFiltersAndPagination);
+        }
+        if (statusFilter) {
+            statusFilter.addEventListener('change', applyFiltersAndPagination);
+        }
+        if (resetFiltersBtn) {
+            resetFiltersBtn.addEventListener('click', () => {
+                if (searchInput) searchInput.value = '';
+                if (statusFilter) statusFilter.value = ''; // Сброс селекта
+                applyFiltersAndPagination(); // Применяем сброшенные фильтры
+            });
+        }
     </script>
 </body>
 </html>
