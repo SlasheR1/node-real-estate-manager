@@ -1,41 +1,275 @@
-<!-- views/login.ejs -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= title %></title>
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/auth.css">
-    <!-- Font Awesome для спиннера -->
+    <!-- Подключаем современные шрифты -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        .ajax-message { padding: 10px 15px; margin-bottom: 15px; margin-top: 15px; border-radius: 5px; text-align: center; display: none; }
-        .ajax-error { color: #842029; background-color: #f8d7da; border: 1px solid #f5c2c7; }
-        #loginForm button[type="submit"]:disabled { opacity: 0.65; cursor: not-allowed; }
-        /* Стили для спиннера внутри кнопки */
-        .button-spinner { margin-left: 8px; display: none; /* Скрыт по умолчанию */ }
-        button:disabled .button-spinner { display: inline-block; /* Показываем при disabled */ }
-        button .button-text { vertical-align: middle; } /* Выравнивание текста */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        :root {
+            --primary-color: #4361ee;
+            --primary-hover: #3a56d4;
+            --secondary-color: #f8f9fa;
+            --text-color: #333;
+            --error-color: #dc3545;
+            --success-color: #28a745;
+            --bg-color: #f4f7fe;
+            --card-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+            --input-border: #e1e5eb;
+            --input-focus: #4361ee;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .auth-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            width: 100%;
+            max-width: 420px;
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, var(--primary-color), #a45ee5);
+        }
+
+        .auth-logo {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .auth-logo img {
+            height: 60px;
+            width: auto;
+        }
+
+        h1 {
+            font-size: 26px;
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            color: #555;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 15px;
+            border: 1px solid var(--input-border);
+            border-radius: 8px;
+            background-color: #fafbfc;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+            background-color: white;
+        }
+
+        .input-with-icon {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            left: 16px;
+            color: #94a3b8;
+        }
+
+        .input-with-icon input {
+            padding-left: 46px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .button-spinner {
+            margin-left: 8px;
+            display: none;
+        }
+
+        button:disabled .button-spinner {
+            display: inline-block;
+        }
+
+        .ajax-message {
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            text-align: center;
+            display: none;
+        }
+
+        .ajax-error {
+            color: var(--error-color);
+            background-color: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.2);
+        }
+
+        .register-link {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .register-link a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+
+        /* Добавляем анимации */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .auth-container {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        /* Тема для видимости пароля */
+        .password-toggle {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .password-toggle:hover {
+            color: var(--primary-color);
+        }
+
+        /* Адаптивность для мобильных устройств */
+        @media (max-width: 480px) {
+            .auth-container {
+                padding: 30px 20px;
+                max-width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="auth-container">
-        <h1>Вход</h1>
+        <!-- Опциональный логотип -->
+        <div class="auth-logo">
+            <!-- Здесь может быть ваш логотип -->
+            <i class="fas fa-unlock-alt" style="font-size: 42px; color: var(--primary-color);"></i>
+        </div>
+        
+        <h1>Добро пожаловать</h1>
         <%- include('partials/messages') %>
         <div id="loginError" class="ajax-message ajax-error"></div>
 
         <form id="loginForm" action="/login" method="POST">
-            <div class="form-group"> <label for="username">Логин:</label> <input type="text" id="username" name="username" required autocomplete="username"> </div>
-            <div class="form-group"> <label for="password">Пароль:</label> <input type="password" id="password" name="password" required autocomplete="current-password"> </div>
-            <div id="loginError" class="ajax-message ajax-error"></div>
+            <div class="form-group">
+                <label for="username">Логин</label>
+                <div class="input-with-icon">
+                    <i class="fas fa-user input-icon"></i>
+                    <input type="text" id="username" name="username" required autocomplete="username" placeholder="Введите ваш логин">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Пароль</label>
+                <div class="input-with-icon" style="position: relative;">
+                    <i class="fas fa-lock input-icon"></i>
+                    <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="Введите ваш пароль">
+                    <i class="fas fa-eye password-toggle" id="passwordToggle"></i>
+                </div>
+            </div>
 
             <button type="submit">
                 <span class="button-text">Войти</span>
-                <i class="fas fa-spinner fa-spin button-spinner"></i> <%# Спиннер %>
+                <i class="fas fa-spinner fa-spin button-spinner"></i>
             </button>
         </form>
-        <p>Нет аккаунта? <a href="/register">Зарегистрироваться</a></p>
+        
+        <div class="register-link">
+            <p>Нет аккаунта? <a href="/register">Зарегистрироваться</a></p>
+        </div>
     </div>
 
     <script>
@@ -44,29 +278,100 @@
         const passwordInput = document.getElementById('password');
         const errorDiv = document.getElementById('loginError');
         const submitButton = loginForm.querySelector('button[type="submit"]');
-        const buttonText = submitButton.querySelector('.button-text'); // Находим текст кнопки
-        const originalButtonText = buttonText.textContent; // Сохраняем исходный текст
+        const buttonText = submitButton.querySelector('.button-text');
+        const originalButtonText = buttonText.textContent;
+        
+        // Добавляем функционал видимости пароля
+        const passwordToggle = document.getElementById('passwordToggle');
+        passwordToggle.addEventListener('click', () => {
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                passwordToggle.classList.remove('fa-eye');
+                passwordToggle.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                passwordToggle.classList.remove('fa-eye-slash');
+                passwordToggle.classList.add('fa-eye');
+            }
+        });
 
+        // Валидация на стороне клиента (опционально)
+        function validateForm() {
+            let isValid = true;
+            
+            if (!usernameInput.value.trim()) {
+                isValid = false;
+                // Можно добавить визуальную валидацию
+            }
+            
+            if (!passwordInput.value) {
+                isValid = false;
+                // Можно добавить визуальную валидацию
+            }
+            
+            return isValid;
+        }
+
+        // Обработка отправки формы
         loginForm.addEventListener('submit', async (event) => {
             event.preventDefault();
+            
+            if (!validateForm()) {
+                return;
+            }
+            
             errorDiv.style.display = 'none';
             errorDiv.textContent = '';
             submitButton.disabled = true;
-            buttonText.textContent = 'Вход...'; // Меняем текст
+            buttonText.textContent = 'Выполняется вход...';
 
             const username = usernameInput.value;
             const password = passwordInput.value;
 
             try {
-                const response = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json', }, body: JSON.stringify({ username, password }) });
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
                 const data = await response.json();
-                if (response.ok && data.success) { window.location.href = data.redirectUrl || '/'; }
-                else { errorDiv.textContent = data.error || 'Произошла неизвестная ошибка.'; errorDiv.style.display = 'block'; }
-            } catch (err) { console.error('Login fetch error:', err); errorDiv.textContent = 'Не удалось подключиться к серверу.'; errorDiv.style.display = 'block';
+                
+                if (response.ok && data.success) {
+                    // Добавляем анимацию перед переходом (опционально)
+                    document.querySelector('.auth-container').style.opacity = '0.7';
+                    setTimeout(() => {
+                        window.location.href = data.redirectUrl || '/';
+                    }, 300);
+                } else {
+                    errorDiv.textContent = data.error || 'Произошла ошибка при входе. Проверьте логин и пароль.';
+                    errorDiv.style.display = 'block';
+                    
+                    // Анимируем появление ошибки
+                    errorDiv.style.animation = 'fadeIn 0.3s ease-out';
+                }
+            } catch (err) {
+                console.error('Login fetch error:', err);
+                errorDiv.textContent = 'Не удалось подключиться к серверу. Пожалуйста, попробуйте позже.';
+                errorDiv.style.display = 'block';
             } finally {
-                 submitButton.disabled = false;
-                 buttonText.textContent = originalButtonText; // Возвращаем исходный текст
+                submitButton.disabled = false;
+                buttonText.textContent = originalButtonText;
             }
+        });
+
+        // Добавляем эффекты фокуса на поля ввода (опционально)
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('focus', () => {
+                input.parentElement.style.transition = 'transform 0.2s';
+                input.parentElement.style.transform = 'translateY(-2px)';
+            });
+            
+            input.addEventListener('blur', () => {
+                input.parentElement.style.transform = 'translateY(0)';
+            });
         });
     </script>
 </body>

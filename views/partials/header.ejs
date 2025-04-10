@@ -9,88 +9,98 @@
         <div class="header-right">
             <div class="nav-links main-nav-links">
                 <%# Общие ссылки %>
-                <a href="/properties">Объекты</a>
+                <a href="/properties" class="nav-link">Объекты</a>
 
                 <%# Ссылки для авторизованных пользователей %>
                 <% if (currentUser) { %>
                     <%# Для Арендатора %>
                     <% if (currentUser.role === 'Tenant') { %>
-                        <a href="/bookings">Мои бронирования</a>
+                        <a href="/bookings" class="nav-link">
+                            <i class="fas fa-calendar-check"></i>
+                            <span>Мои бронирования</span>
+                        </a>
                     <% } %>
                     <%# Управление Арендами (для всех кроме Tenant) %>
                     <% if (currentUser.role === 'Admin' || currentUser.role === 'Owner' || currentUser.role === 'Staff') { %>
-                        <a href="/rentals">Упр. Арендами</a>
+                        <a href="/rentals" class="nav-link">
+                            <i class="fas fa-tasks"></i>
+                            <span>Упр. Арендами</span>
+                        </a>
                     <% } %>
                     <%# Добавить объект (для Admin и Owner с завершенным профилем) %>
                     <% if (currentUser.role === 'Admin' || (currentUser.role === 'Owner' && currentUser.companyProfileCompleted)) { %>
-                         <a href="/properties/add">Добавить объект</a>
+                         <a href="/properties/add" class="nav-link">
+                             <i class="fas fa-plus-circle"></i>
+                             <span>Добавить объект</span>
+                         </a>
                     <% } %>
                     <%# Управление компанией (для Owner и Staff с привязанным companyId) %>
                     <% if ((currentUser.role === 'Owner' || currentUser.role === 'Staff') && currentUser.companyId) { %>
-                          <a href="/company/manage">Моя Компания</a>
+                          <a href="/company/manage" class="nav-link">
+                              <i class="fas fa-building"></i>
+                              <span>Моя Компания</span>
+                          </a>
                      <% } %>
                     <%# Управление пользователями (только для Admin) %>
                     <% if (currentUser.role === 'Admin') { %>
-                        <a href="/users">Пользователи</a>
+                        <a href="/users" class="nav-link">
+                            <i class="fas fa-users-cog"></i>
+                            <span>Пользователи</span>
+                        </a>
                     <% } %>
                 <% } else { %>
                     <%# Ссылки для неавторизованных %>
-                    <a href="/login">Войти</a>
-                    <a href="/register">Регистрация</a>
+                    <a href="/login" class="nav-link auth-link">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>Войти</span>
+                    </a>
+                    <a href="/register" class="nav-link auth-link register-btn">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Регистрация</span>
+                    </a>
                 <% } %>
             </div>
 
             <%# Блок профиля и уведомлений для авторизованных %>
             <% if (currentUser) { %>
-                <div class="user-profile-wrapper" style="display: flex; align-items: center; position: relative;"> <%# Обёртка %>
+                <div class="user-profile-wrapper"> 
                     <!-- === Кнопка Уведомлений (Колокольчик) === -->
-                    <button id="notificationToggleBtn" type="button" title="Уведомления" style="background: none; border: none; font-size: 1.3rem; color: #64748b; cursor: pointer; padding: 5px 8px; margin-right: 10px; position: relative; line-height: 1;">
+                    <button id="notificationToggleBtn" type="button" title="Уведомления" class="notification-btn">
                         <i class="fas fa-bell"></i>
-                        <span id="unreadCountBadgeHeader" class="notification-badge" style="position: absolute; top: 0px; right: 0px; background-color: #dc3545; color: white; font-size: 0.65rem; padding: 1px 4px; border-radius: 50%; min-width: 15px; height: 15px; line-height: 13px; text-align: center; font-weight: bold; display: none;">0</span>
+                        <span id="unreadCountBadgeHeader" class="notification-badge">0</span>
                     </button>
                     <!-- === Конец Кнопки Уведомлений === -->
 
-                    <div class="user-profile"> <%# Сам блок профиля %>
-                        <a href="/profile" class="profile-link" title="Профиль">
-                            <div class="user-info">
-                                <span class="user-name" id="headerUserName"><%= currentUser.fullName || currentUser.username %></span>
-                                <div class="user-sub-info">
-                                    <span class="user-role" id="headerUserRole"><%= currentUser.role %></span>
-                                    <% if (currentUser.role === 'Tenant') { %>
-                                        <span class="user-balance profile-sub-optional" id="headerUserBalance"><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(currentUser.balance ?? 0) %></span>
-                                    <% } else { %>
-                                        <span class="user-balance profile-sub-optional" id="headerUserBalance" style="display: none;"></span>
-                                    <% } %>
-
-                                    <!-- *** ИСПРАВЛЕННАЯ СТРОКА *** -->
-                                    <span class="user-company profile-sub-optional <%= (currentUser.role === 'Owner' || currentUser.role === 'Staff') && currentUser.companyName ? 'company-info-visible' : '' %>"
-                                          title="<%= currentUser.companyName || '' %>"
-                                          style="/* display: none; */ align-items: center; background-color: #e9ecef; padding: 1px 6px; border-radius: 4px; font-size: 0.75rem; color: #4a5568; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                          <!-- display: none убрано, т.к. класс будет управлять -->
-                                        <i class="fas fa-briefcase" style="font-size: 0.8em; margin-right: 4px; opacity: 0.7;"></i>
-                                        <span style="overflow: hidden; text-overflow: ellipsis;"><%= currentUser.companyName %></span>
-                                    </span>
-                                    <!-- *** КОНЕЦ ИСПРАВЛЕНИЯ *** -->
-
-                                </div>
-                            </div>
-                            <div class="avatar-container" id="headerAvatarContainer">
-                                <%
-                                    let avatarSrc = '/images/placeholder-avatar.png';
-                                    if (currentUser && currentUser.imageData && typeof currentUser.imageData === 'string') {
-                                        try { let imageType = currentUser.imageData.startsWith('/9j/')?'image/jpeg':'image/png'; avatarSrc = `data:${imageType};base64,${currentUser.imageData}`; }
-                                        catch (e) { console.error("[Header EJS] Error creating avatar data URI:", e); }
-                                    }
-                                %>
-                                <img src="<%= avatarSrc %>" alt="Avatar" class="user-avatar" id="headerUserAvatar">
-                            </div>
-                        </a>
-                        <form action="/logout" method="POST" class="logout-form">
-                            <button type="submit" class="btn btn-logout" title="Выйти">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16 13v-2h-5v-2h5V7l5 5-5 5zM14 20H6c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2h8v2H6v12h8v2z"></path></svg>
-                            </button>
-                        </form>
-                    </div> <%# Конец user-profile %>
+                   <div class="user-profile">
+    <a href="/profile" class="profile-link" title="Профиль">
+        <div class="user-info">
+            <span class="user-name" id="headerUserName"><%= currentUser.fullName || currentUser.username %></span>
+            <div class="user-sub-info">
+                <span class="user-role" id="headerUserRole"><%= currentUser.role %></span>
+                <% if (currentUser.role === 'Tenant') { %>
+                    <span class="user-balance profile-sub-optional" id="headerUserBalance"><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(currentUser.balance ?? 0) %></span>
+                <% } else { %>
+                    <span class="user-balance profile-sub-optional" id="headerUserBalance" style="display: none;"></span>
+                <% } %>
+            </div>
+        </div>
+        <div class="avatar-container" id="headerAvatarContainer">
+            <%
+                let avatarSrc = '/images/placeholder-avatar.png';
+                if (currentUser && currentUser.imageData && typeof currentUser.imageData === 'string') {
+                    try { let imageType = currentUser.imageData.startsWith('/9j/')?'image/jpeg':'image/png'; avatarSrc = `data:${imageType};base64,${currentUser.imageData}`; }
+                    catch (e) { console.error("[Header EJS] Error creating avatar data URI:", e); }
+                }
+            %>
+            <img src="<%= avatarSrc %>" alt="Avatar" class="user-avatar" id="headerUserAvatar">
+        </div>
+    </a>
+    <form action="/logout" method="POST" class="logout-form">
+        <button type="submit" class="btn btn-logout" title="Выйти">
+            <i class="fas fa-sign-out-alt"></i>
+        </button>
+    </form>
+</div>
 
                     <!-- === Глобальная Панель Уведомлений (ВНУТРИ WRAPPER) === -->
                     <div class="notification-panel global-notification-panel" id="globalNotificationPanel">
@@ -105,30 +115,790 @@
                         </div>
                     </div>
                     <!-- === Конец Глобальной Панели Уведомлений === -->
-                </div> <%# Конец user-profile-wrapper %>
+                </div>
              <% } %>
         </div>
         <%# Кнопка мобильного меню %>
-        <button class="mobile-nav-toggle" aria-label="Открыть меню" style="display: none;">☰</button>
+        <button class="mobile-nav-toggle" aria-label="Открыть меню">
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+        </button>
     </nav>
+    
     <!-- ===== Модальное окно обновления ===== -->
-    <div id="updateModalOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); z-index: 1050; align-items: center; justify-content: center;">
-         <div id="updateModalContent" class="" style="background-color: #fff; padding: 30px 40px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15); width: 90%; max-width: 550px; text-align: center; border-top: 5px solid #5bc0de;">
-            <h2 id="updateModalTitle" style="margin-top: 0; margin-bottom: 15px; color: #2c3e50; font-size: 1.7rem; font-weight: 600;">Обновление Приложения</h2>
-            <p id="updateModalMessage" style="color: #555; margin-bottom: 25px; line-height: 1.6; font-size: 1.05rem;">Проверяем наличие обновлений...</p>
-            <div id="updateProgressContainer" style="display: none; margin-bottom: 25px; background-color: #e9ecef; border-radius: 5px; overflow: hidden; height: 12px; border: 1px solid #dee2e6;">
-                <div id="updateProgressBar" style="width: 0%; height: 100%; background-color: #5cb85c; background-image: linear-gradient(45deg, rgba(255, 255, 255, .15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, transparent 75%, transparent); background-size: 1rem 1rem; border-radius: 4px; transition: width 0.2s linear; animation: progress-bar-stripes 1s linear infinite;"></div>
+    <div id="updateModalOverlay" style="display: none;">
+         <div id="updateModalContent" class="">
+            <h2 id="updateModalTitle">Обновление Приложения</h2>
+            <p id="updateModalMessage">Проверяем наличие обновлений...</p>
+            <div id="updateProgressContainer">
+                <div id="updateProgressBar"></div>
             </div>
-            <style> @keyframes progress-bar-stripes{from{background-position:1rem 0}to{background-position:0 0}} </style>
             <div id="updateModalActions">
-                 <button id="updateModalRestartButton" class="btn btn-primary" style="display: none; padding: 12px 30px; font-size: 1rem; margin: 5px; min-width: 150px;">Перезапустить и установить</button>
-                 <button id="updateModalCloseButton" class="btn btn-secondary" style="display: none; padding: 12px 20px; font-size: 1rem; margin: 5px;">Закрыть</button>
+                 <button id="updateModalRestartButton" class="btn btn-primary">Перезапустить и установить</button>
+                 <button id="updateModalCloseButton" class="btn btn-secondary">Закрыть</button>
             </div>
-             <small id="updateErrorDetails" style="display: none; color: #dc3545; margin-top: 15px; display: block; font-size: 0.9em; line-height: 1.5; word-wrap: break-word;"></small>
+             <small id="updateErrorDetails"></small>
         </div>
     </div>
     <!-- ============================================================= -->
 </header>
+
+<style>
+/* ===== ОСНОВНЫЕ СТИЛИ ХЕДЕРА ===== */
+.main-header {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.7rem 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Логотип */
+.brand-logo {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: rgb(0, 0, 0);
+    font-weight: 700;
+    font-size: 1.5rem;
+    transition: all 0.2s ease;
+}
+
+.brand-logo:hover {
+    transform: translateY(-1px);
+}
+
+.logo-img {
+    height: 35px;
+    margin-right: 0.6rem;
+}
+
+/* Правая часть хедера */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+}
+
+/* Навигационные ссылки */
+.nav-links {
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.8rem;
+    color: #4b5563;
+    text-decoration: none;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+    gap: 0.4rem;
+}
+
+.nav-link i {
+    font-size: 0.95rem;
+    opacity: 0.8;
+}
+
+.nav-link:hover {
+    color: #2563eb;
+    background-color: rgba(37, 99, 235, 0.08);
+}
+
+/* Авторизационные ссылки */
+.auth-link {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 0.5rem;
+    border: 1px solid transparent;
+}
+
+.auth-link.register-btn {
+    background-color: #2563eb;
+    color: white;
+    border: 1px solid #2563eb;
+}
+
+.auth-link.register-btn:hover {
+    background-color: #1d4ed8;
+    color: white;
+}
+
+/* Блок профиля пользователя */
+.user-profile-wrapper {
+    display: flex;
+    align-items: center;
+    position: relative;
+    gap: 1rem;
+}
+
+.notification-btn {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: #64748b;
+    cursor: pointer;
+    padding: 0.5rem;
+    position: relative;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.notification-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #2563eb;
+}
+
+.notification-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background-color: #dc3545;
+    color: white;
+    font-size: 0.65rem;
+    padding: 1px 4px;
+    border-radius: 50%;
+    min-width: 15px;
+    height: 15px;
+    line-height: 13px;
+    text-align: center;
+    font-weight: bold;
+    display: none;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    background-color: #f8f9fa;
+    border-radius: 0.6rem;
+    padding: 0.3rem 0.5rem; /* Уменьшенный padding для контроля высоты */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+    max-height: 50px; /* Ограничение высоты */
+    overflow: hidden; /* Обрезаем переполнение */
+}
+
+.user-profile:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.profile-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+    gap: 0.6rem; /* Уменьшенный gap */
+    padding: 0;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    max-width: 150px; /* Уменьшенный max-width */
+    line-height: 1.2; /* Корректировка высоты текста */
+}
+
+.user-name {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 0.9rem; /* Уменьшенный размер шрифта */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-top: 2px; /* Небольшой отступ сверху */
+}
+
+.user-sub-info {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem; /* Уменьшенный gap */
+    font-size: 0.7rem; /* Уменьшенный размер шрифта */
+    color: #64748b;
+    flex-wrap: wrap;
+    max-height: 18px; /* Ограничение высоты */
+    overflow: hidden; /* Обрезаем переполнение */
+}
+
+.user-role {
+    background-color: rgba(37, 99, 235, 0.1);
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.3rem;
+    font-weight: 500;
+    color: #2563eb;
+}
+
+.user-balance {
+    font-weight: 500;
+    color: #4b5563;
+}
+
+.user-company {
+    display: flex;
+    align-items: center;
+    background-color: #f1f5f9; 
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.3rem;
+    font-size: 0.7rem;
+    color: #4a5568;
+    max-width: 120px; /* Ограничение ширины */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.company-info-visible {
+    display: inline-flex;
+}
+
+.user-company i {
+    font-size: 0.8em;
+    margin-right: 2px;
+    opacity: 0.7;
+}
+
+.avatar-container {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid rgba(37, 99, 235, 0.2);
+    transition: all 0.3s ease;
+}
+
+.avatar-container:hover {
+    border-color: rgba(37, 99, 235, 0.5);
+}
+
+.user-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.btn-logout {
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 0.4rem;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    margin-left: 0.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-logout:hover {
+    color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+/* Мобильное меню */
+.mobile-nav-toggle {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 20px;
+    width: 26px;
+    padding: 0;
+}
+
+.hamburger-line {
+    display: block;
+    height: 2px;
+    width: 100%;
+    background-color: #4b5563;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+/* Панель уведомлений */
+.notification-panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 360px;
+    background-color: white;
+    border-radius: 0.6rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+    transition: all 0.3s ease;
+    z-index: 1001;
+    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.notification-panel.active {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1.2rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    background-color: #f8fafc;
+}
+
+.notification-header h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.notification-header h3 i {
+    color: #2563eb;
+}
+
+.btn-small {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.5rem;
+    color: #64748b;
+    text-decoration: none;
+    border-radius: 0.3rem;
+    transition: all 0.2s ease;
+}
+
+.btn-small:hover {
+    color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+.notification-list-container {
+    max-height: calc(90vh - 200px);
+    overflow-y: auto;
+}
+
+.notification-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.notification-item {
+    padding: 0.8rem 1.2rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.notification-item:hover {
+    background-color: #f8fafc;
+}
+
+.notification-item.unread {
+    background-color: rgba(37, 99, 235, 0.05);
+}
+
+.notification-item .icon {
+    color: #64748b;
+    font-size: 1.1rem;
+    margin-top: 0.2rem;
+}
+
+.notification-item.success .icon {
+    color: #10b981;
+}
+
+.notification-item.warning .icon {
+    color: #f59e0b;
+}
+
+.notification-item.error .icon {
+    color: #ef4444;
+}
+
+.notification-item.info .icon {
+    color: #3b82f6;
+}
+
+.notification-item .content {
+    flex: 1;
+}
+
+.notification-item .title {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 0.9rem;
+    margin-bottom: 0.2rem;
+    display: block;
+}
+
+.notification-item .message {
+    color: #4b5563;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.notification-item .timestamp {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    margin-top: 0.3rem;
+}
+
+.notification-item .close-btn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.2rem;
+    line-height: 1;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    margin-left: 0.5rem;
+}
+
+.notification-item .close-btn:hover {
+    color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+.no-notifications {
+    padding: 2rem 0;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+/* Модальное окно обновления */
+#updateModalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 1050;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#updateModalContent {
+    background-color: #fff;
+    padding: 30px 40px;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    width: 90%;
+    max-width: 550px;
+    text-align: center;
+    border-top: 5px solid #5bc0de;
+    transform: translateY(-20px);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+}
+
+#updateModalTitle {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #2c3e50;
+    font-size: 1.7rem;
+    font-weight: 600;
+}
+
+#updateModalMessage {
+    color: #555;
+    margin-bottom: 25px;
+    line-height: 1.6;
+    font-size: 1.05rem;
+}
+
+#updateProgressContainer {
+    display: none;
+    margin-bottom: 25px;
+    background-color: #e9ecef;
+    border-radius: 5px;
+    overflow: hidden;
+    height: 12px;
+    border: 1px solid #dee2e6;
+}
+
+#updateProgressBar {
+    width: 0%;
+    height: 100%;
+    background-color: #5cb85c;
+    background-image: linear-gradient(45deg, rgba(255, 255, 255, .15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, transparent 75%, transparent);
+    background-size: 1rem 1rem;
+    border-radius: 4px;
+    transition: width 0.2s linear;
+    animation: progress-bar-stripes 1s linear infinite;
+}
+
+#updateModalRestartButton {
+    display: none;
+    padding: 12px 30px;
+    font-size: 1rem;
+    margin: 5px;
+    min-width: 150px;
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#updateModalRestartButton:hover {
+    background-color: #1d4ed8;
+}
+
+#updateModalCloseButton {
+    display: none;
+    padding: 12px 20px;
+    font-size: 1rem;
+    margin: 5px;
+    background-color: #e2e8f0;
+    color: #334155;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#updateModalCloseButton:hover {
+    background-color: #cbd5e1;
+}
+
+#updateErrorDetails {
+    display: none;
+    color: #dc3545;
+    margin-top: 15px;
+    font-size: 0.9em;
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+@keyframes progress-bar-stripes {
+    from { background-position: 1rem 0; }
+    to { background-position: 0 0; }
+}
+
+/* Медиа-запросы для адаптивности */
+@media (max-width: 1024px) {
+    .user-info {
+        max-width: 120px; /* Уменьшенный max-width для адаптивности */
+    }
+}
+
+@media (max-width: 900px) {
+    .main-nav-links a span {
+        display: none;
+    }
+    
+    .main-nav-links a i {
+        font-size: 1.1rem;
+        margin: 0;
+    }
+    
+    .nav-link {
+        padding: 0.5rem;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+    }
+}
+
+@media (max-width: 768px) {
+    .header-content {
+        padding: 0.5rem 1rem;
+    }
+    
+    .brand-logo {
+        font-size: 1.2rem;
+    }
+    
+    .logo-img {
+        height: 28px;
+    }
+    
+    .header-right {
+        gap: 0.6rem;
+    }
+    
+    .nav-links {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background-color: white;
+        flex-direction: column;
+        padding: 0.8rem 0;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+    }
+    
+    .nav-links.open {
+        display: flex;
+    }
+    
+    .nav-link {
+        width: 100%;
+        justify-content: flex-start;
+        padding: 0.8rem 1.5rem;
+        border-radius: 0;
+    }
+    
+    .nav-link span {
+        display: inline;
+    }
+    
+    .mobile-nav-toggle {
+        display: flex;
+    }
+    
+    .avatar-container {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .user-name {
+        font-size: 0.85rem;
+    }
+    
+    .user-sub-info {
+        font-size: 0.7rem;
+    }
+    
+    .notification-panel {
+        width: 300px;
+        right: -70px;
+    }
+}
+
+@media (max-width: 480px) {
+    .user-info {
+        display: none;
+    }
+    
+    .notification-panel {
+        width: 100%;
+        right: 0;
+        left: 0;
+        transform: translateY(-20px);
+    }
+    
+    .notification-badge {
+        top: 0;
+        right: 0;
+    }
+}
+</style>
+
+<script>
+// Скрипт для мобильного меню
+document.addEventListener('DOMContentLoaded', function() {
+    const mobileToggle = document.querySelector('.mobile-nav-toggle');
+    const navLinks = document.querySelector('.main-nav-links');
+    
+    if(mobileToggle && navLinks) {
+        mobileToggle.addEventListener('click', function() {
+            navLinks.classList.toggle('open');
+            mobileToggle.classList.toggle('active');
+            
+            // Анимация гамбургера
+            const lines = mobileToggle.querySelectorAll('.hamburger-line');
+            if(mobileToggle.classList.contains('active')) {
+                lines[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+                lines[1].style.opacity = '0';
+                lines[2].style.transform = 'rotate(-45deg) translate(5px, -5px)';
+            } else {
+                lines[0].style.transform = 'none';
+                lines[1].style.opacity = '1';
+                lines[2].style.transform = 'none';
+            }
+        });
+    }
+});
+
+// Функция для сокращения полного имени до Фамилии И. О.
+function shortenFullName(fullName) {
+    if (!fullName) return '';
+    const nameParts = fullName.trim().split(' ');
+    if (nameParts.length < 2) return fullName; // Если менее 2 частей, возвращаем как есть
+    const lastName = nameParts[0];
+    const initials = nameParts.slice(1).map(part => part[0] + '.').join(' ');
+    return `${lastName} ${initials}`;
+}
+
+// Функция для сокращения названия компании
+function shortenCompanyName(companyName, maxLength = 15) {
+    if (!companyName || companyName.length <= maxLength) return companyName;
+    return companyName.substring(0, maxLength) + '...';
+}
+
+// Обновление имени и компании при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    const userNameElement = document.getElementById('headerUserName');
+    const companyElement = document.querySelector('.user-sub-info .user-company span');
+    if (userNameElement) {
+        userNameElement.textContent = shortenFullName(userNameElement.textContent);
+    }
+    if (companyElement) {
+        companyElement.textContent = shortenCompanyName(companyElement.textContent);
+    }
+});
+
+// Обновление имени и компании при изменении данных профиля
+(function() {
+    const socket = io({ reconnectionAttempts: 5, reconnectionDelay: 3000 });
+    socket.on('profile_data_updated', (data) => {
+        const headerUserNameEl = document.getElementById('headerUserName');
+        const headerCompanySpanEl = document.querySelector('.user-sub-info .user-company span');
+        if (headerUserNameEl && data?.fullName) {
+            headerUserNameEl.textContent = shortenFullName(data.fullName);
+        }
+        if (headerCompanySpanEl && data?.companyName) {
+            headerCompanySpanEl.textContent = shortenCompanyName(data.companyName);
+        }
+    });
+})();
+
+</script>
 
 <%# --- Подключение и логика Socket.IO клиента И AutoUpdater --- %>
 <% if (currentUser) { %>
@@ -411,7 +1181,7 @@
                         const addPropertyLink = document.querySelector('.main-nav-links a[href="/properties/add"]');
 
                         if (headerUserNameEl && data?.fullName) {
-                            headerUserNameEl.textContent = data.fullName;
+                            headerUserNameEl.textContent = shortenFullName(data.fullName);
                         }
                         if (headerUserRoleEl && data?.role) {
                             headerUserRoleEl.textContent = data.role;
@@ -429,7 +1199,7 @@
                             headerCompanyContainerEl.style.display = shouldShowCompany ? 'inline-flex' : 'none';
                             if (shouldShowCompany) {
                                 if (headerCompanySpanEl) {
-                                    headerCompanySpanEl.textContent = data.companyName;
+                                    headerCompanySpanEl.textContent = shortenCompanyName(data.companyName);
                                 }
                                 headerCompanyContainerEl.title = data.companyName;
                             }

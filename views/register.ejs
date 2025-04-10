@@ -1,42 +1,362 @@
-<!-- views/register.ejs -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= title %></title>
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/auth.css">
-    <!-- Font Awesome для спиннера -->
+    <!-- Подключаем современные шрифты -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        .ajax-message { padding: 10px 15px; margin-bottom: 15px; border-radius: 5px; text-align: center; display: none; }
-        .ajax-error { color: #842029; background-color: #f8d7da; border: 1px solid #f5c2c7; }
-        #registerForm button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }
-        /* Стили для спиннера внутри кнопки */
-        .button-spinner { margin-left: 8px; display: none; }
-        button:disabled .button-spinner { display: inline-block; }
-        button .button-text { vertical-align: middle; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        :root {
+            --primary-color: #4361ee;
+            --primary-hover: #3a56d4;
+            --secondary-color: #f8f9fa;
+            --text-color: #333;
+            --error-color: #dc3545;
+            --success-color: #28a745;
+            --bg-color: #f4f7fe;
+            --card-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+            --input-border: #e1e5eb;
+            --input-focus: #4361ee;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .auth-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            width: 100%;
+            max-width: 460px;
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, var(--primary-color), #a45ee5);
+        }
+
+        .auth-logo {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .auth-logo img {
+            height: 60px;
+            width: auto;
+        }
+
+        h1 {
+            font-size: 26px;
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            color: #555;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 15px;
+            border: 1px solid var(--input-border);
+            border-radius: 8px;
+            background-color: #fafbfc;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+            background-color: white;
+        }
+
+        .input-with-icon {
+            position: relative;
+            /* Убрано min-height для динамического расчета высоты */
+        }
+
+         .input-icon {
+            position: absolute;
+            top: 55%;  /* Небольшая корректировка для идеального выравнивания */
+            transform: translateY(-50%);
+            left: 16px;
+            color: #94a3b8;
+        }
+
+        .input-with-icon input {
+            padding-left: 46px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .button-spinner {
+            margin-left: 8px;
+            display: none;
+        }
+
+        button:disabled .button-spinner {
+            display: inline-block;
+        }
+
+        .ajax-message {
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            text-align: center;
+            display: none;
+        }
+
+        .ajax-error {
+            color: var(--error-color);
+            background-color: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.2);
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .login-link a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+
+        /* Добавляем анимации */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .auth-container {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        /* Тема для видимости пароля */
+        .password-toggle {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .password-toggle:hover {
+            color: var(--primary-color);
+        }
+
+        /* Секции формы для визуального группирования */
+        .form-section {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .form-section-title {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        /* Валидация полей */
+        .field-validation {
+            font-size: 12px;
+            margin-top: 5px;
+            display: none;
+            color: var(--error-color);
+        }
+
+        input:invalid + .field-validation {
+            display: block;
+        }
+
+        /* Анимация при заполнении */
+        .focused-field {
+            transform: translateY(-2px);
+        }
+
+        /* Адаптивность для мобильных устройств */
+        @media (max-width: 480px) {
+            .auth-container {
+                padding: 30px 20px;
+                max-width: 100%;
+            }
+        }
+
+        /* Прогресс-индикатор заполнения пароля */
+        .password-strength {
+            height: 4px;
+            margin-top: 8px;
+            border-radius: 2px;
+            background: #eee;
+            overflow: hidden;
+        }
+
+        .password-strength .strength-meter {
+            height: 100%;
+            width: 0;
+            transition: width 0.3s, background-color 0.3s;
+        }
+
+        .password-hint {
+            font-size: 12px;
+            color: #666;
+            margin-top: 6px;
+        }
+
+        .strength-weak { background-color: #ff4d4d; width: 33%; }
+        .strength-medium { background-color: #ffa500; width: 66%; }
+        .strength-strong { background-color: #28a745; width: 100%; }
     </style>
 </head>
 <body>
-     <div class="auth-container">
-        <h1>Регистрация</h1>
+    <div class="auth-container">
+        <!-- Опциональный логотип -->
+        <div class="auth-logo">
+            <!-- Здесь может быть ваш логотип -->
+            <i class="fas fa-user-plus" style="font-size: 42px; color: var(--primary-color);"></i>
+        </div>
+        
+        <h1>Создание аккаунта</h1>
         <div id="registerError" class="ajax-message ajax-error"></div>
 
         <form id="registerForm" action="/register" method="POST">
-            <div class="form-group"> <label for="username">Логин:</label> <input type="text" id="username" name="username" required autocomplete="username"> </div>
-            <div class="form-group"> <label for="fullName">Полное имя:</label> <input type="text" id="fullName" name="fullName" required autocomplete="name"> </div>
-            <div class="form-group"> <label for="phone">Телефон:</label> <input type="tel" id="phone" name="phone" required autocomplete="tel"> </div>
-            <div class="form-group"> <label for="email">Email (необязательно):</label> <input type="email" id="email" name="email" autocomplete="email"> </div>
-            <div class="form-group"> <label for="password">Пароль:</label> <input type="password" id="password" name="password" required minlength="6" autocomplete="new-password"> </div>
+            <div class="form-section">
+               <div class="form-group">
+            <label for="username">Логин</label>
+            <div class="input-with-icon">
+                <i class="fas fa-user input-icon"></i>
+                <input type="text" id="username" name="username" required autocomplete="username" placeholder="Придумайте логин">
+            </div>
+            <div class="field-validation">Логин должен содержать минимум 3 символа</div>
+        </div>
+               <div class="form-group">
+            <label for="password">Пароль</label>
+            <div class="input-with-icon">
+                <i class="fas fa-lock input-icon"></i>
+                <input type="password" id="password" name="password" required minlength="6" autocomplete="new-password" placeholder="Создайте надежный пароль">
+                <i class="fas fa-eye password-toggle" id="passwordToggle"></i>
+            </div>
+            <div class="password-strength">
+                <div class="strength-meter" id="strengthMeter"></div>
+            </div>
+            <div class="password-hint" id="passwordHint">Минимум 6 символов</div>
+        </div>
+
+            <div class="form-section">
+                <div class="form-group">
+                    <label for="fullName">Полное имя</label>
+                    <div class="input-with-icon">
+                        <i class="fas fa-id-card input-icon"></i>
+                        <input type="text" id="fullName" name="fullName" required autocomplete="name" placeholder="Введите ваше полное имя">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone">Телефон</label>
+                    <div class="input-with-icon">
+                        <i class="fas fa-phone input-icon"></i>
+                        <input type="tel" id="phone" name="phone" required autocomplete="tel" placeholder="+7 (___) ___-__-__">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email (необязательно)</label>
+                    <div class="input-with-icon">
+                        <i class="fas fa-envelope input-icon"></i>
+                        <input type="email" id="email" name="email" autocomplete="email" placeholder="Введите ваш email">
+                    </div>
+                </div>
+            </div>
 
             <button type="submit">
                 <span class="button-text">Зарегистрироваться</span>
-                <i class="fas fa-spinner fa-spin button-spinner"></i> <%# Спиннер %>
+                <i class="fas fa-spinner fa-spin button-spinner"></i>
             </button>
         </form>
-         <p>Уже есть аккаунт? <a href="/login">Войти</a></p>
+        
+        <div class="login-link">
+            <p>Уже есть аккаунт? <a href="/login">Войти</a></p>
+        </div>
     </div>
 
     <script>
@@ -48,26 +368,192 @@
         const emailInput = document.getElementById('email');
         const errorDiv = document.getElementById('registerError');
         const submitButton = registerForm.querySelector('button[type="submit"]');
-        const buttonText = submitButton.querySelector('.button-text'); // Находим текст
-        const originalButtonText = buttonText.textContent; // Сохраняем
+        const buttonText = submitButton.querySelector('.button-text');
+        const originalButtonText = buttonText.textContent;
+        const strengthMeter = document.getElementById('strengthMeter');
+        const passwordHint = document.getElementById('passwordHint');
+        
+        // Добавляем функционал видимости пароля
+        const passwordToggle = document.getElementById('passwordToggle');
+        passwordToggle.addEventListener('click', () => {
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                passwordToggle.classList.remove('fa-eye');
+                passwordToggle.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                passwordToggle.classList.remove('fa-eye-slash');
+                passwordToggle.classList.add('fa-eye');
+            }
+        });
 
+        // Функция для форматирования телефонного номера
+        phoneInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 0 && value[0] !== '7') {
+                value = '7' + value;
+            }
+            
+            let formattedValue = '';
+            if (value.length > 0) {
+                formattedValue = '+' + value[0];
+                if (value.length > 1) {
+                    formattedValue += ' (' + value.substring(1, 4);
+                }
+                if (value.length > 4) {
+                    formattedValue += ') ' + value.substring(4, 7);
+                }
+                if (value.length > 7) {
+                    formattedValue += '-' + value.substring(7, 9);
+                }
+                if (value.length > 9) {
+                    formattedValue += '-' + value.substring(9, 11);
+                }
+            }
+            
+            e.target.value = formattedValue;
+        });
+
+        // Функция для проверки силы пароля
+        passwordInput.addEventListener('input', function() {
+            const password = passwordInput.value;
+            let strength = 0;
+            
+            if (password.length >= 6) {
+                strength += 1;
+            }
+            
+            if (password.match(/[A-Z]/)) {
+                strength += 1;
+            }
+            
+            if (password.match(/[0-9]/)) {
+                strength += 1;
+            }
+            
+            if (password.match(/[^A-Za-z0-9]/)) {
+                strength += 1;
+            }
+            
+            switch(strength) {
+                case 0:
+                case 1:
+                    strengthMeter.className = 'strength-meter';
+                    passwordHint.textContent = 'Слабый пароль. Минимум 6 символов.';
+                    break;
+                case 2:
+                    strengthMeter.className = 'strength-meter strength-weak';
+                    passwordHint.textContent = 'Средний пароль. Добавьте цифры или специальные символы.';
+                    break;
+                case 3:
+                    strengthMeter.className = 'strength-meter strength-medium';
+                    passwordHint.textContent = 'Хороший пароль. Можно улучшить.';
+                    break;
+                case 4:
+                    strengthMeter.className = 'strength-meter strength-strong';
+                    passwordHint.textContent = 'Отличный пароль!';
+                    break;
+            }
+        });
+
+        // Валидация на стороне клиента
+        function validateForm() {
+            let isValid = true;
+            
+            // Проверка логина
+            if (usernameInput.value.trim().length < 3) {
+                isValid = false;
+            }
+            
+            // Проверка пароля
+            if (passwordInput.value.length < 6) {
+                isValid = false;
+            }
+            
+            // Проверка телефона
+            const phoneDigits = phoneInput.value.replace(/\D/g, '');
+            if (phoneDigits.length < 11) {
+                isValid = false;
+            }
+            
+            // Проверка имени
+            if (fullNameInput.value.trim().length < 2) {
+                isValid = false;
+            }
+            
+            // Проверка email (если заполнен)
+            if (emailInput.value.trim() && !emailInput.value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+
+        // Добавление эффектов фокуса для всех полей
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('focus', () => {
+                input.parentElement.classList.add('focused-field');
+            });
+            
+            input.addEventListener('blur', () => {
+                input.parentElement.classList.remove('focused-field');
+            });
+        });
+
+        // Обработка отправки формы
         registerForm.addEventListener('submit', async (event) => {
             event.preventDefault();
+            
+            if (!validateForm()) {
+                errorDiv.textContent = 'Пожалуйста, правильно заполните все поля формы.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
             errorDiv.style.display = 'none';
             errorDiv.textContent = '';
             submitButton.disabled = true;
-            buttonText.textContent = 'Регистрация...'; // Меняем текст
+            buttonText.textContent = 'Создание аккаунта...';
 
-            const formData = { username: usernameInput.value, password: passwordInput.value, fullName: fullNameInput.value, phone: phoneInput.value, email: emailInput.value, };
+            const formData = {
+                username: usernameInput.value,
+                password: passwordInput.value,
+                fullName: fullNameInput.value,
+                phone: phoneInput.value.replace(/\D/g, ''), // Удаляем все нецифровые символы
+                email: emailInput.value
+            };
+
             try {
-                const response = await fetch('/register', { method: 'POST', headers: { 'Content-Type': 'application/json', }, body: JSON.stringify(formData) });
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
                 const data = await response.json();
-                if (response.ok && data.success) { window.location.href = data.redirectUrl || '/login'; }
-                else { errorDiv.textContent = data.error || 'Произошла ошибка регистрации.'; errorDiv.style.display = 'block'; }
-            } catch (err) { console.error('Registration fetch error:', err); errorDiv.textContent = 'Не удалось подключиться к серверу.'; errorDiv.style.display = 'block';
+                
+                if (response.ok && data.success) {
+                    // Добавляем анимацию перед переходом
+                    document.querySelector('.auth-container').style.opacity = '0.7';
+                    setTimeout(() => {
+                        window.location.href = data.redirectUrl || '/login';
+                    }, 300);
+                } else {
+                    errorDiv.textContent = data.error || 'Произошла ошибка при регистрации. Пожалуйста, попробуйте снова.';
+                    errorDiv.style.display = 'block';
+                    
+                    // Анимируем появление ошибки
+                    errorDiv.style.animation = 'fadeIn 0.3s ease-out';
+                }
+            } catch (err) {
+                console.error('Registration fetch error:', err);
+                errorDiv.textContent = 'Не удалось подключиться к серверу. Пожалуйста, попробуйте позже.';
+                errorDiv.style.display = 'block';
             } finally {
                 submitButton.disabled = false;
-                buttonText.textContent = originalButtonText; // Возвращаем текст
+                buttonText.textContent = originalButtonText;
             }
         });
     </script>

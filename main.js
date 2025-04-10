@@ -1,6 +1,6 @@
 // main.js
 // main.js
-const { app, BrowserWindow, dialog, ipcMain } = require('electron'); // Добавили dialog и ipcMain
+const { app, BrowserWindow, dialog, ipcMain, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const log = require('electron-log');
@@ -136,6 +136,7 @@ app.whenReady().then(() => {
     app.quit();
     return;
   }
+  Menu.setApplicationMenu(null);
 
   createWindow();
 
