@@ -92,67 +92,134 @@ io.use((socket, next) => {
 });
 
 // --- Передача данных в шаблоны EJS (С ОБНОВЛЕНИЕМ СЕССИИ) ---
-app.use(async (req, res, next) => {
-    let userInSession = req.session?.user || null;
-    let messageFromSession = req.session?.message || null;
+// server.js - ИЗМЕНЕННЫЙ Middleware обновления сессии
 
+app.use(async (req, res, next) => {
+    // ---> 1. Инициализация res.locals и обработка flash-сообщений (без изменений)
+    res.locals.currentUser = null; // Начинаем с null
+    let messageFromSession = req.session.message || null;
     if (messageFromSession) {
         delete req.session.message;
+        // Не будем ждать сохранения flash, т.к. это не критично для основного потока
         req.session.save(err => {
-            if (err) console.warn("[Middleware:FlashClear] Error saving session after deleting flash message:", err);
+            if (err) log.warn("[Middleware:FlashClear] Error saving session after deleting flash message:", err);
         });
     }
+    res.locals.message = messageFromSession; // Передаем flash в шаблон
 
-    if (userInSession && userInSession.username) {
-        const username = userInSession.username;
+    // ---> 2. Проверяем, есть ли пользователь в сессии
+    if (req.session.user && req.session.user.username) {
+        const username = req.session.user.username;
+        let freshUser = null; // Объявим заранее
+
         try {
-            const freshUser = await firebaseService.getUserByUsername(username);
+            // ---> 3. Загружаем АКТУАЛЬНЫЕ данные из Firebase
+            log.debug(`[Session MW] Fetching fresh data for user: ${username}`); // Используем debug для менее важных логов
+            freshUser = await firebaseService.getUserByUsername(username);
+
             if (freshUser) {
+                log.debug(`[Session MW] Fresh data FOUND for ${username}. Updating session...`);
+
+                // ---> 4. Формируем ОБНОВЛЕННЫЙ объект для сессии (С ЯВНЫМИ ПРОВЕРКАМИ)
                 const updatedSessionUser = {
-                    username: freshUser.Username,
-                    fullName: freshUser.FullName,
-                    role: freshUser.Role,
-                    email: freshUser.Email,
-                    phone: freshUser.Phone,
+                    username: freshUser.Username, // Убедитесь, что Username есть всегда
+                    fullName: freshUser.FullName || null, // Предусмотреть null, если поля нет
+                    role: freshUser.Role || 'Tenant', // Роль по умолчанию, если вдруг нет
+                    // Явно проверяем и копируем email и phone
+                    email: freshUser.Email || null, // <-- Явная проверка и null по умолчанию
+                    phone: freshUser.Phone || null, // <-- Явная проверка и null по умолчанию
                     imageData: freshUser.ImageData || null,
                     companyId: freshUser.companyId || null,
                     companyProfileCompleted: freshUser.companyProfileCompleted === true,
-                    companyName: null
+                    // Имя компании: берем из старой сессии как базу, обновим ниже если нужно/возможно
+                    companyName: req.session.user.companyName || null
                 };
+
+                // ---> 5. Добавляем баланс ТОЛЬКО для Tenant
                 if (freshUser.Role === 'Tenant') {
+                    // Используем ?? (nullish coalescing) для дефолтного 0, если Balance null или undefined
                     updatedSessionUser.balance = freshUser.Balance ?? 0;
+                    log.debug(`[Session MW] Tenant role confirmed for ${username}. Balance set to: ${updatedSessionUser.balance}`);
+                } else {
+                     // Убедимся, что у других ролей нет поля balance в сессии
+                     // (хотя spread operator (...) и так бы его не добавил, если его нет в freshUser)
+                     // delete updatedSessionUser.balance; // Эта строка необязательна, если balance не копируется для других ролей
+                     log.debug(`[Session MW] Role is ${freshUser.Role} for ${username}. Balance field not applicable.`);
                 }
-                if (updatedSessionUser.companyId) {
+
+
+                // ---> 6. Загружаем имя компании, если ID есть И (имени еще нет в сессии ИЛИ оно изменилось в БД - опционально)
+                // Для простоты, будем перезагружать имя компании только если его нет в сессии
+                if (updatedSessionUser.companyId && !updatedSessionUser.companyName) {
                     try {
+                        log.debug(`[Session MW] Fetching company name for companyId: ${updatedSessionUser.companyId}`);
                         const company = await firebaseService.getCompanyById(updatedSessionUser.companyId);
-                        updatedSessionUser.companyName = company?.companyName || null;
+                        updatedSessionUser.companyName = company?.companyName || null; // Используем ?. и ??
+                        log.debug(`[Session MW] Company name set to: ${updatedSessionUser.companyName}`);
                     } catch (companyError) {
-                         console.warn(`[Session Update Middleware] Failed fetch company name for ${username}:`, companyError);
+                        log.warn(`[Session MW] Failed fetch company name for ${username}:`, companyError);
+                        // Оставляем companyName как null в случае ошибки
+                        updatedSessionUser.companyName = null;
                     }
                 }
+
+                // ---> 7. Обновляем сессию и res.locals СРАЗУ
+                // Теперь в req.session.user будут актуальные данные (включая email, phone, balance)
                 req.session.user = updatedSessionUser;
-                userInSession = updatedSessionUser;
-                // console.log(`[Session Update Middleware] Session updated FOR EVERY request for ${username}`);
-                 req.session.save(err => {
-                     if (err) console.warn(`[Session Update Middleware] Error saving updated session for ${username}:`, err);
-                 });
+                // И эти же актуальные данные передаем в шаблон через res.locals
+                res.locals.currentUser = updatedSessionUser;
+                res.locals.companyId = updatedSessionUser.companyId; // Обновляем companyId в locals
+
+                // Логируем объект, который будет в сессии и в шаблоне
+                log.debug(`[Session MW] Session object for ${username} updated:`, {
+                    username: updatedSessionUser.username,
+                    fullName: updatedSessionUser.fullName,
+                    role: updatedSessionUser.role,
+                    email: updatedSessionUser.email, // Логируем для проверки
+                    phone: updatedSessionUser.phone, // Логируем для проверки
+                    balance: updatedSessionUser.balance, // Логируем для проверки (будет undefined если не Tenant)
+                    companyId: updatedSessionUser.companyId,
+                    companyName: updatedSessionUser.companyName,
+                    companyProfileCompleted: updatedSessionUser.companyProfileCompleted
+                    // imageData не логируем, т.к. слишком длинное
+                });
+
+                // ---> 8. Асинхронно сохраняем сессию в хранилище (НЕ БЛОКИРУЕМ ЗАПРОС)
+                // Это важно для производительности, т.к. нам не нужно ждать завершения записи в хранилище
+                // для продолжения обработки запроса. Данные в req.session и res.locals уже обновлены.
+                req.session.save(err => {
+                    if (err) log.error(`[Session MW] Error persisting updated session for ${username}:`, err);
+                    // else log.debug(`[Session MW] Session persisted successfully for ${username}.`); // Можно включить для отладки
+                });
+
             } else {
-                console.warn(`[Session Update Middleware] User ${username} not found in DB. Destroying session.`);
-                 return req.session.destroy((err) => {
-                     if (err) console.error("[Session Destroy Middleware] Error destroying session:", err);
-                     res.clearCookie('connect.sid');
-                     res.redirect('/login');
-                 });
+                // ---> 9. Пользователь не найден в БД - уничтожаем сессию
+                log.warn(`[Session MW] User ${username} not found in DB. Destroying session.`);
+                // Важно: используем return, чтобы остановить выполнение этого middleware и сразу сделать редирект
+                return req.session.destroy((err) => {
+                    if (err) log.error("[Session MW] Error destroying session:", err);
+                    res.clearCookie('connect.sid');
+                    res.redirect('/login');
+                });
             }
         } catch (error) {
-            console.error(`[Session Update Middleware] Error fetching user data for ${username}:`, error);
+            // ---> 10. Ошибка при получении данных из Firebase
+            log.error(`[Session MW] Error fetching/processing data for ${username}:`, error);
+            // В случае ошибки, передаем старые данные из сессии в locals, чтобы не сломать рендеринг полностью.
+            // Это компромисс: пользователь увидит страницу со старыми данными, но без критической ошибки.
+            res.locals.currentUser = req.session.user; // Передаем то, что было в сессии до ошибки
+            res.locals.companyId = req.session.user?.companyId || null;
+            // Оставляем next() чтобы запрос пошел дальше, но с потенциально старыми данными в locals
+            // Можно раскомментировать `return next(error);` если хотите видеть страницу ошибки 500
+            // return next(error);
         }
+    } else {
+        // Если пользователя нет в сессии изначально, просто устанавливаем null в locals
+         res.locals.currentUser = null;
+         res.locals.companyId = null;
     }
 
-    res.locals.currentUser = userInSession;
-    res.locals.companyId = userInSession?.companyId || null;
-    res.locals.message = messageFromSession;
-
+    // ---> 11. Переходим к следующему middleware или маршруту
     next();
 });
 

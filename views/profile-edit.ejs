@@ -1,95 +1,512 @@
-<!-- views/profile-edit.ejs -->
+
+<!-- views/profile-edit.ejs (ИСПРАВЛЕННАЯ и улучшенная версия) -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= title %></title>
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/forms.css">
+    <link rel="stylesheet" href="/css/style.css"> <!-- Глобальные стили -->
+    <link rel="stylesheet" href="/css/forms.css"> <!-- Стили форм -->
+    <!-- Font Awesome ОБЯЗАТЕЛЬНО для иконок -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        /* Стили для секции аватара */
-         .avatar-upload-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
-         .avatar-upload-section .current-avatar-display img {
-             max-width: 100px; height: 100px; border-radius: 50%;
-             margin-bottom: 10px; display: block; object-fit: cover;
-             border: 1px solid #eee;
-         }
-         .avatar-upload-section input[type="file"] { margin-bottom: 10px; }
-         .avatar-preview-container { margin-top: 10px; margin-bottom: 15px; /* Отступ снизу */ }
-         .avatar-preview-container label { font-size: 0.9em; color: #6c757d; display: block; margin-bottom: 5px; }
-         #avatarPreview {
-             max-width: 100px; height: 100px; border-radius: 50%;
-             object-fit: cover; border: 1px solid #eee; display: none;
-         }
-         /* Общие стили */
-         .btn:disabled { opacity: 0.65; cursor: not-allowed; }
+        /* Переносим стили сюда из <style> тега в вашем примере profile-edit.ejs */
+        :root {
+            --primary-color: #4a6cfa;
+            --primary-hover: #3454d1;
+            --secondary-color: #5e6472;
+            --accent-color: #00c2cb;
+            --success-color: #34c759;
+            --danger-color: #ff3b30;
+            --light-bg: #f9fafb;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --border-radius: 12px;
+            --input-border: #d1d5db;
+            --input-bg: #ffffff;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            --transition: all 0.3s ease;
+        }
 
-         /* --- Стили для флеш-сообщений (полные) --- */
-         .flash-message, #js-messages .flash-message {
+        /* --- Общие стили --- */
+        body {
+            background-color: var(--light-bg);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        .form-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* --- Заголовок --- */
+        .page-title { /* Используем класс вместо h1 */
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: var(--text-color);
+            margin-bottom: 1.5rem;
+            text-align: center;
+            position: relative;
+            padding-bottom: 1rem;
+        }
+
+        .page-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 4px;
+            background: var(--primary-color);
+            border-radius: 2px;
+        }
+
+        h2 { /* Стили для подзаголовков секций */
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 1.25rem;
+        }
+
+        hr {
+            border: 0;
+            height: 1px;
+            background-color: var(--border-color);
+            margin: 2rem 0;
+        }
+
+        /* --- Стили форм --- */
+        #profileEditForm, #avatarUploadForm {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: var(--transition);
+            animation: fadeIn 0.6s ease-out;
+            opacity: 0; /* Начальное состояние для анимации */
+            animation-fill-mode: forwards; /* Сохраняем конечное состояние анимации */
+        }
+
+        #profileEditForm:hover, #avatarUploadForm:hover {
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Смещение анимации для второй формы */
+        #profileEditForm {
+            animation-delay: 0.2s;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group-full {
+            grid-column: span 2;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+        }
+
+        .form-group small {
+            display: block;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--input-border);
+            border-radius: 8px;
+            background-color: var(--input-bg);
+            font-size: 1rem;
+            color: var(--text-color);
+            transition: var(--transition);
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(74, 108, 250, 0.15);
+        }
+
+        .form-group input:read-only {
+            background-color: #f3f4f6;
+            cursor: not-allowed;
+            opacity: 0.7; /* Делаем чуть прозрачнее */
+        }
+
+        .form-group input:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .form-group input::placeholder {
+            color: #9ca3af;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        /* --- Стили кнопок --- */
+        .btn {
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            border-radius: 10px;
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s ease, height 0.6s ease;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: 0 4px 6px rgba(74, 108, 250, 0.2);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(74, 108, 250, 0.3);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            color: white;
+            box-shadow: 0 4px 6px rgba(94, 100, 114, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background-color: #4a5260;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(94, 100, 114, 0.3);
+        }
+
+        .btn-small {
+            padding: 0.6rem 1.2rem;
+            font-size: 0.95rem;
+        }
+
+        .btn:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* --- Секция Аватара --- */
+        .avatar-upload-section {
+            margin-bottom: 2rem; /* Отступ между секциями */
+        }
+
+        .avatar-upload-section h2 {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+        }
+
+        .current-avatar-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .current-avatar-display img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+        }
+
+        .current-avatar-display img:hover {
+            transform: scale(1.05);
+            border-color: var(--primary-color);
+        }
+
+        .avatar-upload-controls {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            width: 100%;
+            margin-bottom: 1.5rem;
+        }
+
+        .file-input-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 0.8rem 1.5rem;
+            background-color: #f3f4f6;
+            color: var(--text-color);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 1px dashed var(--input-border);
+            gap: 8px;
+        }
+
+        .file-input-label:hover {
+            background-color: #e5e7eb;
+            border-color: var(--primary-color);
+        }
+
+        /* Иконка загрузки для кнопки выбора файла */
+        .file-input-label i {
+            font-size: 1.1em;
+            opacity: 0.7;
+        }
+
+        .file-input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+        .avatar-preview-container {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background-color: #f3f4f6;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .avatar-preview-container label {
+            display: block;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        #avatarPreview {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--border-color);
+            display: none;
+            margin: 0 auto;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.3s ease;
+        }
+
+        #avatarPreview:hover {
+            transform: scale(1.05);
+        }
+
+        /* Спиннер для кнопки */
+        .loading-spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s infinite linear;
+            margin-right: 8px;
+            vertical-align: middle; /* Выравнивание */
+        }
+        /* Скрываем текст при загрузке (опционально) */
+        .btn.loading span {
+            vertical-align: middle; /* Выравнивание */
+        }
+
+        /* --- Сообщения об ошибках --- */
+        .flash-message {
             padding: 12px 20px;
             margin-bottom: 20px;
-            border-radius: 6px;
+            border-radius: 10px;
             border: 1px solid transparent;
             position: relative;
             font-size: 0.95rem;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-         }
-         .flash-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
-         .flash-error { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
-         .flash-warning { color: #664d03; background-color: #fff3cd; border-color: #ffecb5; }
-         .flash-info { color: #055160; background-color: #cff4fc; border-color: #b6effb; }
-         .flash-message .close-flash {
-            position: absolute; top: 50%; right: 15px; transform: translateY(-50%);
-            background: none; border: none; font-size: 1.5rem; line-height: 1;
-            color: inherit; opacity: 0.6; cursor: pointer; padding: 0 5px;
-         }
-         .flash-message .close-flash:hover { opacity: 0.9; }
-         #js-messages .flash-message { margin-bottom: 15px; } /* Отступ для JS сообщений */
+            animation: slideIn 0.5s ease forwards;
+        }
+        @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .flash-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
+        .flash-error { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
+        .flash-warning { color: #664d03; background-color: #fff3cd; border-color: #ffecb5; }
+        .flash-info { color: #055160; background-color: #cff4fc; border-color: #b6effb; }
+        .flash-message .close-flash { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); background: none; border: none; font-size: 1.5rem; line-height: 1; color: inherit; opacity: 0.6; cursor: pointer; padding: 0 5px; }
+        .flash-message .close-flash:hover { opacity: 0.9; }
+        #js-messages .flash-message { margin-bottom: 15px; }
+
+
+        /* --- Анимации --- */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* --- Адаптивность --- */
+        @media (max-width: 768px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .form-group-full { grid-column: span 1; }
+            .form-actions { flex-direction: column-reverse; gap: 0.75rem; }
+            .form-actions .btn { width: 100%; }
+            #profileEditForm, #avatarUploadForm { padding: 1.5rem; }
+        }
+
+        /* Темная тема (если используется) */
+        @media (prefers-color-scheme: dark) {
+             /* ... (стили для темной темы, если нужны) ... */
+        }
     </style>
 </head>
 <body>
     <%- include('partials/header') %>
 
     <main class="container form-container">
-        <h1><%= title %></h1>
-        <%- include('partials/messages') %>
-        <div id="js-messages"></div>
+        <h1 class="page-title"><%= title %></h1>
+        <div id="js-messages">
+            <%- include('partials/messages') %>
+        </div>
 
-         <!-- Секция Аватара -->
-         <div class="avatar-upload-section">
-             <label style="font-weight: 500; margin-bottom: 10px; display: block;">Аватар</label>
-             <div class="current-avatar-display">
+        <!-- Секция Аватара -->
+        <section id="avatarUploadForm" class="avatar-upload-section">
+            <h2>Изменение аватара</h2>
+            <div class="current-avatar-display">
                 <img src="<%= (typeof user !== 'undefined' && user.DisplayAvatarSrc) ? user.DisplayAvatarSrc : '/images/placeholder-avatar.png' %>" alt="Текущий аватар">
-             </div>
-            <form id="avatarUploadForm" action="/profile/avatar" method="POST" enctype="multipart/form-data">
-                 <div class="form-group" style="margin-bottom: 5px;">
-                     <label for="profileAvatar" style="font-weight: normal; font-size: 0.9rem;">Загрузить новый аватар (макс. 2MB):</label>
-                    <input type="file" id="profileAvatar" name="profileAvatar" accept="image/*" required>
-                </div>
-                <div class="avatar-preview-container">
-                    <label>Предпросмотр нового:</label>
-                    <img id="avatarPreview" src="#" alt="Предпросмотр нового аватара">
-                </div>
-                 <button type="submit" id="uploadAvatarBtn" class="btn btn-secondary btn-small">Загрузить</button>
-             </form>
-         </div>
+            </div>
+
+            <div class="avatar-upload-controls">
+                <form action="/profile/avatar" method="POST" enctype="multipart/form-data">
+                    <div class="file-input-wrapper">
+                        <label for="profileAvatar" class="file-input-label">
+                            <i class="fas fa-upload"></i> <%# Иконка Font Awesome %>
+                            <span>Выбрать новое изображение</span>
+                        </label>
+                        <input type="file" id="profileAvatar" name="profileAvatar" accept="image/*" required class="file-input">
+                        <small style="display: block; color: var(--text-secondary); text-align: center; margin-top: 5px;">Максимальный размер: 2MB</small>
+                    </div>
+
+                    <div class="avatar-preview-container">
+                        <label>Предпросмотр нового аватара</label>
+                        <img id="avatarPreview" src="#" alt="Предпросмотр нового аватара">
+                        <%# Убрал прогресс бар, т.к. он имитировался %>
+                    </div>
+
+                    <button type="submit" id="uploadAvatarBtn" class="btn btn-primary" style="width: 100%;">
+                        <span class="button-text">Загрузить аватар</span>
+                    </button>
+                </form>
+            </div>
+        </section>
 
         <!-- Форма для Основных Данных Профиля -->
-        <hr style="margin: 25px 0;">
-        <h2 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 20px;">Основные данные</h2>
         <form id="profileEditForm" action="/profile/edit" method="POST">
+            <h2>Основные данные</h2>
+
             <div class="form-grid">
-                <div class="form-group form-group-full"> <label for="username">Логин</label> <input type="text" id="username" name="username" value="<%= (typeof user !== 'undefined' && user.Username) ? user.Username : '' %>" readonly> <small>Логин изменить нельзя.</small> </div>
-                <div class="form-group form-group-full"> <label for="fullName">ФИО</label> <input type="text" id="fullName" name="fullName" value="<%= (typeof user !== 'undefined' && user.FullName) ? user.FullName : '' %>" required> </div>
-                <div class="form-group"> <label for="email">Email</label> <input type="email" id="email" name="email" value="<%= (typeof user !== 'undefined' && user.Email) ? user.Email : '' %>"> </div>
-                <div class="form-group"> <label for="phone">Телефон</label> <input type="tel" id="phone" name="phone" value="<%= (typeof user !== 'undefined' && user.Phone) ? user.Phone : '' %>" required> </div>
-                <div class="form-group form-group-full"> <hr style="margin: 15px 0;"> <label for="currentPassword">Текущий пароль (для смены пароля)</label> <input type="password" id="currentPassword" name="currentPassword" placeholder="Введите текущий пароль"> </div>
-                <div class="form-group form-group-full"> <label for="newPassword">Новый пароль (оставьте пустым, чтобы не менять)</label> <input type="password" id="newPassword" name="newPassword" minlength="6" placeholder="Минимум 6 символов"> </div>
+                <div class="form-group form-group-full">
+                    <label for="username">Логин</label>
+                    <input type="text" id="username" name="username" value="<%= (typeof user !== 'undefined' && user.Username) ? user.Username : '' %>" readonly>
+                    <small>Логин изменить нельзя.</small>
+                </div>
+
+                <div class="form-group form-group-full">
+                    <label for="fullName">ФИО</label>
+                    <input type="text" id="fullName" name="fullName" value="<%= (typeof user !== 'undefined' && user.FullName) ? user.FullName : '' %>" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" value="<%= (typeof user !== 'undefined' && user.Email) ? user.Email : '' %>">
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Телефон</label>
+                    <input type="tel" id="phone" name="phone" value="<%= (typeof user !== 'undefined' && user.Phone) ? user.Phone : '' %>" required>
+                </div>
+
+                <div class="form-group form-group-full">
+                    <hr style="margin: 1rem 0;">
+                    <h3 style="font-size: 1.2rem; margin-top: 0.5rem; margin-bottom: 1rem;">Изменение пароля</h3>
+                </div>
+
+                <div class="form-group">
+                    <label for="currentPassword">Текущий пароль</label>
+                    <input type="password" id="currentPassword" name="currentPassword" placeholder="Введите текущий пароль">
+                </div>
+
+                <div class="form-group">
+                    <label for="newPassword">Новый пароль</label>
+                    <input type="password" id="newPassword" name="newPassword" minlength="6" placeholder="Минимум 6 символов">
+                    <small>Оставьте пустым, чтобы не менять</small>
+                </div>
             </div>
+
             <div class="form-actions">
-                 <button type="submit" id="saveProfileBtn" class="btn btn-primary">Сохранить изменения</button>
                  <a href="/profile" class="btn btn-secondary">Отмена</a>
+                 <button type="submit" id="saveProfileBtn" class="btn btn-primary">
+                     <span class="button-text">Сохранить изменения</span>
+                 </button>
             </div>
         </form>
     </main>
@@ -97,47 +514,163 @@
     <%- include('partials/footer') %>
 
     <script>
-        // --- Блокировка кнопок ---
-        function disableFormButton(formId, buttonId, loadingText = 'Сохранение...') {
-            const form = document.getElementById(formId);
-            const button = document.getElementById(buttonId);
-            if (form && button) {
-                form.addEventListener('submit', () => {
-                    let fileInput = form.querySelector('input[type=file]');
-                    // Для форм с файлами - блокируем если файл выбран или если файлов нет вообще (обычная форма)
-                    if (!fileInput || form.checkValidity() || (fileInput && fileInput.files.length > 0) ) {
-                        button.disabled = true;
-                        button.textContent = loadingText;
-                    }
-                });
-            }
-        }
-        disableFormButton('profileEditForm', 'saveProfileBtn', 'Сохранение...');
-        disableFormButton('avatarUploadForm', 'uploadAvatarBtn', 'Загрузка...');
+        // --- JS для этой страницы ---
 
-        // --- Предпросмотр аватара ---
+        // Функция показа уведомлений (копируем из profile.ejs для консистентности)
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('js-messages');
+            if (!container) return; // Проверка наличия контейнера
+            const notification = document.createElement('div');
+            notification.className = `flash-message flash-${type}`; // Используем классы из style.css
+            notification.style.opacity = '0'; // Для анимации
+            notification.style.transform = 'translateY(-10px)';
+            notification.style.transition = 'all 0.5s ease';
+
+            let title = 'Информация';
+            if (type === 'success') title = 'Успешно!';
+            if (type === 'error') title = 'Ошибка!';
+            if (type === 'warning') title = 'Внимание!';
+
+            notification.innerHTML = `
+                <strong>${title}</strong> ${message}
+                <button type="button" class="close-flash" onclick="this.parentElement.remove()">×</button>
+            `;
+
+            // Удаляем старые сообщения перед добавлением нового
+            container.innerHTML = '';
+            container.appendChild(notification);
+
+            // Анимация появления
+            setTimeout(() => {
+                notification.style.opacity = '1';
+                notification.style.transform = 'translateY(0)';
+            }, 10);
+
+            // Автоматически скрываем через 5 секунд
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.style.opacity = '0';
+                    notification.style.transform = 'translateY(-10px)';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.remove();
+                        }
+                    }, 500);
+                }
+            }, 5000);
+        }
+
+
+        // Обработка загрузки изображения (логика остается, но добавляем вызов showNotification)
         const avatarInput = document.getElementById('profileAvatar');
         const avatarPreview = document.getElementById('avatarPreview');
-        if (avatarInput && avatarPreview) {
+        const fileInputLabel = document.querySelector('.file-input-label span'); // Находим span для текста
+        const uploadButton = document.getElementById('uploadAvatarBtn');
+        const uploadForm = document.getElementById('avatarUploadForm');
+
+        if (avatarInput && avatarPreview && fileInputLabel) {
             avatarInput.addEventListener('change', function(event) {
                 const file = event.target.files[0];
                 if (file && file.type.startsWith('image/')) {
+                    if (file.size > 2 * 1024 * 1024) {
+                        showNotification('Файл слишком большой. Максимальный размер: 2MB', 'error');
+                        avatarInput.value = null;
+                        avatarPreview.style.display = 'none';
+                        if (fileInputLabel) fileInputLabel.textContent = 'Выбрать новое изображение';
+                        return;
+                    }
                     const reader = new FileReader();
                     reader.onload = function(e) {
                         avatarPreview.src = e.target.result;
                         avatarPreview.style.display = 'block';
                     }
                     reader.readAsDataURL(file);
+                    if (fileInputLabel) fileInputLabel.textContent = file.name; // Показываем имя файла
                 } else {
                     avatarPreview.src = '#';
                     avatarPreview.style.display = 'none';
-                    if (file) { // Если был выбран файл, но не картинка
-                         event.target.value = null; // Очищаем поле
-                         alert('Пожалуйста, выберите файл изображения.');
+                    if (fileInputLabel) fileInputLabel.textContent = 'Выбрать новое изображение';
+                    if (file) {
+                        avatarInput.value = null;
+                        showNotification('Пожалуйста, выберите файл изображения', 'warning');
                     }
                 }
             });
         }
+
+        // Блокировка кнопок формы при отправке (логика остается)
+        function disableFormButton(formId, buttonId, loadingText = 'Сохранение...') {
+             const form = document.getElementById(formId);
+             const button = document.getElementById(buttonId);
+             if (form && button) {
+                 const buttonTextSpan = button.querySelector('.button-text');
+                 const originalText = buttonTextSpan ? buttonTextSpan.textContent : button.textContent;
+                 form.addEventListener('submit', (event) => {
+                     // Проверка валидности перед блокировкой
+                     if (!form.checkValidity()) {
+                          // Можно добавить сообщение о незаполненных полях
+                          // event.preventDefault(); // Остановить отправку, если нужно
+                          return;
+                     }
+                     // Проверка для формы аватара - файл должен быть выбран
+                     if (form.id === 'avatarUploadForm') {
+                          const fileInput = form.querySelector('#profileAvatar');
+                          if (fileInput && fileInput.required && fileInput.files.length === 0) {
+                              // Сообщение уже может быть показано обработчиком change
+                              // event.preventDefault();
+                              return;
+                          }
+                     }
+                     button.disabled = true;
+                     // Добавляем спиннер Font Awesome
+                     button.innerHTML = `<i class="fas fa-spinner fa-spin"></i>  ${loadingText}`;
+                 });
+             }
+         }
+
+        // Инициализация блокировки кнопок
+        disableFormButton('profileEditForm', 'saveProfileBtn', 'Сохранение...');
+        disableFormButton('avatarUploadForm', 'uploadAvatarBtn', 'Загрузка...');
+
+
+        // Валидация полей формы (логика остается)
+        function validateInput(input, pattern, errorMessage) {
+             const value = input.value.trim();
+             const isValid = pattern.test(value);
+             const existingError = input.parentNode.querySelector('.input-error');
+             if (existingError) { existingError.remove(); }
+             if (value !== '' && !isValid) {
+                 input.style.borderColor = 'var(--danger-color)';
+                 input.style.boxShadow = '0 0 0 3px rgba(255, 59, 48, 0.15)';
+                 const errorDiv = document.createElement('div'); errorDiv.className = 'input-error'; errorDiv.textContent = errorMessage; errorDiv.style.color = 'var(--danger-color)'; errorDiv.style.fontSize = '0.85rem'; errorDiv.style.marginTop = '0.5rem'; input.parentNode.appendChild(errorDiv);
+             } else {
+                 input.style.borderColor = value !== '' ? 'var(--primary-color)' : 'var(--input-border)';
+                 input.style.boxShadow = value !== '' ? '0 0 0 3px rgba(74, 108, 250, 0.15)' : 'none';
+             }
+             updateSaveButtonState();
+         }
+         function updateSaveButtonState() {
+             const saveButton = document.getElementById('saveProfileBtn');
+             const errorElements = document.querySelectorAll('.input-error');
+             saveButton.disabled = errorElements.length > 0;
+             saveButton.title = errorElements.length > 0 ? 'Пожалуйста, исправьте ошибки в форме' : '';
+         }
+        // Назначаем валидаторы (если элементы существуют)
+        const fullNameInput = document.getElementById('fullName');
+        const phoneInput = document.getElementById('phone');
+        const emailInput = document.getElementById('email');
+        if (fullNameInput) fullNameInput.addEventListener('input', function() { validateInput(this, /^[А-Яа-яЁёA-Za-z\s-]{2,100}$/, 'ФИО: только буквы, пробелы, дефисы (2-100 симв.)'); });
+        if (phoneInput) phoneInput.addEventListener('input', function() { validateInput(this, /^(\+7|8)?[\s-]?\(?[0-9]{3}\)?[\s-]?[0-9]{3}[\s-]?[0-9]{2}[\s-]?[0-9]{2}$/, 'Введите корректный номер телефона'); });
+        if (emailInput) emailInput.addEventListener('input', function() { if (this.value.trim() === '') { this.style.borderColor = 'var(--input-border)'; this.style.boxShadow = 'none'; const err = this.parentNode.querySelector('.input-error'); if(err) err.remove(); updateSaveButtonState(); return; } validateInput(this, /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, 'Введите корректный email'); });
+
+        // Анимация форм при загрузке (если нужно)
+        document.addEventListener('DOMContentLoaded', () => {
+             const forms = document.querySelectorAll('form');
+             forms.forEach((form, index) => {
+                  form.style.animationDelay = `${index * 0.15}s`;
+             });
+        });
+
     </script>
 
 </body>

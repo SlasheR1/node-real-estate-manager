@@ -1,18 +1,63 @@
-<!-- views/profile.ejs -->
+<!-- views/profile.ejs (ФИНАЛЬНАЯ ПРОВЕРКА) -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= title %></title>
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/profile.css">
+    <link rel="stylesheet" href="/css/style.css"> <!-- Глобальные стили -->
+    <link rel="stylesheet" href="/css/profile.css"> <!-- Стили для профиля -->
+    <!-- Font Awesome ОБЯЗАТЕЛЬНО для иконок -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        /* Стиль для заблокированной кнопки */
-        .btn:disabled {
-             opacity: 0.65;
-             cursor: not-allowed;
-         }
+        /* Переносим стили сюда из <style> тега в вашем примере profile.ejs */
+        :root {
+            --primary-color: #4a6cfa; --primary-hover: #3454d1; --secondary-color: #5e6472; --accent-color: #00c2cb; --success-color: #34c759; --danger-color: #ff3b30; --light-bg: #f9fafb; --card-bg: #ffffff; --text-color: #333333; --text-secondary: #6b7280; --border-color: #e5e7eb; --border-radius: 12px; --shadow-sm: 0 1px 2px rgba(0,0,0,0.05); --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); --transition: all 0.3s ease;
+        }
+        body { background-color: var(--light-bg); color: var(--text-color); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.5; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+        .page-title { font-size: 2.25rem; font-weight: 700; color: var(--text-color); margin-bottom: 1.5rem; text-align: center; position: relative; padding-bottom: 1rem; }
+        .page-title::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 60px; height: 4px; background: var(--primary-color); border-radius: 2px; }
+        .profile-container { animation: fadeIn 0.6s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .profile-card { background: var(--card-bg); border-radius: var(--border-radius); box-shadow: var(--shadow-md); overflow: hidden; transition: var(--transition); margin-bottom: 2rem; }
+        .profile-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-5px); }
+        .profile-header { background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); color: white; padding: 2.5rem 2rem; text-align: center; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .profile-avatar { width: 140px; height: 140px; border-radius: 50%; border: 5px solid rgba(255, 255, 255, 0.7); box-shadow: 0 0 20px rgba(0, 0, 0, 0.2); object-fit: cover; margin-bottom: 1.5rem; transition: var(--transition); }
+        .profile-avatar:hover { transform: scale(1.05); border-color: white; }
+        .profile-name-role { text-align: center; }
+        .profile-name-role h2 { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+        .role { display: inline-block; background-color: rgba(255, 255, 255, 0.2); color: white; padding: 0.4rem 1rem; border-radius: 30px; font-size: 0.95rem; font-weight: 500; backdrop-filter: blur(5px); }
+        .profile-details { padding: 2rem; }
+        .profile-section-title { font-size: 1.3rem; font-weight: 600; color: var(--text-color); margin: 1.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--border-color); }
+        .profile-section-title:first-of-type { margin-top: 0; }
+        .profile-details p { margin-bottom: 0.75rem; display: flex; align-items: center; font-size: 1.05rem; }
+        .profile-details p strong { min-width: 100px; color: var(--text-secondary); }
+        .profile-details .balance { font-size: 1.2rem; color: var(--text-color); }
+        .profile-details .balance strong { color: var(--text-secondary); }
+        .balance-amount { font-size: 1.4rem; font-weight: 700; color: var(--success-color); background: rgba(52, 199, 89, 0.1); padding: 0.25rem 0.75rem; border-radius: 8px; display: inline-block; margin-left: 10px; }
+        .profile-actions { margin-top: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+        .profile-actions.main-actions { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); }
+        .btn { padding: 0.8rem 1.5rem; font-size: 1rem; font-weight: 500; border-radius: 10px; cursor: pointer; border: none; display: inline-flex; align-items: center; justify-content: center; transition: var(--transition); text-decoration: none; position: relative; overflow: hidden; }
+        .btn::before { content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0; background: rgba(255, 255, 255, 0.1); border-radius: 50%; transform: translate(-50%, -50%); transition: width 0.6s ease, height 0.6s ease; }
+        .btn:hover::before { width: 300px; height: 300px; }
+        .btn-primary { background-color: var(--primary-color); color: white; box-shadow: 0 4px 6px rgba(74, 108, 250, 0.2); }
+        .btn-primary:hover { background-color: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 8px rgba(74, 108, 250, 0.3); }
+        .btn-secondary { background-color: var(--secondary-color); color: white; box-shadow: 0 4px 6px rgba(94, 100, 114, 0.2); }
+        .btn-secondary:hover { background-color: #4a5260; transform: translateY(-2px); box-shadow: 0 6px 8px rgba(94, 100, 114, 0.3); }
+        .btn-edit { background-color: #f3f4f6; color: var(--text-color); box-shadow: var(--shadow-sm); gap: 8px; }
+        .btn-edit:hover { background-color: #e5e7eb; transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .btn:disabled { opacity: 0.65; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+        .btn i { margin-right: 8px; font-size: 0.9em; }
+        #addFundsBtn.loading .fa-spinner { display: inline-block; animation: spin 1s infinite linear; }
+        #addFundsBtn .fa-plus-circle { display: inline-block; }
+        #addFundsBtn.loading .fa-plus-circle { display: none; }
+        .button-text { vertical-align: middle; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        .flash-message { animation: slideIn 0.5s ease forwards; }
+        @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @media (max-width: 768px) { .profile-header { padding: 2rem 1rem; } .profile-avatar { width: 110px; height: 110px; } .profile-details { padding: 1.5rem; } .btn { width: 100%; margin-bottom: 0.5rem; } .profile-actions { flex-direction: column; gap: 0.5rem; } }
     </style>
 </head>
 <body>
@@ -20,75 +65,94 @@
     <%- include('partials/messages') %>
 
     <main class="container profile-container">
-        <h1><%= title %></h1>
+        <h1 class="page-title"><%= title %></h1>
 
-        <div class="profile-card">
-            <div class="profile-header">
-                <img src="<%= user.DisplayAvatarSrc %>" alt="Аватар пользователя" class="profile-avatar">
-                <div class="profile-name-role">
-                    <h2><%= user.FullName || user.Username %></h2>
-                    <p class="role"><%= user.Role %></p>
+        <% if (typeof user !== 'undefined' && user) { %> <%# Проверка, что user вообще передан %>
+            <div class="profile-card">
+                <div class="profile-header">
+                    <%# Проверяем user.DisplayAvatarSrc перед использованием %>
+                    <img src="<%= user.DisplayAvatarSrc || '/images/placeholder-avatar.png' %>" alt="Аватар пользователя" class="profile-avatar">
+                    <div class="profile-name-role">
+                        <h2><%= user.FullName || user.Username %></h2>
+                        <%# Проверяем user.Role %>
+                        <p class="role"><%= user.Role || 'Роль не определена' %></p>
+                    </div>
+                </div>
+
+                <div class="profile-details">
+                    <h3 class="profile-section-title">Контактная информация</h3>
+                    <%# Проверяем user.Email и user.Phone перед использованием %>
+                    <p><strong>Email:</strong> <%= user.Email ? user.Email : 'Не указан' %></p>
+                    <p><strong>Телефон:</strong> <%= user.Phone ? user.Phone : 'Не указан' %></p>
+
+                    <%# Блок для Арендатора (Tenant) %>
+                    <% if (user.Role === 'Tenant') { %>
+                        <h3 class="profile-section-title">Финансы</h3>
+                        <p class="balance">
+                            <strong>Баланс:</strong>
+                            <%# Проверяем user.Balance %>
+                            <span class="balance-amount"><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(user.Balance || 0) %></span>
+                        </p>
+                        <div class="profile-actions">
+                             <button id="addFundsBtn" class="btn btn-primary" onclick="addFunds(this)">
+                                 <i class="fas fa-plus-circle"></i>
+                                 <i class="fas fa-spinner fa-spin" style="display: none;"></i>
+                                 <span class="button-text">Пополнить баланс</span>
+                             </button>
+                             <%# Кнопка Истории операций - она здесь есть %>
+                             <a href="/profile/balance-history" class="btn btn-secondary">
+                                 <i class="fas fa-history"></i>
+                                 <span class="button-text">История операций</span>
+                             </a>
+                        </div>
+                    <% } %>
+
+                     <div class="profile-actions main-actions">
+                           <a href="/profile/edit" class="btn btn-edit">
+                               <i class="fas fa-pencil-alt"></i>
+                               <span class="button-text">Редактировать профиль</span>
+                            </a>
+                     </div>
                 </div>
             </div>
-
-            <div class="profile-details">
-                <h3>Контактная информация</h3>
-                <p><strong>Email:</strong> <%= user.Email || 'Не указан' %></p>
-                <p><strong>Телефон:</strong> <%= user.Phone %></p>
-
-                <% if (user.Role === 'Tenant') { %>
-                    <h3>Финансы</h3>
-                    <p class="balance"><strong>Баланс:</strong> <%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(user.Balance || 0) %></p>
-                    <div class="profile-actions">
-                         <!-- *** ДОБАВЛЕН ID КНОПКЕ *** -->
-                         <button id="addFundsBtn" class="btn btn-primary" onclick="addFunds(this)">Пополнить баланс (Тест)</button>
-                         <a href="/profile/balance-history" class="btn btn-secondary">История операций</a>
-                    </div>
-                <% } %>
-
-                 <div class="profile-actions main-actions">
-                       <a href="/profile/edit" class="btn btn-edit">Редактировать профиль</a>
-                 </div>
-
+        <% } else { %>
+            <%# Сообщение, если данные пользователя не были переданы %>
+            <div class="flash-message flash-error">
+                Не удалось загрузить данные профиля. Пожалуйста, попробуйте <a href="/login">войти</a> снова.
             </div>
-        </div>
+        <% } %>
     </main>
 
     <%- include('partials/footer') %>
 
-    <% if (user.Role === 'Tenant') { %>
+    <%# JS скрипт остается тем же, что и в прошлом ответе %>
+    <% if (typeof user !== 'undefined' && user && user.Role === 'Tenant') { %>
         <script>
-             // *** ОБНОВЛЕНА ФУНКЦИЯ addFunds ***
              async function addFunds(buttonElement) {
-                 // Блокируем кнопку и меняем текст
                  buttonElement.disabled = true;
-                 const originalText = buttonElement.textContent;
-                 buttonElement.textContent = 'Пополнение...';
-
+                 const buttonTextSpan = buttonElement.querySelector('.button-text');
+                 const originalText = buttonTextSpan.textContent;
+                 const plusIcon = buttonElement.querySelector('.fa-plus-circle');
+                 const spinnerIcon = buttonElement.querySelector('.fa-spinner');
+                 buttonTextSpan.textContent = 'Пополнение';
+                 if(plusIcon) plusIcon.style.display = 'none';
+                 if(spinnerIcon) spinnerIcon.style.display = 'inline-block';
                  try {
-                    const response = await fetch('/profile/add-funds', {
-                         method: 'POST',
-                         headers: { 'Content-Type': 'application/json' }
-                     });
-
-                    const result = await response.json(); // Получаем ответ
-
-                    if (!response.ok) {
-                         // Если ошибка, показываем сообщение из ответа или стандартное
-                         throw new Error(result.error || `Ошибка сервера: ${response.statusText}`);
-                    }
-                    // Успех: перезагружаем страницу для обновления баланса и заголовка
-                    window.location.reload();
-                    // Сообщение об успехе покажется после перезагрузки, если оно установлено сервером
+                    const response = await fetch('/profile/add-funds', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+                    const result = await response.json();
+                    if (!response.ok) { throw new Error(result.error || `Ошибка сервера: ${response.statusText}`); }
+                    const balanceAmountEl = document.querySelector('.balance-amount');
+                    if (balanceAmountEl) { balanceAmountEl.style.animation = 'pulse 0.6s ease'; balanceAmountEl.textContent = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(result.newBalance || 0); }
+                    setTimeout(() => { window.location.reload(); }, 800);
                  } catch (error) {
                      console.error('Ошибка пополнения баланса:', error);
-                     alert('Не удалось пополнить баланс: ' + error.message);
-                      // Возвращаем кнопку в исходное состояние при ошибке
-                      buttonElement.disabled = false;
-                      buttonElement.textContent = originalText;
+                     const notification = document.createElement('div'); notification.className = 'flash-message flash-error'; notification.style.opacity = '0'; notification.style.transform = 'translateY(-10px)'; notification.style.transition = 'all 0.5s ease'; notification.innerHTML = `<strong>Ошибка!</strong> Не удалось пополнить баланс: ${error.message}<button type="button" class="close-flash" onclick="this.parentElement.remove()">×</button>`;
+                     const mainContainer = document.querySelector('main.container'); const pageTitleEl = mainContainer.querySelector('.page-title'); if(pageTitleEl){ pageTitleEl.parentNode.insertBefore(notification, pageTitleEl.nextSibling); setTimeout(() => { notification.style.opacity = '1'; notification.style.transform = 'translateY(0)'; }, 10); } else { mainContainer.prepend(notification); setTimeout(() => { notification.style.opacity = '1'; notification.style.transform = 'translateY(0)'; }, 10); }
+                     buttonElement.disabled = false; buttonTextSpan.textContent = originalText; if(plusIcon) plusIcon.style.display = 'inline-block'; if(spinnerIcon) spinnerIcon.style.display = 'none';
+                     setTimeout(() => { if (notification.parentNode) { notification.style.opacity = '0'; notification.style.transform = 'translateY(-10px)'; setTimeout(() => notification.remove(), 500); } }, 5000);
                  }
-                 // Не нужно разблокировать кнопку здесь, т.к. при успехе идет перезагрузка
              }
+             const avatar = document.querySelector('.profile-avatar'); if (avatar) { avatar.addEventListener('mouseenter', function() { this.style.transform = 'scale(1.05)'; }); avatar.addEventListener('mouseleave', function() { this.style.transform = 'scale(1)'; }); }
         </script>
     <% } %>
 </body>
