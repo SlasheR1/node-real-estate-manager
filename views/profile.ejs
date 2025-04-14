@@ -74,16 +74,16 @@
                     <img src="<%= user.DisplayAvatarSrc || '/images/placeholder-avatar.png' %>" alt="Аватар пользователя" class="profile-avatar">
                     <div class="profile-name-role">
                         <h2><%= user.FullName || user.Username %></h2>
-                        <%# Проверяем user.Role %>
-                        <p class="role"><%= user.Role || 'Роль не определена' %></p>
+                        <%# Проверяем user.role %>
+                        <p class="role"><%= user.role || 'Роль не определена' %></p>
                     </div>
                 </div>
 
                 <div class="profile-details">
                     <h3 class="profile-section-title">Контактная информация</h3>
                     <%# Проверяем user.Email и user.Phone перед использованием %>
-                    <p><strong>Email:</strong> <%= user.Email ? user.Email : 'Не указан' %></p>
-                    <p><strong>Телефон:</strong> <%= user.Phone ? user.Phone : 'Не указан' %></p>
+                    <p><strong>Email:</strong> <%= user.email ? user.email : 'Не указан' %></p>
+                    <p><strong>Телефон:</strong> <%= user.phone ? user.phone : 'Не указан' %></p>
 
                     <%# Блок для Арендатора (Tenant) %>
                     <% if (user.Role === 'Tenant') { %>

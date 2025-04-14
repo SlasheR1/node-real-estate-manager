@@ -39,66 +39,67 @@ router.get('/register', isLoggedOut, (req, res) => {
     res.render('register', { title: 'Регистрация' });
 });
 
-// GET /profile - Страница профиля
+// GET /profile - Страница профиля (Пересмотренная версия)
 router.get('/profile', isLoggedIn, async (req, res, next) => {
-    // Проверяем, есть ли пользователь в сессии
+    // Пользователь и его актуальные данные УЖЕ должны быть в req.session.user
+    // (и в res.locals.currentUser) благодаря middleware в server.js.
+    // Мы можем просто использовать их.
+
+    // --- ПРОВЕРКА ---
+    // Проверяем, что пользователь точно есть в сессии после middleware
     if (!req.session.user || !req.session.user.username) {
-        log.error("[Profile GET] User session incomplete or missing. Redirecting to login.");
+        log.error("[GET /profile - Revised] Сессия пользователя неполная или отсутствует после middleware. Перенаправление на /login.");
+        // Уничтожаем сессию и перенаправляем, если что-то не так
         return req.session.destroy((err) => {
-             if(err) log.error("[Profile GET] Error destroying session:", err);
-             res.clearCookie('connect.sid'); // Чистим куки на всякий случай
+             if(err) log.error("[GET /profile - Revised] Ошибка при уничтожении сессии:", err);
+             res.clearCookie('connect.sid');
              res.redirect('/login');
         });
     }
+    // --- КОНЕЦ ПРОВЕРКИ ---
+
     const username = req.session.user.username;
-    log.info(`[Profile GET] Fetching profile data for user: ${username}`);
+    log.info(`[GET /profile - Revised] Рендеринг профиля для пользователя: ${username}, используя уже обновленные данные сессии.`);
 
     try {
-        // Получаем АКТУАЛЬНЫЕ данные пользователя из Firebase
-        const userFromDB = await firebaseService.getUserByUsername(username);
+        // --- НЕ НУЖНО снова загружать пользователя здесь ---
+        // Данные уже актуальны в req.session.user благодаря middleware
 
-        if (!userFromDB) {
-             log.error(`[Profile GET] User ${username} not found in DB! Logging out.`);
-             return req.session.destroy((err) => {
-                 if(err) log.error("[Profile GET] Error destroying session for non-existent user:", err);
-                 res.clearCookie('connect.sid');
-                 res.redirect('/login');
-             });
-        }
-
-        // --- ОБНОВЛЯЕМ СЕССИЮ АКТУАЛЬНЫМИ ДАННЫМИ ---
-        // Перенесено в middleware в server.js, здесь уже должны быть свежие данные в req.session.user
-        log.info(`[Profile GET] Using (potentially updated by middleware) session data for user: ${username}`);
-        // --- КОНЕЦ ОБНОВЛЕНИЯ СЕССИИ (в middleware) ---
-
-        // Подготовка данных для рендеринга (аватар)
-        let avatarSrc = '/images/placeholder-avatar.png';
-        // Используем данные из сессии (которые должны быть обновлены middleware'ом)
+        // Подготовка данных для рендеринга (аватар) из СЕССИИ
+        let avatarSrc = '/images/placeholder-avatar.png'; // Путь к аватару по умолчанию
+        // Используем данные из сессии, обновленные middleware
         if (req.session.user.imageData) {
             try {
+                 // Простая проверка типа по началу base64 строки
                  let type = req.session.user.imageData.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
                  avatarSrc = `data:${type};base64,${req.session.user.imageData}`;
+                 log.debug(`[GET /profile - Revised] Сгенерирован Data URI для аватара пользователя ${username}.`);
             } catch (e) {
-                 log.error(`[Profile GET] Error creating avatar data URI for ${username} from session:`, e);
+                 log.error(`[GET /profile - Revised] Ошибка при создании Data URI для аватара пользователя ${username} из сессии:`, e);
+                 // Если ошибка, останется аватар по умолчанию
             }
+        } else {
+            log.debug(`[GET /profile - Revised] У пользователя ${username} нет данных аватара в сессии. Используется плейсхолдер.`);
         }
 
-        // Рендерим страницу профиля, передавая данные из СЕССИИ (уже обновлены)
-        // Для консистентности, можно передать данные из сессии, а не из userFromDB
+        // Рендерим страницу профиля, передавая актуальные данные из СЕССИИ
         res.render('profile', {
             title: 'Мой профиль',
-            // Передаем обновленные данные из СЕССИИ (обновляются middleware'ом)
+            // Передаем обновленные данные из СЕССИИ
+            // Важно передать копию, чтобы случайно не изменить сессию в шаблоне (хотя EJS обычно этого не делает)
             user: {
-                ...req.session.user, // Используем данные сессии
-                // Добавляем DisplayAvatarSrc, созданный выше
-                DisplayAvatarSrc: avatarSrc
+                ...req.session.user, // Берем все актуальные поля из сессии (включая Role, Email, Phone, Balance и т.д.)
+                DisplayAvatarSrc: avatarSrc // Добавляем подготовленный аватар
             },
-            // message уже в res.locals
+            // message уже в res.locals из middleware (если был)
         });
+        log.info(`[GET /profile - Revised] Страница профиля успешно отрендерена для ${username}.`);
 
     } catch (error) {
-        log.error(`[Profile GET] Error fetching or rendering profile for ${username}:`, error);
-        next(error); // Передаем ошибку глобальному обработчику
+        // Ловим ошибки, не связанные с загрузкой пользователя (например, ошибки рендеринга EJS)
+        log.error(`[GET /profile - Revised] Ошибка при рендеринге профиля для ${username}:`, error);
+        // Передаем ошибку глобальному обработчику для отображения страницы ошибки 500
+        next(error);
     }
 });
 
