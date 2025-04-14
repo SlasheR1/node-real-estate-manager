@@ -1,0 +1,100 @@
+<!-- views/chats.ejs -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/css/chat.css"> <%# Подключаем стили чата %>
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <main class="container">
+        <div class="chat-layout"> <%# Обертка для макета чата %>
+
+            <!-- Sidebar: Список чатов -->
+            <aside class="chat-sidebar">
+                <div class="sidebar-header">
+                    <h2><i class="fas fa-comments"></i> Чаты</h2>
+                    <%# Поле поиска по чатам (пока не реализовано) %>
+                    <!--
+                    <div class="search-bar">
+                        <input type="text" placeholder="Поиск по чатам...">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    -->
+                </div>
+                <ul class="chat-list" id="chatList">
+                    <% if (locals.chats && chats.length > 0) { %>
+                        <% chats.forEach(chat => { %>
+                            <li class="chat-list-item <%= chat.unreadCountForCurrentUser > 0 ? 'unread' : '' %>"
+                                data-chat-id="<%= chat.id %>"
+                                onclick="openChat('<%= chat.id %>')"> <%# JS функция открытия чата %>
+                                <img src="<%= chat.otherParticipantAvatar %>" alt="Avatar" class="chat-avatar">
+                                <div class="chat-info">
+                                    <span class="chat-name"><%= chat.otherParticipantName %></span>
+                                    <p class="chat-last-message">
+                                        <% if (chat.lastMessageSenderId === currentUser.username) { %>Вы: <% } %>
+                                        <%= chat.lastMessageTextSnippet %>
+                                    </p>
+                                </div>
+                                <div class="chat-meta">
+                                    <span class="chat-timestamp"><%= chat.lastMessageTimestampRelative %></span>
+                                    <% if (chat.unreadCountForCurrentUser > 0) { %>
+                                        <span class="unread-badge" id="unread-badge-<%= chat.id %>"><%= chat.unreadCountForCurrentUser > 9 ? '9+' : chat.unreadCountForCurrentUser %></span>
+                                    <% } %>
+                                </div>
+                            </li>
+                        <% }) %>
+                    <% } else { %>
+                        <li class="no-chats-message">
+                            <i class="fas fa-comment-slash"></i>
+                            <p>У вас пока нет активных чатов.</p>
+                        </li>
+                    <% } %>
+                </ul>
+            </aside>
+
+            <!-- Основная область: Отображение сообщений -->
+            <section class="chat-main-area" id="chatMainArea">
+                <!-- Плейсхолдер, пока чат не выбран -->
+                <div class="chat-placeholder" id="chatPlaceholder">
+                    <i class="fas fa-comments"></i>
+                    <p>Выберите чат<br>для просмотра сообщений</p>
+                </div>
+
+                <!-- Контейнер для отображения выбранного чата (скрыт по умолчанию) -->
+                <div class="chat-view hidden" id="chatView">
+                    <div class="chat-header">
+                        <h3 id="chatViewHeaderName"></h3>
+                        <a href="#" id="chatViewSubjectLink" class="chat-subject-link" target="_blank" style="display: none;"></a>
+                    </div>
+                    <div class="message-list" id="messageList">
+                         <button id="loadMoreMessagesBtn" class="btn btn-secondary btn-small load-more-btn hidden">
+                             <i class="fas fa-spinner fa-spin button-spinner" style="display: none;"></i>
+                             <span class="button-text">Загрузить еще</span>
+                         </button>
+                        <%# Сообщения будут добавлены сюда JS %>
+                    </div>
+                    <form class="message-input-form" id="messageInputForm" data-chat-id="">
+                        <textarea id="messageTextarea" placeholder="Введите ваше сообщение..." required maxlength="2000" rows="1"></textarea>
+                        <button type="submit" id="sendMessageBtn" class="btn btn-primary send-btn" title="Отправить (Enter)" disabled>
+                            <i class="fas fa-paper-plane"></i>
+                            <i class="fas fa-spinner fa-spin button-spinner" style="display: none;"></i>
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+        </div> <%# конец chat-layout %>
+    </main>
+
+    <%# Не включаем footer здесь, чтобы чат занимал больше места %>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/chat.js"></script> <%# Подключаем основной скрипт чата %>
+</body>
+</html>

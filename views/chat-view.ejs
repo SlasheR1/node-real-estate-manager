@@ -1,0 +1,161 @@
+<!-- views/chat-view.ejs (ИСПРАВЛЕНО) -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title> <%# title передается из res.render %>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/css/chat.css"> <%# Используем те же стили, что и для списка чатов %>
+    <style>
+        /* Дополнительные стили или переопределения для chat-view, если нужны */
+        .chat-view-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 65px); /* Высота минус хедер (стандартная высота 65px) */
+            max-width: 900px; /* Ограничим ширину для лучшего вида */
+            margin: 0 auto; /* Центрируем */
+            background-color: var(--chat-panel-bg, #f0f2f5); /* Используем переменную с fallback */
+            border-radius: var(--border-radius-md, 8px); /* Используем переменную с fallback */
+            box-shadow: var(--shadow-md, 0 2px 4px rgba(0,0,0,0.08)); /* Используем переменную с fallback */
+            overflow: hidden; /* Чтобы скроллбар был внутри message-list */
+            margin-top: 10px; /* Небольшой отступ сверху */
+            margin-bottom: 10px; /* Небольшой отступ снизу */
+        }
+        /* Убираем chat-layout и sidebar для отдельного вида */
+        main.container { padding: 0; } /* Убираем паддинг у main */
+    </style>
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <main class="container">
+        <div class="chat-view-container"> <%# Обертка для этого вида %>
+            <div class="chat-header">
+                <h3 id="chatViewHeaderName"><%= otherParticipantName %></h3> <%# Имя собеседника %>
+                <% if (locals.subjectLink && locals.chatSubject) { %>
+                    <a href="<%= subjectLink %>" id="chatViewSubjectLink" class="chat-subject-link" target="_blank"><%= chatSubject %></a>
+                <% } else if (locals.chatSubject) { %>
+                     <span class="chat-subject-link"><%= chatSubject %></span> <%# Просто текст, если ссылки нет %>
+                <% } %>
+                <a href="/chats" class="btn btn-sm btn-outline-secondary" style="margin-left: auto; padding: 4px 8px; font-size: 0.8rem; border: 1px solid #ced4da; color: #6c757d;"><i class="fas fa-arrow-left"></i> К списку чатов</a>
+            </div>
+            <div class="message-list" id="messageList">
+                 <button id="loadMoreMessagesBtn" class="btn btn-secondary btn-small load-more-btn hidden">
+                     <i class="fas fa-spinner fa-spin button-spinner" style="display: none;"></i>
+                     <span class="button-text">Загрузить еще</span>
+                 </button>
+                <% if (messages && messages.length > 0) { %>
+                    <% messages.forEach(message => { %> <%# Начало цикла %>
+                        <div class="message-bubble <%= message.isOwnMessage ? 'own' : 'other' %>" data-timestamp="<%= message.timestamp %>">
+                            <div class="message-text"><%= message.text %></div>
+                            <div class="message-meta">
+                                <span class="message-time"><%= message.timestampFormatted %></span>
+                                <% if (message.isOwnMessage) { %>
+                                    <span class="message-status-ticks"><i class="fas fa-check"></i></span>
+                                <% } %>
+                            </div>
+                        </div>
+                    <% }); %> <%# <<<--- ИСПРАВЛЕНО ЗДЕСЬ: Добавлен ; перед }) %>
+                <% } else { %>
+                    <p style="text-align: center; color: var(--text-secondary); padding: 20px;">Нет сообщений в этом чате.</p>
+                <% } %>
+            </div>
+            <form class="message-input-form" id="messageInputForm" data-chat-id="<%= chatId %>"> <%# Передаем chatId %>
+                <textarea id="messageTextarea" placeholder="Введите ваше сообщение..." required maxlength="2000" rows="1"></textarea>
+                <button type="submit" id="sendMessageBtn" class="btn btn-primary send-btn" title="Отправить (Enter)">
+                     <i class="fas fa-paper-plane"></i>
+                     <i class="fas fa-spinner fa-spin button-spinner" style="display: none;"></i>
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <%# Не включаем footer здесь, чтобы чат занимал больше места %>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/chat.js"></script>
+    <script>
+        // Дополнительный JS специфичный для этой страницы, если нужно
+        document.addEventListener('DOMContentLoaded', () => {
+            const messageListElement = document.getElementById('messageList');
+            if (messageListElement) {
+                 // Инициализация прокрутки в самый низ при загрузке
+                 messageListElement.scrollTop = messageListElement.scrollHeight;
+                 // Инициализация oldestMessageTimestamp для пагинации
+                 const firstMessage = messageListElement.querySelector('.message-bubble');
+                 if (firstMessage && typeof window.setOldestMessageTimestamp === 'function') {
+                     window.setOldestMessageTimestamp(parseInt(firstMessage.dataset.timestamp || '0'));
+                 } else if (typeof window.updateHasMoreMessages === 'function') {
+                     window.updateHasMoreMessages(false); // Сообщений нет или не удалось найти timestamp
+                      const loadBtn = document.getElementById('loadMoreMessagesBtn');
+                      if(loadBtn) loadBtn.classList.add('hidden');
+                 }
+            }
+
+             // Автофокус на поле ввода сообщения
+            const textarea = document.getElementById('messageTextarea');
+            if (textarea) {
+                textarea.focus();
+                // Устанавливаем начальную высоту textarea
+                textarea.style.height = 'auto';
+                const scrollHeight = textarea.scrollHeight;
+                const maxHeight = 120; // Синхронизируем с CSS
+                textarea.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
+            }
+        });
+
+         // Глобальные функции для установки переменных из chat.js (если нужны)
+         window.initializeOldestTimestamp = (timestamp) => {
+            if (typeof window.setOldestMessageTimestamp === 'function') {
+                window.setOldestMessageTimestamp(timestamp);
+            }
+         };
+         window.setHasMoreMessages = (hasMore) => {
+             if (typeof window.updateHasMoreMessages === 'function') {
+                window.updateHasMoreMessages(hasMore);
+             }
+         }
+    </script>
+     <%# Дополняем chat.js, чтобы он мог работать и на этой странице %>
+     <script>
+          // Делаем переменные и функции из chat.js доступными глобально для вызова из EJS
+          document.addEventListener('DOMContentLoaded', () => {
+              // Проверяем, что функции существуют перед вызовом
+              if (typeof window.appendMessage === 'function' && typeof window.scrollToBottom === 'function') {
+                 const messageListElement = document.getElementById('messageList');
+                 if(messageListElement) {
+                     scrollToBottom(messageListElement, false); // Прокрутка без анимации при загрузке
+                 }
+              }
+
+               // Экспонируем функции в глобальную область видимости (если еще не сделано в chat.js)
+               window.setOldestMessageTimestamp = (ts) => { if(typeof oldestMessageTimestamp !== 'undefined') oldestMessageTimestamp = ts; };
+               window.updateHasMoreMessages = (more) => { if(typeof hasMoreMessages !== 'undefined') hasMoreMessages = more; };
+
+               // Инициализация переменных пагинации из EJS, если они есть
+               const initialMessages = document.querySelectorAll('#messageList .message-bubble');
+               if (initialMessages.length > 0) {
+                  const firstTimestamp = parseInt(initialMessages[0].dataset.timestamp || '0');
+                   if (typeof window.setOldestMessageTimestamp === 'function') {
+                       window.setOldestMessageTimestamp(firstTimestamp);
+                   }
+                   // Проверяем, нужно ли скрывать кнопку "Загрузить еще" изначально
+                   const initialLoadLimit = 50; // Лимит из GET /chats/:chatId
+                   if (initialMessages.length < initialLoadLimit && typeof window.updateHasMoreMessages === 'function') {
+                       window.updateHasMoreMessages(false);
+                   }
+
+               } else {
+                    if (typeof window.updateHasMoreMessages === 'function') {
+                        window.updateHasMoreMessages(false); // Нет начальных сообщений
+                    }
+                     const loadBtn = document.getElementById('loadMoreMessagesBtn');
+                     if(loadBtn) loadBtn.classList.add('hidden');
+               }
+          });
+     </script>
+
+</body>
+</html>

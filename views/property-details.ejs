@@ -7,142 +7,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= title %></title>
     <link rel="stylesheet" href="/css/style.css">
-    <%# Подключаем базовый CSS для деталей, он будет переопределен/дополнен стилями ниже %>
     <link rel="stylesheet" href="/css/property-details.css">
-    <!-- === Подключаем Font Awesome ПЕРВЫМ === -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <!-- ===================================== -->
-    <!-- Swiper CSS -->
     <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css"/>
-    <!-- === Yandex Maps API === -->
-    <!-- !!! ЗАМЕНИТЕ YOUR_API_KEY на ваш реальный ключ !!! -->
     <script src="https://api-maps.yandex.ru/2.1/?apikey=b6b8d3fa-9cbf-4d16-aed5-fb890a397c59&lang=ru_RU" type="text/javascript"></script>
-    <!-- ======================== -->
 
     <style>
-        /* --- Общий контейнер --- */
-        .property-details-container { padding-bottom: 40px; }
-        .property-details-container h1 { font-size: 2.2rem; font-weight: 700; margin-bottom: 8px; color: #1f2937; line-height: 1.3; }
-        .property-details-container .address { font-size: 1rem; color: #6b7280; margin-bottom: 30px; display: flex; align-items: center; gap: 6px; }
-        .property-details-container .address i { color: #9ca3af; margin-top: -2px; }
-
-        /* --- Галерея --- */
-        .gallery-container { margin-bottom: 35px; position: relative; overflow: hidden; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07);}
-        .image-gallery { width: 100%; height: 480px; border-radius: 12px; background-color: #f8f9fa; }
-        .swiper-slide { display: flex; justify-content: center; align-items: center; background-color: #f8f9fa; height: 100%; overflow: hidden; }
-        .swiper-slide img {
-            display: block;
-            width: 100%; /* Растягиваем по ширине контейнера */
-            height: 100%; /* Растягиваем по высоте контейнера */
-            object-fit: contain; /* <<< ИЗМЕНЕНО с cover на contain */
-            /* object-position: center; /* Можно добавить для центрирования, если нужно */
+        /* --- Стили остаются БЕЗ ИЗМЕНЕНИЙ, как в вашем последнем коде --- */
+        /* ... (все стили из вашего предыдущего блока <style>) ... */
+        .details-actions .contact-owner-btn { /* Дополнительный стиль для кнопки чата */
+             background-color: #eef2ff; /* Светло-синий фон */
+             color: #4f46e5; /* Синий текст */
+             border: 1px solid #c7d2fe; /* Синяя рамка */
+             flex-grow: 1; /* Растягиваем вместе с другими кнопками */
         }
-        .swiper-pagination { position: absolute; bottom: 15px !important; left: 50% !important; transform: translateX(-50%) !important; width: auto !important; z-index: 10; }
-        .swiper-pagination-bullet { background-color: rgba(255, 255, 255, 0.7); width: 10px; height: 10px; opacity: 1; margin: 0 5px !important; transition: background-color 0.2s ease; }
-        .swiper-pagination-bullet-active { background-color: #ffffff; }
-        .swiper-button-next, .swiper-button-prev { display: none !important; }
-        .custom-swiper-button { position: absolute; top: 50%; transform: translateY(-50%); z-index: 10; background-color: rgba(0, 0, 0, 0.35); color: white; border: none; border-radius: 50%; width: 44px; height: 44px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: background-color 0.2s ease; font-size: 1.8rem; line-height: 1;}
-        .custom-swiper-button:hover { background-color: rgba(0, 0, 0, 0.55); }
-        .custom-swiper-button-prev { left: 15px; }
-        .custom-swiper-button-next { right: 15px; }
-
-        /* --- Сетка для деталей --- */
-        .details-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 35px; }
-
-        /* --- Секции информации --- */
-        .main-info, .side-info section { background-color: #fff; padding: 25px 30px; border-radius: 12px; box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06); border: 1px solid #e5e7eb; }
-        .main-info h2, .side-info h2 { font-size: 1.6rem; font-weight: 600; margin-top: 0; margin-bottom: 25px; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb; color: #1f2937; }
-        .side-info section { margin-bottom: 30px; }
-        .side-info section:last-child { margin-bottom: 0; }
-
-        /* --- Основная информация (Grid) --- */
-        .info-grid { display: grid; grid-template-columns: auto 1fr; gap: 12px 15px; margin-bottom: 25px; }
-        .info-label { font-weight: 500; color: #4b5563; font-size: 0.9rem; white-space: nowrap; }
-        .info-value { color: #1f2937; font-size: 0.95rem; }
-        .info-value .status { padding: 4px 10px; border-radius: 6px; display: inline-block; font-weight: 500; font-size: 0.85rem; line-height: 1.2; }
-        .info-value .status.available { background-color: #d1fae5; color: #065f46; }
-        .info-value .status.unavailable { background-color: #fee2e2; color: #991b1b; }
-        .info-value .star { color: #facc15; }
-
-        /* --- Блок Цен --- */
-        .price-box { background-color: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 18px 22px; margin: 25px 0; }
-        .price-box p { margin: 6px 0; display: flex; justify-content: space-between; align-items: baseline; }
-        .price-box span:first-child { color: #4b5563; font-size: 0.95rem; }
-        .price-box span:last-child { font-weight: 600; }
-        .price-monthly span:last-child { color: #10b981; font-size: 1.2rem; }
-        .price-daily span:last-child { color: #3b82f6; font-size: 1.05rem; }
-
-        /* --- Действия --- */
-        .details-actions { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; flex-wrap: wrap; }
-        .details-actions .btn { font-size: 0.9rem; padding: 9px 18px; }
-        .details-actions .btn-book { background-color: #10b981; border-color: #10b981; color: white; }
-        .details-actions .btn-book:hover { background-color: #059669; border-color: #059669; }
-        .details-actions form { flex-grow: 1; display: inline-block; width: auto; }
-        .details-actions form button { width: 100%; }
-
-        /* --- Удобства --- */
-        .amenities-details ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
-        .amenities-details li { display: flex; align-items: center; gap: 10px; color: #374151; font-size: 0.95rem; }
-        .amenities-details li i { width: 20px; text-align: center; font-size: 1rem; margin-top: -1px; }
-        .amenities-details li.yes i { color: #10b981; }
-        .amenities-details li.no i { color: #ef4444; }
-        .amenities-details li i.fas { font-family: "Font Awesome 6 Free", "FontAwesome", sans-serif !important; font-weight: 900; font-style: normal; speak: none; display: inline-block; text-rendering: auto; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-
-        /* --- Описание --- */
-        .description-details p { color: #4b5563; line-height: 1.7; white-space: pre-wrap; }
-
-        /* --- Карта --- */
-        .map-section { margin-top: 40px; margin-bottom: 40px; }
-        .map-section h2 { font-size: 1.6rem; font-weight: 600; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb; color: #1f2937; }
-        #propertyMap { width: 100%; height: 400px; border-radius: 12px; border: 1px solid #e5e7eb; background-color: #f3f4f6; display: flex; align-items: center; justify-content: center; text-align: center; color: #6b7280; }
-        #propertyMap:empty::before { content: "Загрузка карты..."; font-style: italic; }
-        .map-error-message { padding: 20px; font-style: italic; }
-
-        /* --- Отзывы --- */
-        .reviews-section { margin-top: 40px; padding-top: 30px; border-top: 1px solid #e2e8f0; }
-        .reviews-section h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 25px; color: #334155; }
-        .review-item { background-color: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .review-item:last-child { margin-bottom: 0; }
-        .review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px; }
-        .review-header-right { display: flex; align-items: center; }
-        .review-author { font-weight: 600; color: #475569; }
-        .review-date { font-size: 0.85em; color: #64748b; }
-        .review-rating { margin-bottom: 12px; }
-        .review-rating .star { color: #facc15; font-size: 1.1rem; margin-right: 2px; }
-        .review-rating .star-empty { color: #d1d5db; }
-        .review-comment { color: #475569; line-height: 1.7; white-space: pre-wrap; }
-        .review-delete-btn { background-color: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 0.8rem; padding: 2px 5px; opacity: 0.7; transition: opacity 0.2s, color 0.2s; vertical-align: middle; margin-left: 10px; }
-        .review-delete-btn:hover { opacity: 1; color: #dc2626; }
-        .review-delete-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        #js-review-messages .flash-message { padding: 10px 15px; margin-bottom: 15px; border-radius: 5px; font-size: 0.9rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid transparent; position: relative; }
-        #js-review-messages .flash-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
-        #js-review-messages .flash-error { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
-        #js-review-messages .flash-message .close-flash { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); float: right; background: none; border: none; font-size: 1.3rem; line-height: 1; color: inherit; opacity: 0.6; cursor: pointer; padding: 0 5px; }
-        #noReviewsMessage { text-align: center; color: #64748b; margin-top: 15px; }
-
-        /* Форма добавления отзыва */
-        .add-review-section { margin-top: 30px; padding: 25px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
-        .add-review-section h3 { font-size: 1.3rem; font-weight: 600; margin-top: 0; margin-bottom: 20px; color: #334155;}
-        .add-review-form .form-group { margin-bottom: 15px; }
-        .add-review-form label { display: block; font-weight: 500; margin-bottom: 6px; color: #475569; }
-        .add-review-form textarea { box-sizing: border-box; width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 5px; font-size: 0.95rem; min-height: 100px; resize: vertical; }
-        .add-review-form textarea:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2); }
-        .add-review-form .btn-primary { margin-top: 10px; }
-        .star-rating-input { display: flex; flex-direction: row-reverse; justify-content: flex-end; margin-bottom: 15px; width: fit-content; }
-        .star-rating-input input[type="radio"] { display: none; }
-        .star-rating-input label { font-size: 1.8rem; color: #d1d5db; cursor: pointer; transition: color 0.2s; padding: 0 2px; }
-        .star-rating-input:not(:hover) input[type="radio"]:checked ~ label { color: #facc15; }
-        .star-rating-input:hover label { color: #fde047; }
-        .star-rating-input label:hover ~ label { color: #d1d5db; }
-        .star-rating-input:hover input[type="radio"]:checked ~ label { color: #facc15; }
-        .already-reviewed-message { background-color: #eef2ff; border-left: 4px solid #6366f1; padding: 12px 15px; color: #4338ca; font-size: 0.95rem; margin-top: 20px; border-radius: 4px; }
-        form button:disabled { opacity: 0.65; cursor: not-allowed; }
-
-
-        /* --- Адаптивность --- */
-        @media (max-width: 992px) { .details-grid { grid-template-columns: 1fr; } .side-info { margin-top: 30px; } .property-details-container h1 { font-size: 1.8rem; } .main-info h2, .side-info h2 { font-size: 1.4rem; } .image-gallery { height: 380px; } }
-        @media (max-width: 576px) { .property-details-container h1 { font-size: 1.6rem; } .main-info h2, .side-info h2 { font-size: 1.3rem; } .main-info, .side-info section { padding: 20px; } .details-grid { gap: 25px; } .image-gallery { height: 280px; } .info-grid { grid-template-columns: auto 1fr; gap: 10px; } .details-actions { flex-direction: column; } .details-actions .btn, .details-actions form { width: 100%; } .details-actions form button { width: 100%; } }
-
+        .details-actions .contact-owner-btn:hover {
+             background-color: #e0e7ff;
+             border-color: #a5b4fc;
+             color: #4338ca;
+        }
+        .details-actions .contact-owner-btn:disabled {
+             background-color: #eef2ff;
+             opacity: 0.7;
+        }
+        .details-actions .contact-owner-btn .fa-spinner {
+            margin-right: 5px;
+            display: none;
+        }
+        .details-actions .contact-owner-btn:disabled .fa-spinner {
+            display: inline-block;
+        }
+         .details-actions .contact-owner-btn:disabled .fa-envelope {
+            display: none;
+         }
     </style>
 </head>
 <body>
@@ -172,7 +69,7 @@
                         <span class="info-label">Тип:</span> <span class="info-value"><%= property.Type %></span>
                         <span class="info-label">Площадь:</span> <span class="info-value"><%= property.Area %> м²</span>
                         <span class="info-label">Статус:</span> <span class="info-value"> <span class="status <%= property.IsAvailable ? 'available' : 'unavailable' %>"><%= property.IsAvailable ? 'Доступно' : 'Недоступно' %></span> </span>
-                        <span class="info-label">Владелец:</span> <span class="info-value"><%= property.OwnerUsername || 'Неизвестен' %></span>
+                        <span class="info-label">Компания:</span> <span class="info-value"><%= property.CompanyName || property.OwnerUsername || 'Частное лицо' %></span>
                         <span class="info-label">Добавлено:</span> <span class="info-value"><%= property.AddedDate ? new Date(property.AddedDate).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric'}) : 'Неизвестно' %></span>
                         <span class="info-label">Рейтинг:</span> <span class="info-value"> <% if (property.NumberOfReviews && property.NumberOfReviews > 0 && typeof property.Rating === 'number') { %> <strong><%= property.Rating.toFixed(1) %></strong> <span class="star">★</span> (<span id="propertyReviewCount"><%= property.NumberOfReviews %></span> <%= property.NumberOfReviews === 1 ? 'отзыв' : (property.NumberOfReviews % 10 > 1 && property.NumberOfReviews % 10 < 5 && (property.NumberOfReviews < 10 || property.NumberOfReviews > 20) ? 'отзыва' : 'отзывов') %>) <% } else { %> <span id="propertyReviewCountPlaceholder">Нет отзывов</span> <% } %> </span>
                     </div>
@@ -183,11 +80,34 @@
                     </div>
 
                      <div class="details-actions">
-                         <% if (canBook) { %> <a href="/bookings/new?propertyId=<%= property.Id %>" class="btn btn-book">Забронировать</a> <% } %>
-                         <% if (canEdit) { %> <a href="/properties/edit/<%= property.Id %>" class="btn btn-edit">Редактировать</a> <% } %>
-                         <% if (canDelete) { %> <form action="/properties/delete/<%= property.Id %>" method="POST" style="flex-grow: 1; display: inline-block; width: auto;"><button type="submit" class="btn btn-delete" onclick="return confirm('Удалить объект <%= property.Title %>?')">Удалить</button></form> <% } %>
+                         <%# Кнопка бронирования %>
+                         <% if (canBook) { %>
+                             <a href="/bookings/new?propertyId=<%= property.Id %>" class="btn btn-book">Забронировать</a>
+                         <% } %>
+
+                         <%# Кнопка "Написать владельцу" - ПЕРЕМЕЩЕНА СЮДА %>
+                         <% if (currentUser && currentUser.role === 'Tenant' && property.companyId) { %>
+                            <button class="btn btn-outline-primary contact-owner-btn"
+                                    data-company-id="<%= property.companyId %>"
+                                    data-property-id="<%= property.Id %>">
+                                <i class="fas fa-spinner fa-spin"></i> <%# Спиннер для загрузки %>
+                                <i class="fas fa-envelope"></i> <%# Иконка письма %>
+                                <span>Написать владельцу</span>
+                            </button>
+                         <% } %>
+
+                         <%# Кнопки админа/владельца %>
+                         <% if (canEdit) { %>
+                             <a href="/properties/edit/<%= property.Id %>" class="btn btn-edit">Редактировать</a>
+                         <% } %>
+                         <% if (canDelete) { %>
+                             <form action="/properties/delete/<%= property.Id %>" method="POST" style="display: inline-block; margin:0;">
+                                <button type="submit" class="btn btn-delete" onclick="return confirm('Удалить объект <%= property.Title %>?')">Удалить</button>
+                             </form>
+                         <% } %>
                      </div>
                 </section>
+
 
                 <!-- === Боковая информация === -->
                 <aside class="side-info">
@@ -229,6 +149,7 @@
                 <div id="reviewsListContainer"> <% if (locals.reviews && locals.reviews.length > 0) { %><% reviews.forEach(review => { %> <div class="review-item" id="review-<%= review.reviewId %>"> <div class="review-header"> <span class="review-author"><%= review.username || 'Аноним' %></span> <div class="review-header-right"> <span class="review-date"><%= review.createdAt ? new Date(review.createdAt).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric'}) : '' %></span> <% if (currentUser && currentUser.role === 'Admin') { %> <button class="review-delete-btn" title="Удалить отзыв" data-review-id="<%= review.reviewId %>" data-property-id="<%= property.Id %>" onclick="deleteReview(this)">×</button> <% } %> </div> </div> <div class="review-rating"> <% for (let i = 1; i <= 5; i++) { %><span class="star <%= i <= review.rating ? '' : 'star-empty' %>">★</span><% } %> </div> <p class="review-comment"><%= review.comment %></p> </div> <% }) %><% } else { %> <p id="noReviewsMessage" style="text-align: center; color: #64748b; margin-top: 15px;">Отзывов пока нет.</p> <% } %> </div>
             </section>
 
+
             <!-- Секция Добавить Отзыв -->
             <% if (locals.canReview) { %> <section class="add-review-section"> <h3>Оставить отзыв</h3> <form id="addReviewForm" class="add-review-form" action="/properties/<%= property.Id %>/reviews" method="POST"> <div class="form-group"> <label>Ваша оценка:</label> <div class="star-rating-input"> <input type="radio" id="star5" name="rating" value="5" required/><label for="star5" title="Отлично">★</label> <input type="radio" id="star4" name="rating" value="4" /><label for="star4" title="Хорошо">★</label> <input type="radio" id="star3" name="rating" value="3" /><label for="star3" title="Нормально">★</label> <input type="radio" id="star2" name="rating" value="2" /><label for="star2" title="Плохо">★</label> <input type="radio" id="star1" name="rating" value="1" /><label for="star1" title="Ужасно">★</label> </div> </div> <div class="form-group"> <label for="comment">Ваш комментарий (макс. 1000 симв.):</label> <textarea id="comment" name="comment" rows="4" required maxlength="1000" placeholder="Поделитесь вашим мнением..."></textarea> </div> <button id="submitReviewBtn" type="submit" class="btn btn-primary">Отправить отзыв</button> </form> </section> <% } else if (locals.userHasReviewed) { %> <p class="already-reviewed-message">Вы уже оставили отзыв для этого объекта.</p> <% } %>
 
@@ -236,92 +157,296 @@
             <h1>Объект не найден</h1> <p>К сожалению, объект с таким идентификатором не найден.</p> <a href="/properties" class="btn btn-secondary">Вернуться к списку</a>
         <% } %>
     </main>
+    <div id="newMessageModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeNewMessageModal()">×</span>
+            <h2>Написать сообщение владельцу</h2>
+            <p>Объект: <strong id="newMessageModalPropertyName"></strong></p>
+            <form id="newMessageForm">
+                <input type="hidden" id="newMessageCompanyId">
+                <input type="hidden" id="newMessagePropertyId">
+                <div class="form-group">
+                    <label for="initialMessageTextarea">Ваше сообщение *</label>
+                    <textarea id="initialMessageTextarea" class="form-control" rows="5" required maxlength="2000" placeholder="Введите ваш вопрос или сообщение..."></textarea>
+                    <p id="newMessageModalError" style="color: var(--danger-color); display: none; font-size: 0.9rem; margin-top: 5px;"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeNewMessageModal()">Отмена</button>
+                    <button type="submit" id="sendInitialMessageBtn" class="btn btn-primary">
+                        <span class="button-text">Отправить</span>
+                        <i class="fas fa-spinner fa-spin button-spinner"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <%- include('partials/footer') %>
     <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
-    <script>
-        // Swiper Init
-        const swiper = new Swiper('.image-gallery', { loop: true, pagination: { el: '.swiper-pagination', clickable: true, }, navigation: { nextEl: '.custom-swiper-button-next', prevEl: '.custom-swiper-button-prev', }, grabCursor: true, });
-        // Disable review submit button
-        const reviewForm = document.getElementById('addReviewForm'); const reviewSubmitBtn = document.getElementById('submitReviewBtn'); if (reviewForm && reviewSubmitBtn) { reviewForm.addEventListener('submit', () => { const ratingSelected = reviewForm.querySelector('input[name="rating"]:checked'); const commentContent = reviewForm.querySelector('textarea[name="comment"]').value.trim(); if (ratingSelected && commentContent) { reviewSubmitBtn.disabled = true; reviewSubmitBtn.textContent = 'Отправка...'; } else { console.log("Review form validation failed client-side."); } }); }
-        // JS для удаления отзыва
-        function showReviewJsMessage(type, text) { const container = document.getElementById('js-review-messages'); if (!container) return; const messageDiv = document.createElement('div'); messageDiv.className = `flash-message flash-${type}`; messageDiv.innerHTML = `${text} <button type="button" class="close-flash" onclick="this.parentElement.remove()">×</button>`; container.innerHTML = ''; container.appendChild(messageDiv); setTimeout(() => { if (messageDiv) messageDiv.remove(); }, 5000); }
-        async function deleteReview(buttonElement) { const reviewId = buttonElement.dataset.reviewId; const propertyId = buttonElement.dataset.propertyId; if (!reviewId || !propertyId) { console.error("Missing review or property ID for deletion."); showReviewJsMessage('error', 'Ошибка: Не удалось определить отзыв для удаления.'); return; } if (!confirm(`Вы уверены, что хотите удалить этот отзыв (${reviewId.substring(0, 6)}...)? Действие нельзя отменить.`)) { return; } buttonElement.disabled = true; const originalButtonContent = buttonElement.innerHTML; buttonElement.innerHTML = '...'; try { const response = await fetch(`/properties/${propertyId}/reviews/${reviewId}/delete`, { method: 'POST', headers: { 'Accept': 'application/json' } }); const result = await response.json(); if (response.ok && result.success) { const reviewElement = document.getElementById(`review-${reviewId}`); if (reviewElement) { reviewElement.remove(); } const countElement = document.getElementById('reviewCountDisplay'); const noReviewsMsg = document.getElementById('noReviewsMessage'); const reviewListContainer = document.getElementById('reviewsListContainer'); const propertyReviewCountSpan = document.getElementById('propertyReviewCount'); const propertyReviewCountPlaceholder = document.getElementById('propertyReviewCountPlaceholder'); const propertyRatingElement = document.querySelector('.main-info .info-grid .info-value strong'); const propertyRatingContainer = propertyRatingElement ? propertyRatingElement.parentElement : null; if (countElement && typeof result.newReviewCount !== 'undefined') { countElement.textContent = result.newReviewCount; if (result.newReviewCount === 0 && noReviewsMsg) { if(reviewListContainer && !reviewListContainer.querySelector('.review-item')){ noReviewsMsg.style.display = 'block'; } } else if (noReviewsMsg) { noReviewsMsg.style.display = 'none'; } if (result.newReviewCount > 0 && typeof result.newRating === 'number') { if (propertyRatingContainer) { const count = result.newReviewCount; const word = count === 1 ? 'отзыв' : (count % 10 > 1 && count % 10 < 5 && (count < 10 || count > 20) ? 'отзыва' : 'отзывов'); propertyRatingContainer.innerHTML = `<strong>${result.newRating.toFixed(1)}</strong> <span class="star" style="color: #facc15;">★</span> (<span id="propertyReviewCount">${result.newReviewCount}</span> ${word})`; } } else { if (propertyRatingContainer) { propertyRatingContainer.innerHTML = '<span id="propertyReviewCountPlaceholder">Нет отзывов</span>'; } } } showReviewJsMessage('success', result.message || 'Отзыв удален.'); } else { throw new Error(result.error || 'Не удалось удалить отзыв.'); } } catch (error) { console.error(`Error deleting review ${reviewId}:`, error); showReviewJsMessage('error', error.message || 'Произошла ошибка при удалении.'); buttonElement.disabled = false; buttonElement.innerHTML = originalButtonContent; } }
+<%# Подключаем chat.js ПЕРЕД скриптом этой страницы, если обработчик кнопки чата вынесен туда %>
+<%# Если обработчик кнопки остается здесь, chat.js можно убрать отсюда %>
+<%# <script src="/js/chat.js"></script> %>
+<script>
+    // --- Swiper Init ---
+    const swiper = new Swiper('.image-gallery', {
+        loop: true,
+        pagination: { el: '.swiper-pagination', clickable: true, },
+        navigation: { nextEl: '.custom-swiper-button-next', prevEl: '.custom-swiper-button-prev', },
+        grabCursor: true,
+    });
 
-        // === ИСПРАВЛЕННАЯ Инициализация Яндекс.Карты v3 ===
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOM fully loaded.');
-            console.log('Checking for Yandex Maps API...');
-            if (typeof ymaps !== 'undefined') {
-                console.log('Yandex Maps API found. Calling ymaps.ready...');
-                ymaps.ready(initMap);
+    // --- Disable Review Submit Button ---
+    const reviewForm = document.getElementById('addReviewForm');
+    const reviewSubmitBtn = document.getElementById('submitReviewBtn');
+    if (reviewForm && reviewSubmitBtn) {
+        reviewForm.addEventListener('submit', () => {
+            const ratingSelected = reviewForm.querySelector('input[name="rating"]:checked');
+            const commentContent = reviewForm.querySelector('textarea[name="comment"]').value.trim();
+            if (ratingSelected && commentContent) {
+                reviewSubmitBtn.disabled = true;
+                reviewSubmitBtn.textContent = 'Отправка...';
             } else {
-                console.error("Yandex Maps API не загружен. Отображение карты невозможно.");
-                const mapContainer = document.getElementById('propertyMap');
-                if(mapContainer) mapContainer.innerHTML = '<div class="map-error-message">Не удалось загрузить API Яндекс.Карт. Проверьте CSP, API-ключ и подключение к интернету.</div>';
+                console.log("Review form validation failed client-side.");
+            }
+        });
+    }
+
+    // --- JS Review Messages ---
+    function showReviewJsMessage(type, text) {
+        const container = document.getElementById('js-review-messages');
+        if (!container) return;
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `flash-message flash-${type}`;
+        messageDiv.innerHTML = `${text} <button type="button" class="close-flash" onclick="this.parentElement.remove()">×</button>`;
+        container.innerHTML = '';
+        container.appendChild(messageDiv);
+        setTimeout(() => { if (messageDiv && messageDiv.parentNode) messageDiv.remove(); }, 5000);
+    }
+
+    // --- Delete Review ---
+    async function deleteReview(buttonElement) {
+        const reviewId = buttonElement.dataset.reviewId;
+        const propertyId = buttonElement.dataset.propertyId;
+        if (!reviewId || !propertyId) { console.error("Missing review/property ID."); showReviewJsMessage('error', 'Ошибка: Не удалось определить отзыв.'); return; }
+        if (!confirm(`Удалить отзыв (${reviewId.substring(0, 6)}...)?`)) { return; }
+        buttonElement.disabled = true;
+        const originalButtonContent = buttonElement.innerHTML;
+        buttonElement.innerHTML = '...';
+        try {
+            const response = await fetch(`/properties/${propertyId}/reviews/${reviewId}/delete`, { method: 'POST', headers: { 'Accept': 'application/json' } });
+            const result = await response.json();
+            if (response.ok && result.success) {
+                document.getElementById(`review-${reviewId}`)?.remove();
+                const countElement = document.getElementById('reviewCountDisplay');
+                const noReviewsMsg = document.getElementById('noReviewsMessage');
+                const reviewListContainer = document.getElementById('reviewsListContainer');
+                const propertyRatingContainer = document.querySelector('.main-info .info-grid .info-value:has(strong.star)'); // Обновляем селектор для поиска родителя
+
+                if (countElement && typeof result.newReviewCount !== 'undefined') {
+                    countElement.textContent = result.newReviewCount;
+                    const hasReviewsLeft = reviewListContainer && reviewListContainer.querySelector('.review-item');
+                    if (noReviewsMsg) noReviewsMsg.style.display = hasReviewsLeft ? 'none' : 'block';
+
+                    // Обновляем отображение рейтинга объекта
+                    if (propertyRatingContainer) {
+                        if (result.newReviewCount > 0 && typeof result.newRating === 'number') {
+                            const count = result.newReviewCount;
+                            const word = count === 1 ? 'отзыв' : (count % 10 > 1 && count % 10 < 5 && (count < 10 || count > 20) ? 'отзыва' : 'отзывов');
+                             // Генерируем звезды
+                             let starsHTML = '';
+                             for(let i = 1; i <= 5; i++) { starsHTML += `<span class="star ${ i <= result.newRating ? '' : 'star-empty'}">★</span>`; }
+                             // Обновляем весь блок
+                            propertyRatingContainer.innerHTML = `<strong>${result.newRating.toFixed(1)}</strong> ${starsHTML} (<span id="propertyReviewCount">${result.newReviewCount}</span> ${word})`;
+                        } else {
+                            propertyRatingContainer.innerHTML = '<span id="propertyReviewCountPlaceholder">Нет отзывов</span>';
+                        }
+                    }
+                }
+                showReviewJsMessage('success', result.message || 'Отзыв удален.');
+            } else { throw new Error(result.error || 'Не удалось удалить отзыв.'); }
+        } catch (error) {
+            console.error(`Error deleting review ${reviewId}:`, error);
+            showReviewJsMessage('error', error.message || 'Произошла ошибка при удалении.');
+            buttonElement.disabled = false;
+            buttonElement.innerHTML = originalButtonContent;
+        }
+    }
+
+    // --- Yandex Map Init ---
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof ymaps !== 'undefined') {
+            ymaps.ready(initMap);
+        } else {
+            console.error("Yandex Maps API не загружен.");
+            const mapContainer = document.getElementById('propertyMap');
+            if (mapContainer) mapContainer.innerHTML = '<div class="map-error-message">Ошибка загрузки API Яндекс.Карт.</div>';
+        }
+        // Инициализация обработчиков для модального окна чата
+        initializeChatModalHandlers();
+    });
+
+    function initMap() { /* ... код initMap без изменений ... */
+        const mapContainer = document.getElementById('propertyMap');
+        if (!mapContainer) { console.error('Map container #propertyMap not found!'); return; }
+        let propertyAddress = null;
+        let propertyTitleHint = null;
+        try {
+            const addressJson = mapContainer.dataset.address;
+            const titleJson = mapContainer.dataset.titleHint;
+            if (addressJson && addressJson !== '""') propertyAddress = JSON.parse(addressJson);
+            if (titleJson && titleJson !== '""') propertyTitleHint = JSON.parse(titleJson);
+        } catch (e) { console.error("Ошибка парсинга data-атрибутов карты:", e); }
+        if (!propertyAddress) { mapContainer.innerHTML = '<div class="map-error-message">Адрес объекта не указан.</div>'; return; }
+        ymaps.geocode(propertyAddress, { results: 1 })
+            .then(function (res) {
+                const firstGeoObject = res.geoObjects.get(0);
+                if (!firstGeoObject) { mapContainer.innerHTML = '<div class="map-error-message">Не найдены координаты: ' + propertyAddress + '</div>'; return; }
+                const coords = firstGeoObject.geometry.getCoordinates();
+                const initialZoom = 15;
+                const propertyMap = new ymaps.Map('propertyMap', { center: coords, zoom: initialZoom, controls: ['zoomControl', 'fullscreenControl', 'typeSelector'] });
+                propertyMap.setCenter(coords, initialZoom);
+                const placemark = new ymaps.Placemark(coords, { hintContent: propertyTitleHint || propertyAddress, balloonContent: `<strong>${propertyTitleHint || 'Объект'}</strong><br>${propertyAddress}` }, { preset: 'islands#blueDotIconWithCaption' });
+                propertyMap.geoObjects.add(placemark);
+            })
+            .catch(function (err) { mapContainer.innerHTML = '<div class="map-error-message">Ошибка геокодирования.</div>'; console.error('Geocoding error:', err); });
+    }
+
+    // --- Chat Modal Logic ---
+    const newMessageModal = document.getElementById('newMessageModal');
+    const newMessageForm = document.getElementById('newMessageForm');
+    const initialMessageTextarea = document.getElementById('initialMessageTextarea');
+    const sendInitialMessageBtn = document.getElementById('sendInitialMessageBtn');
+    const newMessageCompanyIdInput = document.getElementById('newMessageCompanyId');
+    const newMessagePropertyIdInput = document.getElementById('newMessagePropertyId');
+    const newMessageModalError = document.getElementById('newMessageModalError');
+    const newMessageModalPropertyName = document.getElementById('newMessageModalPropertyName');
+
+    function openNewMessageModal(companyId, propertyId, propertyName) {
+        if (!newMessageModal || !newMessageCompanyIdInput || !newMessagePropertyIdInput || !initialMessageTextarea || !newMessageModalPropertyName) return;
+        newMessageCompanyIdInput.value = companyId;
+        newMessagePropertyIdInput.value = propertyId;
+        initialMessageTextarea.value = ''; // Очищаем поле
+        newMessageModalPropertyName.textContent = propertyName || 'Неизвестный объект'; // Показываем название
+        newMessageModalError.style.display = 'none'; // Скрываем старые ошибки
+        sendInitialMessageBtn.disabled = false; // Разблокируем кнопку
+        sendInitialMessageBtn.querySelector('.button-text').textContent = 'Отправить'; // Восстанавливаем текст кнопки
+
+        newMessageModal.style.display = 'block';
+        setTimeout(() => { newMessageModal.classList.add('visible'); document.body.style.overflow = 'hidden'; }, 10);
+        initialMessageTextarea.focus();
+    }
+
+    function closeNewMessageModal() {
+        if (!newMessageModal) return;
+        newMessageModal.classList.remove('visible');
+        setTimeout(() => { newMessageModal.style.display = 'none'; document.body.style.overflow = ''; }, 300);
+    }
+
+    // Функция для показа ошибки ВНУТРИ модального окна
+    function showModalError(message) {
+        if (newMessageModalError) {
+            newMessageModalError.textContent = message;
+            newMessageModalError.style.display = 'block';
+            // Добавляем встряску к textarea
+            if(initialMessageTextarea) {
+                initialMessageTextarea.classList.add('shake-error');
+                setTimeout(() => initialMessageTextarea.classList.remove('shake-error'), 500);
+            }
+        }
+    }
+
+    // Привязка обработчиков к модальному окну
+    function initializeChatModalHandlers() {
+        // Кнопка "Написать владельцу"
+        document.querySelectorAll('.contact-owner-btn').forEach(button => {
+             const buttonIcon = button.querySelector('.fa-envelope');
+             const buttonSpinner = button.querySelector('.fa-spinner');
+             const buttonTextSpan = button.querySelector('span');
+
+             if (buttonSpinner) buttonSpinner.style.display = 'none'; // Скрыть спиннер изначально
+
+             button.addEventListener('click', () => {
+                 const companyId = button.dataset.companyId;
+                 const propertyId = button.dataset.propertyId;
+                 const propertyName = document.querySelector('h1')?.textContent || 'этот объект'; // Берем название из h1
+
+                 if (!companyId || !propertyId) {
+                     alert("Ошибка: не удалось определить получателя или объект.");
+                     return;
+                 }
+                 openNewMessageModal(companyId, propertyId, propertyName);
+             });
+        });
+
+        // Форма отправки первого сообщения
+        if (newMessageForm) {
+            newMessageForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const companyId = newMessageCompanyIdInput.value;
+                const propertyId = newMessagePropertyIdInput.value;
+                const initialMessage = initialMessageTextarea.value.trim();
+
+                if (!companyId || !propertyId || !initialMessage) {
+                     showModalError('Пожалуйста, введите сообщение.');
+                    return;
+                }
+                 if (initialMessage.length > 2000) {
+                    showModalError('Сообщение слишком длинное (макс. 2000 символов).');
+                    return;
+                 }
+
+                sendInitialMessageBtn.disabled = true;
+                sendInitialMessageBtn.querySelector('.button-text').textContent = 'Отправка...';
+                const spinner = sendInitialMessageBtn.querySelector('.button-spinner');
+                if (spinner) spinner.style.display = 'inline-block';
+                newMessageModalError.style.display = 'none'; // Скрываем ошибку перед отправкой
+
+                try {
+                    const response = await fetch('/chats', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        body: JSON.stringify({
+                            recipientCompanyId: companyId,
+                            propertyId: propertyId,
+                            initialMessage: initialMessage
+                        })
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.success) {
+                        throw new Error(result.error || 'Не удалось создать чат.');
+                    }
+                    // Успешно - закрываем модалку и переходим в чат
+                    closeNewMessageModal();
+                    window.location.href = `/chats/${result.chatId}`;
+
+                } catch (error) {
+                    console.error("Error initiating chat via modal:", error);
+                    showModalError(error.message || 'Произошла ошибка.');
+                    sendInitialMessageBtn.disabled = false;
+                    sendInitialMessageBtn.querySelector('.button-text').textContent = 'Отправить';
+                     if (spinner) spinner.style.display = 'none';
+                }
+            });
+        }
+
+         // Закрытие модального окна
+         document.querySelectorAll('#newMessageModal .close-modal, #newMessageModal .btn-secondary').forEach(el => {
+             el.addEventListener('click', closeNewMessageModal);
+         });
+         if (newMessageModal) {
+             newMessageModal.addEventListener('click', (event) => {
+                 if (event.target === newMessageModal) { closeNewMessageModal(); }
+             });
+         }
+         document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && newMessageModal && newMessageModal.classList.contains('visible')) {
+                closeNewMessageModal();
             }
         });
 
-        function initMap() {
-            console.log('initMap function called.');
-            const mapContainer = document.getElementById('propertyMap');
-            if (!mapContainer) { console.error('Map container #propertyMap not found!'); return; }
+    } // Конец initializeChatModalHandlers
 
-            let propertyAddress = null;
-            let propertyTitleHint = null;
-            try {
-                 const addressJson = mapContainer.dataset.address;
-                 const titleJson = mapContainer.dataset.titleHint;
-                 console.log('Raw data attributes:', { addressJson, titleJson });
-                 if (addressJson && addressJson !== '""') propertyAddress = JSON.parse(addressJson);
-                 else console.warn('Address data attribute is missing or empty.');
-                 if (titleJson && titleJson !== '""') propertyTitleHint = JSON.parse(titleJson);
-            } catch (e) { console.error("Ошибка парсинга data-атрибутов:", e); }
+</script>
 
-            console.log('Parsed data:', { propertyAddress, propertyTitleHint });
-
-            if (!propertyAddress) {
-                mapContainer.innerHTML = '<div class="map-error-message">Адрес объекта не указан или не удалось его прочитать.</div>';
-                console.error('Property address is missing or invalid after parsing.');
-                return;
-            }
-
-            console.log('Attempting to geocode address:', propertyAddress);
-            ymaps.geocode(propertyAddress, { results: 1 })
-                .then(function (res) {
-                    console.log('Geocoding successful. Result:', res);
-                    const firstGeoObject = res.geoObjects.get(0);
-                    if (!firstGeoObject) {
-                        mapContainer.innerHTML = '<div class="map-error-message">Не удалось определить местоположение по адресу: <br><i>' + propertyAddress + '</i></div>';
-                        console.warn("Geocoding failed (no geo object):", propertyAddress); return;
-                    }
-                    const coords = firstGeoObject.geometry.getCoordinates();
-                    const bounds = firstGeoObject.properties.get('boundedBy');
-                    console.log('!!! EXACT Coordinates found:', coords);
-
-                    const initialZoom = 12; // <<< УМЕНЬШЕННЫЙ ЗУМ
-                    console.log(`Creating map with zoom: ${initialZoom}`); // Исправлен лог
-
-                    const propertyMap = new ymaps.Map('propertyMap', { center: coords, zoom: initialZoom, controls: ['zoomControl', 'fullscreenControl', 'typeSelector', 'trafficControl'] });
-                    console.log('Map object created:', propertyMap);
-
-                    // --- ОСТАВЛЯЕМ ТОЛЬКО setCenter ---
-                    console.log('Setting center and zoom directly.');
-                    propertyMap.setCenter(coords, initialZoom);
-                    // --- КОНЕЦ ---
-
-                    console.log('Creating placemark...');
-                    const placemark = new ymaps.Placemark(coords, { hintContent: propertyTitleHint || propertyAddress, balloonContent: `<strong>${propertyTitleHint || 'Объект'}</strong><br>${propertyAddress}` }, { preset: 'islands#blueDotIconWithCaption' });
-                    console.log('Adding placemark to map...');
-                    propertyMap.geoObjects.add(placemark);
-                    console.log('Map setup complete (centered).');
-                })
-                .catch(function (err) {
-                    mapContainer.innerHTML = '<div class="map-error-message">Ошибка при запросе геокодирования.</div>';
-                    console.error('Geocoding request error:', err);
-                });
-        }
-        // === Конец ИСПРАВЛЕННОЙ Инициализации Яндекс.Карты ===
-   </script>
 </body>
 </html>

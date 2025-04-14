@@ -232,3 +232,56 @@ form button:disabled { opacity: 0.65; cursor: not-allowed; }
       .details-actions { flex-direction: column; } /* Кнопки друг под другом */
        .details-actions .btn, .details-actions form { width: 100%; }
   }
+  /* --- Стили для модального окна нового сообщения --- */
+.modal { /* Стили .modal уже должны быть определены для других модалок */
+    display: none; /* Скрыто по умолчанию */
+    position: fixed; z-index: 1050; left: 0; top: 0; width: 100%; height: 100%;
+    overflow: auto; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+    opacity: 0; transition: opacity 0.3s ease;
+}
+.modal.visible { opacity: 1; }
+
+.modal-content { /* Стили .modal-content уже должны быть */
+    background-color: #fefefe; margin: 8% auto; padding: 30px; border: none;
+    width: 90%; max-width: 550px; /* Чуть шире для текстареа */
+    border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    transform: translateY(-40px) scale(0.95); opacity: 0;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative;
+}
+.modal.visible .modal-content { transform: translateY(0) scale(1); opacity: 1; }
+
+.close-modal { /* Стили .close-modal уже должны быть */
+    position: absolute; top: 15px; right: 20px; color: #aaa; font-size: 32px;
+    font-weight: bold; cursor: pointer; line-height: 1; transition: all 0.2s ease;
+    padding: 0 5px;
+}
+.close-modal:hover, .close-modal:focus { color: #dc3545; transform: rotate(90deg) scale(1.1); }
+
+#newMessageModal .modal-content h2 { /* Стили h2 модалки */
+    margin-top: 0; margin-bottom: 15px; font-size: 1.5rem; font-weight: 600;
+    color: #333; border-bottom: 1px solid #eee; padding-bottom: 15px;
+}
+#newMessageModal .modal-content p { /* Стиль параграфа с названием объекта */
+    margin-bottom: 20px; color: #555; font-size: 1rem;
+}
+#newMessageModal .form-group label {
+    display: block; margin-bottom: 8px; font-weight: 500;
+}
+#newMessageModal textarea.form-control { /* Стили textarea */
+    width: 100%; padding: 12px 15px; border: 1px solid #ced4da;
+    border-radius: 8px; font-size: 1rem; line-height: 1.5;
+    box-sizing: border-box; resize: vertical; min-height: 120px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+#newMessageModal textarea.form-control:focus {
+    border-color: #4a6cfa; outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(74, 108, 250, 0.2);
+}
+#newMessageModal .modal-footer { /* Стили футера модалки */
+    display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;
+    padding-top: 20px; border-top: 1px solid #eee;
+}
+#newMessageModal .button-spinner { margin-left: 5px; display: none; }
+#newMessageModal button:disabled .button-spinner { display: inline-block; animation: spin 1s linear infinite; }
+#newMessageModal button .button-text { vertical-align: middle; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }

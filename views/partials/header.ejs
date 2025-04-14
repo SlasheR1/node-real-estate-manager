@@ -19,6 +19,10 @@
                             <i class="fas fa-calendar-check"></i>
                             <span>Мои бронирования</span>
                         </a>
+                        <a href="/chats" class="nav-link"> <%# <<<=== НОВАЯ ССЫЛКА ДЛЯ TENANT %>
+                            <i class="fas fa-comments"></i>
+                            <span>Мои чаты</span>
+                        </a>
                     <% } %>
                     <%# Управление Арендами (для всех кроме Tenant) %>
                     <% if (currentUser.role === 'Admin' || currentUser.role === 'Owner' || currentUser.role === 'Staff') { %>
@@ -27,6 +31,13 @@
                             <span>Упр. Арендами</span>
                         </a>
                     <% } %>
+                    <%# Чаты для Owner/Staff %>
+                     <% if ((currentUser.role === 'Owner' || currentUser.role === 'Staff') && currentUser.companyId) { %>
+                         <a href="/chats" class="nav-link"> <%# Новая ссылка для Owner/Staff %>
+                             <i class="fas fa-headset"></i> <%# Другая иконка для отличия? %>
+                             <span>Чаты компании</span>
+                         </a>
+                     <% } %>
                     <%# Добавить объект (для Admin и Owner с завершенным профилем) %>
                     <% if (currentUser.role === 'Admin' || (currentUser.role === 'Owner' && currentUser.companyProfileCompleted)) { %>
                          <a href="/properties/add" class="nav-link">
