@@ -563,6 +563,130 @@ main.container {
     font-size: 1rem; flex-shrink: 0; width: 18px;
     text-align: center; margin-top: 1px;
 }
+
+/* public/css/style.css или chat.css */
+
+/* --- Стили всплывающих уведомлений --- */
+#toast-notification-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1060; /* Выше модалок */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 350px; /* Ширина уведомления */
+    width: calc(100% - 40px); /* Адаптивность */
+}
+
+.toast-notification {
+    background-color: #fff;
+    color: var(--text-primary, #333);
+    border-radius: var(--border-radius-md, 8px);
+    padding: 15px 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+    border-left: 5px solid var(--primary-accent, #0d6efd); /* Цветная полоска */
+    display: flex;
+    align-items: flex-start; /* Иконка и текст сверху */
+    gap: 15px;
+    opacity: 0;
+    transform: translateX(100%); /* Начинаем справа за экраном */
+    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Эффект "вылета" */
+    cursor: pointer; /* Чтобы было понятно, что можно кликнуть */
+    overflow: hidden; /* Обрезать содержимое */
+}
+
+.toast-notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.toast-notification.hide {
+    opacity: 0;
+    transform: translateX(100%);
+}
+
+.toast-icon {
+    font-size: 1.5rem;
+    color: var(--primary-accent, #0d6efd);
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.toast-content {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.toast-title {
+    font-weight: 600;
+    margin: 0 0 5px 0;
+    font-size: 1rem;
+}
+
+.toast-message {
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: var(--text-secondary, #666);
+    margin: 0 0 12px 0;
+    /* Ограничение текста в несколько строк */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* Показать максимум 3 строки */
+    -webkit-box-orient: vertical;
+}
+
+.toast-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end; /* Кнопки справа */
+}
+
+.toast-actions button {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    border-radius: var(--border-radius-sm, 4px);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.toast-actions .btn-toast-read {
+    background-color: #e9ecef;
+    color: #495057;
+    border-color: #dee2e6;
+}
+.toast-actions .btn-toast-read:hover {
+    background-color: #dee2e6;
+}
+
+.toast-actions .btn-toast-open {
+    background-color: var(--primary-accent, #0d6efd);
+    color: white;
+    border-color: var(--primary-accent, #0d6efd);
+}
+.toast-actions .btn-toast-open:hover {
+    background-color: var(--primary-dark, #0b5ed7); /* Используйте свою переменную */
+}
+
+/* --- Стили для счетчика непрочитанных чатов в хедере --- */
+.unread-chats-badge {
+    background-color: var(--unread-badge-bg, #25d366); /* Цвет как у бейджа в списке */
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 6px;
+    line-height: 1; /* Убираем лишнюю высоту */
+    vertical-align: middle; /* Выравниваем */
+    transition: transform 0.2s ease;
+}
+.unread-chats-badge.updated { /* Анимация при обновлении */
+    transform: scale(1.2);
+}
 .global-notification-panel .notification-item.success .icon { color: #27ae60; }
 .global-notification-panel .notification-item.warning .icon { color: #f39c12; }
 .global-notification-panel .notification-item.error .icon { color: #e74c3c; }

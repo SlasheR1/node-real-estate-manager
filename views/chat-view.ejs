@@ -42,26 +42,32 @@
                 <a href="/chats" class="btn btn-sm btn-outline-secondary" style="margin-left: auto; padding: 4px 8px; font-size: 0.8rem; border: 1px solid #ced4da; color: #6c757d;"><i class="fas fa-arrow-left"></i> К списку чатов</a>
             </div>
             <div class="message-list" id="messageList">
-                 <button id="loadMoreMessagesBtn" class="btn btn-secondary btn-small load-more-btn hidden">
-                     <i class="fas fa-spinner fa-spin button-spinner" style="display: none;"></i>
-                     <span class="button-text">Загрузить еще</span>
-                 </button>
-                <% if (messages && messages.length > 0) { %>
-                    <% messages.forEach(message => { %> <%# Начало цикла %>
-                        <div class="message-bubble <%= message.isOwnMessage ? 'own' : 'other' %>" data-timestamp="<%= message.timestamp %>">
-                            <div class="message-text"><%= message.text %></div>
-                            <div class="message-meta">
-                                <span class="message-time"><%= message.timestampFormatted %></span>
-                                <% if (message.isOwnMessage) { %>
-                                    <span class="message-status-ticks"><i class="fas fa-check"></i></span>
-                                <% } %>
-                            </div>
-                        </div>
-                    <% }); %> <%# <<<--- ИСПРАВЛЕНО ЗДЕСЬ: Добавлен ; перед }) %>
-                <% } else { %>
-                    <p style="text-align: center; color: var(--text-secondary); padding: 20px;">Нет сообщений в этом чате.</p>
-                <% } %>
-            </div>
+                <button id="loadMoreMessagesBtn" class="btn btn-secondary btn-small load-more-btn hidden">
+                    <i class="fas fa-spinner fa-spin button-spinner" style="display: none;"></i>
+                    <span class="button-text">Загрузить еще</span>
+                </button>
+               <% if (messages && messages.length > 0) { %>
+                   <% messages.forEach(message => { %>
+                        <%# Добавляем класс read на основе isReadByRecipient %>
+                       <div class="message-bubble <%= message.isOwnMessage ? 'own' : 'other' %> <%= message.isOwnMessage && message.isReadByRecipient ? 'read' : '' %>"
+                            data-timestamp="<%= message.timestamp %>"
+                            data-message-id="<%= message.id %>">
+                           <div class="message-text"><%= message.text %></div>
+                           <div class="message-meta">
+                               <span class="message-time"><%= message.timestampFormatted %></span>
+                               <% if (message.isOwnMessage) { %>
+                                   <span class="message-status-ticks">
+                                        <%# Отображаем двойную галочку, если прочитано %>
+                                        <i class="fas <%= message.isReadByRecipient ? 'fa-check-double' : 'fa-check' %>"></i>
+                                   </span>
+                               <% } %>
+                           </div>
+                       </div>
+                   <% }); %>
+               <% } else { %>
+                   <p style="text-align: center; color: var(--text-secondary); padding: 20px;">Нет сообщений в этом чате.</p>
+               <% } %>
+           </div>
             <form class="message-input-form" id="messageInputForm" data-chat-id="<%= chatId %>"> <%# Передаем chatId %>
                 <textarea id="messageTextarea" placeholder="Введите ваше сообщение..." required maxlength="2000" rows="1"></textarea>
                 <button type="submit" id="sendMessageBtn" class="btn btn-primary send-btn" title="Отправить (Enter)">

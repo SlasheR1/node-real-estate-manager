@@ -990,71 +990,110 @@ async function createMessage(messageData) {
  * @param {number|null} [beforeTimestamp=null] Timestamp самого старого загруженного сообщения (для загрузки более старых).
  * @returns {Promise<Array<object>>} Массив объектов сообщений, отсортированных по времени (старые сверху).
  */
-async function getChatMessages(chatId, limit = 50, beforeTimestamp = null) {
-    if (!chatId) return [];
-    log.debug(`[getChatMessages] Fetching messages for chat ${chatId}, limit: ${limit}, before: ${beforeTimestamp}`);
+async function getChatMessages(chatId, requestingUser, limit = 50, beforeTimestamp = null) {
+    if (!chatId || !requestingUser || !requestingUser.username) {
+        log.warn('[getChatMessages v2] Invalid input: chatId or requestingUser is missing.');
+        return [];
+    }
+    const currentUserId = requestingUser.username;
+    const currentUserCompanyId = requestingUser.companyId;
+
+    log.debug(`[getChatMessages v2] Fetching messages for chat ${chatId}, User: ${currentUserId}, Limit: ${limit}, Before: ${beforeTimestamp}`);
+
     try {
-        // 1. Запрос ВСЕХ сообщений для данного chatId
-        //    Используем ТОЛЬКО фильтрацию по chatId. Сортировку и лимитирование сделаем на сервере.
+        // 1. Получаем данные чата для информации о прочтении
+        const chatData = await getChatById(chatId);
+        if (!chatData || !chatData.participants) {
+            log.warn(`[getChatMessages v2] Chat data or participants not found for chat ${chatId}`);
+            return [];
+        }
+        const participants = chatData.participants;
+        const lastReadTimestamps = chatData.lastReadTimestamp || {};
+
+        // 2. Определяем ID "других" участников
+        const otherParticipantIds = Object.keys(participants).filter(pId =>
+             pId !== currentUserId && pId !== currentUserCompanyId
+        );
+
+        // 3. Находим максимальный timestamp прочтения *другими*
+        let maxOtherLastReadTimestamp = 0;
+        otherParticipantIds.forEach(pId => {
+            if (lastReadTimestamps[pId] && lastReadTimestamps[pId] > maxOtherLastReadTimestamp) {
+                maxOtherLastReadTimestamp = lastReadTimestamps[pId];
+            }
+        });
+        log.debug(`[getChatMessages v2] Max lastReadTimestamp for others in chat ${chatId}: ${maxOtherLastReadTimestamp}`);
+
+        // 4. Запрашиваем ВСЕ сообщения для данного chatId
+        //    Используем ТОЛЬКО фильтрацию по chatId.
         const query = db.ref('messages')
-                      .orderByChild('chatId') // <<< ОСТАВЛЯЕМ ТОЛЬКО ЭТОТ ИНДЕКС
+                      .orderByChild('chatId') // <<< ТОЛЬКО ЭТОТ ИНДЕКС
                       .equalTo(chatId);
 
         const snapshot = await query.once('value');
         const messagesData = snapshot.val();
 
         if (!messagesData) {
-            log.debug(`[getChatMessages] No messages found for chat ${chatId}.`);
+            log.debug(`[getChatMessages v2] No messages found for chat ${chatId}.`);
             return [];
         }
 
-        // 2. Преобразуем в массив и добавляем ID
+        // 5. Преобразуем в массив и добавляем ID
         let messagesArray = Object.entries(messagesData).map(([id, data]) => ({
             id: id,
             ...data
         }));
 
-        // 3. Сортируем ВСЕ сообщения чата по timestamp (ПО УБЫВАНИЮ - новые сверху)
+        // 6. Сортируем ВСЕ сообщения чата по timestamp (ПО УБЫВАНИЮ - новые сверху)
         messagesArray.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        log.debug(`[getChatMessages v2] Total messages fetched and sorted: ${messagesArray.length}`);
 
-        // 4. Применяем пагинацию (limit и beforeTimestamp) уже к отсортированному массиву
+        // 7. Применяем пагинацию (limit и beforeTimestamp) к отсортированному массиву
         let paginatedMessages;
         if (beforeTimestamp && typeof beforeTimestamp === 'number' && beforeTimestamp > 0) {
-            // Ищем индекс первого сообщения, которое СТАРШЕ (или равно) 'beforeTimestamp'
-            // Так как массив отсортирован DESC (новые сверху), ищем первое <= beforeTimestamp-1
+            // Ищем индекс первого сообщения, которое СТАРШЕ (меньше timestamp) 'beforeTimestamp'
+            // В массиве, отсортированном DESC, ищем первый элемент <= (beforeTimestamp - 1)
             const startIndex = messagesArray.findIndex(msg => (msg.timestamp || 0) < beforeTimestamp);
             if (startIndex === -1) {
-                // Нет сообщений старше 'beforeTimestamp'
-                paginatedMessages = [];
-                 log.debug(`[getChatMessages] No messages found before ${beforeTimestamp}`);
+                paginatedMessages = []; // Нет сообщений старше
+                log.debug(`[getChatMessages v2] No messages found before ${beforeTimestamp}`);
             } else {
                 // Берем 'limit' сообщений, начиная с найденного индекса
                 paginatedMessages = messagesArray.slice(startIndex, startIndex + limit);
-                 log.debug(`[getChatMessages] Sliced ${paginatedMessages.length} messages starting from index ${startIndex}`);
+                log.debug(`[getChatMessages v2] Sliced ${paginatedMessages.length} messages starting from index ${startIndex}`);
             }
-             // Возвращаем старые сверху для добавления в начало списка в UI
-             paginatedMessages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-
         } else {
-            // Если 'beforeTimestamp' нет, берем самые ПОСЛЕДНИЕ 'limit' сообщений
+            // Берем самые ПОСЛЕДНИЕ 'limit' сообщений
             paginatedMessages = messagesArray.slice(0, limit);
-             log.debug(`[getChatMessages] Sliced latest ${paginatedMessages.length} messages.`);
-             // Возвращаем новые сверху для первичной загрузки
-             // Они уже отсортированы desc, дополнительная сортировка не нужна
-             // НО для консистентности в UI чата, ЛУЧШЕ ВСЕГДА возвращать старые сверху:
-             paginatedMessages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+            log.debug(`[getChatMessages v2] Sliced latest ${paginatedMessages.length} messages.`);
         }
 
+        // 8. Обогащаем ТОЛЬКО ПАГИНИРОВАННЫЕ сообщения информацией о прочтении
+        const enrichedPaginatedMessages = paginatedMessages.map(msg => {
+            const isOwn = msg.senderId === currentUserId;
+            let isReadByRecipient = false;
+            if (isOwn && maxOtherLastReadTimestamp > 0 && msg.timestamp <= maxOtherLastReadTimestamp) {
+                isReadByRecipient = true;
+            }
+            return {
+                ...msg,
+                isOwnMessage: isOwn,
+                isReadByRecipient: isReadByRecipient
+            };
+        });
 
-        log.info(`[getChatMessages] Processed and returning ${paginatedMessages.length} messages for chat ${chatId}.`); // Используем info для большей заметности
-        return paginatedMessages;
+        // 9. Сортируем результат старые сверху для отображения
+        enrichedPaginatedMessages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+        log.info(`[getChatMessages v2] Processed and returning ${enrichedPaginatedMessages.length} messages for chat ${chatId}.`);
+        return enrichedPaginatedMessages;
 
     } catch (error) {
-        // Логируем ошибку, но НЕ пробрасываем ее, чтобы вызывающий код мог обработать пустой массив
-        log.error(`[FirebaseService] Error fetching messages for chat ${chatId}:`, error);
-        return []; // Возвращаем пустой массив в случае ошибки
+        log.error(`[FirebaseService] Error fetching messages v2 for chat ${chatId}:`, error);
+        return []; // Возвращаем пустой массив при ошибке
     }
 }
+
 // --- Вспомогательные функции для аватаров/лого ---
 
 /**
@@ -1091,6 +1130,22 @@ async function getCompanyLogoDataUri(companyId) {
         log.warn(`[getCompanyLogoDataUri] Error fetching/processing logo for ${companyId}:`, e.message);
     }
     return '/images/placeholder-company.png'; // Путь к дефолтному лого компании
+}
+async function updateLastReadTimestamp(chatId, readerId, timestamp) {
+    if (!chatId || !readerId || typeof timestamp !== 'number') {
+        log.warn(`[updateLastReadTimestamp] Invalid input. Chat: ${chatId}, Reader: ${readerId}, Timestamp: ${timestamp}`);
+        return false;
+    }
+    log.debug(`[updateLastReadTimestamp] Updating for reader ${readerId} in chat ${chatId} to timestamp ${timestamp}`);
+    try {
+        // Используем update, чтобы создать поле, если его нет
+        await db.ref(`chats/${chatId}/lastReadTimestamp`).update({ [readerId]: timestamp });
+        log.info(`[updateLastReadTimestamp] Timestamp updated for ${readerId} in chat ${chatId}.`);
+        return true;
+    } catch (error) {
+        log.error(`[FirebaseService] Error updating last read timestamp for ${readerId} in chat ${chatId}:`, error);
+        return false;
+    }
 }
 
 
@@ -1130,12 +1185,8 @@ module.exports = {
     deleteNotification,
     clearAllNotificationsForUser,
     // Chats (Новые функции)
-    getChatById,
-    getUserChats,
-    createChat,
-    findExistingChat,
-    updateChatMetadataOnNewMessage,
-    resetUnreadCount,
+    getChatById, getUserChats, createChat, findExistingChat, updateChatMetadataOnNewMessage, resetUnreadCount,
+    updateLastReadTimestamp, 
     // Messages (Новые функции)
     createMessage,
     getChatMessages,

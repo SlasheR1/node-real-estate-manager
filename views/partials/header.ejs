@@ -19,9 +19,10 @@
                             <i class="fas fa-calendar-check"></i>
                             <span>Мои бронирования</span>
                         </a>
-                        <a href="/chats" class="nav-link"> <%# <<<=== НОВАЯ ССЫЛКА ДЛЯ TENANT %>
+                        <a href="/chats" class="nav-link">
                             <i class="fas fa-comments"></i>
                             <span>Мои чаты</span>
+                            <span class="unread-chats-badge" id="tenantChatsBadge" style="display: none;">0</span> <%# Счетчик для Tenant %>
                         </a>
                     <% } %>
                     <%# Управление Арендами (для всех кроме Tenant) %>
@@ -33,10 +34,11 @@
                     <% } %>
                     <%# Чаты для Owner/Staff %>
                      <% if ((currentUser.role === 'Owner' || currentUser.role === 'Staff') && currentUser.companyId) { %>
-                         <a href="/chats" class="nav-link"> <%# Новая ссылка для Owner/Staff %>
-                             <i class="fas fa-headset"></i> <%# Другая иконка для отличия? %>
-                             <span>Чаты компании</span>
-                         </a>
+                        <a href="/chats" class="nav-link">
+                            <i class="fas fa-headset"></i>
+                            <span>Чаты компании</span>
+                            <span class="unread-chats-badge" id="companyChatsBadge" style="display: none;">0</span> <%# Счетчик для Owner/Staff %>
+                        </a>
                      <% } %>
                     <%# Добавить объект (для Admin и Owner с завершенным профилем) %>
                     <% if (currentUser.role === 'Admin' || (currentUser.role === 'Owner' && currentUser.companyProfileCompleted)) { %>
@@ -152,6 +154,7 @@
              <small id="updateErrorDetails"></small>
         </div>
     </div>
+    <div id="toast-notification-container"></div>
     <!-- ============================================================= -->
 </header>
 
