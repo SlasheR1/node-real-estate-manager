@@ -802,8 +802,31 @@ async function createChat(chatData) {
         if (chatData.createdAt === undefined) chatData.createdAt = admin.database.ServerValue.TIMESTAMP;
         if (chatData.lastMessageTimestamp === undefined) chatData.lastMessageTimestamp = admin.database.ServerValue.TIMESTAMP;
 
+        // Инициализируем счетчики непрочитанных сообщений для всех участников,
+        // только если они не были предоставлены
+        if (!chatData.unreadCounts) {
+            chatData.unreadCounts = {};
+            if (Array.isArray(chatData.participants)) {
+                // Если participants - массив
+                chatData.participants.forEach(participantId => {
+                    if (participantId) {
+                        chatData.unreadCounts[participantId] = 0;
+                    }
+                });
+            } else if (typeof chatData.participants === 'object') {
+                // Если participants - объект
+                Object.keys(chatData.participants).forEach(participantId => {
+                    if (participantId) {
+                        chatData.unreadCounts[participantId] = 0;
+                    }
+                });
+            } else {
+                throw new Error("Invalid participants format. Must be array or object.");
+            }
+        }
+
         await newChatRef.set(chatData);
-        log.info(`[FirebaseService] Chat created with ID: ${newChatId}`);
+        log.info(`[FirebaseService] Chat ${newChatId} created.`);
         return newChatId;
     } catch (error) {
         log.error('[FirebaseService] Error creating chat:', error);
@@ -872,55 +895,73 @@ async function findExistingChat(tenantId, companyId, propertyId = null) {
  * @param {string} chatId ID чата.
  * @param {object} data Данные для обновления: { lastMessageText, lastMessageTimestamp, lastMessageSenderId, recipientsToIncrementUnread }
  */
-async function updateChatMetadataOnNewMessage(chatId, data) {
-    if (!chatId || !data || typeof data.lastMessageText !== 'string' || typeof data.lastMessageTimestamp !== 'number' || !data.lastMessageSenderId || !Array.isArray(data.recipientsToIncrementUnread)) {
-        log.error(`[updateChatMetadata] Invalid data for chat ${chatId}:`, data);
-        return;
-    }
-    log.debug(`[updateChatMetadata] Updating metadata for chat ${chatId}. Recipients for unread increment:`, data.recipientsToIncrementUnread);
+async function updateChatMetadata(chatId, data) {
     try {
-        const chatRef = db.ref(`chats/${chatId}`);
-
-        // Используем транзакцию для обновления всего узла (или создаем, если его нет)
-        const transactionResult = await chatRef.transaction(currentChatData => {
-             if (currentChatData === null) {
-                 // Это неожиданно, чат должен существовать. Логируем ошибку.
-                 log.error(`[updateChatMetadata] Chat ${chatId} not found during transaction!`);
-                 return undefined; // Отменяем транзакцию
-             }
-
-             // Обновляем основные поля
-             currentChatData.lastMessageText = data.lastMessageText;
-             currentChatData.lastMessageTimestamp = data.lastMessageTimestamp;
-             currentChatData.lastMessageSenderId = data.lastMessageSenderId;
-
-             // Инициализируем счетчики, если их нет
-             if (!currentChatData.unreadCounts) {
-                 currentChatData.unreadCounts = {};
-             }
-
-             // Увеличиваем счетчики для получателей
-             data.recipientsToIncrementUnread.forEach(recipientId => {
-                 if (recipientId) { // Проверка на пустой ID
-                     currentChatData.unreadCounts[recipientId] = (currentChatData.unreadCounts[recipientId] || 0) + 1;
-                 }
-             });
-
-             return currentChatData; // Возвращаем обновленные данные
-        });
-
-        if (!transactionResult.committed) {
-             log.warn(`[updateChatMetadata] Transaction for chat ${chatId} was aborted (maybe chat deleted?).`);
-        } else {
-             log.info(`[updateChatMetadata] Metadata and unread counts updated successfully for chat ${chatId}.`);
+        if (!chatId || !data) {
+            console.error('[updateChatMetadata] Invalid parameters:', { chatId, data });
+            return false;
         }
 
+        const chatRef = admin.database().ref(`chats/${chatId}`);
+        const chatSnapshot = await chatRef.once('value');
+        
+        if (!chatSnapshot.exists()) {
+            console.error('[updateChatMetadata] Chat not found:', chatId);
+            return false;
+        }
+
+        const chat = chatSnapshot.val();
+        const updates = {};
+
+        // Update last message info
+        if (data.lastMessageText) updates.lastMessageText = data.lastMessageText;
+        if (data.lastMessageTimestamp) updates.lastMessageTimestamp = data.lastMessageTimestamp;
+        if (data.lastMessageSenderId) updates.lastMessageSenderId = data.lastMessageSenderId;
+
+        // Update unread counts
+        if (data.recipientsToIncrementUnread && Array.isArray(data.recipientsToIncrementUnread)) {
+            if (!chat.unreadCounts) chat.unreadCounts = {};
+            
+            data.recipientsToIncrementUnread.forEach(recipientId => {
+                if (recipientId) {
+                    chat.unreadCounts[recipientId] = (chat.unreadCounts[recipientId] || 0) + 1;
+                }
+            });
+            
+            updates.unreadCounts = chat.unreadCounts;
+        }
+
+        // Update chat with all changes
+        await chatRef.update(updates);
+        console.log('[updateChatMetadata] Successfully updated chat metadata for:', chatId);
+        return true;
     } catch (error) {
-        log.error(`[FirebaseService] Error updating chat metadata transaction for ${chatId}:`, error);
-        // Не пробрасываем ошибку, чтобы не прерывать основной процесс
+        console.error('[updateChatMetadata] Error updating chat metadata:', error);
+        return false;
     }
 }
 
+/**
+ * Обновляет данные чата.
+ * @param {string} chatId ID чата.
+ * @param {object} updates Объект с полями для обновления.
+ * @returns {Promise<void>}
+ */
+async function updateChat(chatId, updates) {
+    if (!chatId || !updates) {
+        log.warn(`[updateChat] Invalid input. Chat: ${chatId}, UpdateData:`, updates);
+        return false;
+    }
+
+    try {
+        await db.ref(`chats/${chatId}`).update(updates);
+        log.info(`[updateChat] Successfully updated chat ${chatId}`);
+        return true;
+    } catch (error) {
+        log.error(`[FirebaseService] Error updating chat ${chatId}:`, error);
+        return false;
+    }
+}
 
 /**
  * Сбрасывает счетчик непрочитанных сообщений для указанного участника чата.
@@ -951,34 +992,15 @@ async function resetUnreadCount(chatId, readerId) {
  * @returns {Promise<object>} Созданный объект сообщения с присвоенным ID и timestamp.
  */
 async function createMessage(messageData) {
-    if (!messageData || !messageData.chatId || !messageData.senderId || !messageData.text) {
-        throw new Error("Invalid message data provided for creation (chatId, senderId, text required).");
-    }
     try {
-        const newMessageRef = db.ref('messages').push();
-        const newMessageId = newMessageRef.key;
-        if (!newMessageId) throw new Error("Failed to generate message ID.");
-
-        const messageToSave = {
-            chatId: messageData.chatId,
-            senderId: messageData.senderId,
-            senderRole: messageData.senderRole || 'Unknown', // Добавляем роль
-            text: messageData.text,
-            timestamp: messageData.timestamp || admin.database.ServerValue.TIMESTAMP // Время сервера
-        };
-
-        await newMessageRef.set(messageToSave);
-        log.info(`[FirebaseService] Message ${newMessageId} created for chat ${messageData.chatId}`);
-
-        // Возвращаем данные с ID и примерным timestamp для UI
-        // Серверный timestamp будет доступен только после сохранения, поэтому используем Date.now()
-        const approxTimestamp = (messageData.timestamp === admin.database.ServerValue.TIMESTAMP)
-                                ? Date.now()
-                                : messageData.timestamp;
-        return { ...messageToSave, id: newMessageId, timestamp: approxTimestamp };
-
+        const messageRef = admin.database().ref('messages').child(messageData.chatId).push();
+        messageData.id = messageRef.key;
+        messageData.timestamp = messageData.timestamp || Date.now();
+        
+        await messageRef.set(messageData);
+        return messageData;
     } catch (error) {
-        log.error('[FirebaseService] Error creating message:', error);
+        log.error('[Firebase] Ошибка при создании сообщения:', error);
         throw error;
     }
 }
@@ -986,111 +1008,39 @@ async function createMessage(messageData) {
 /**
  * Получает сообщения для конкретного чата с пагинацией.
  * @param {string} chatId ID чата.
- * @param {number} [limit=50] Количество сообщений для загрузки.
+ * @param {number} [limit=100] Количество сообщений для загрузки.
  * @param {number|null} [beforeTimestamp=null] Timestamp самого старого загруженного сообщения (для загрузки более старых).
  * @returns {Promise<Array<object>>} Массив объектов сообщений, отсортированных по времени (старые сверху).
  */
-async function getChatMessages(chatId, requestingUser, limit = 50, beforeTimestamp = null) {
-    if (!chatId || !requestingUser || !requestingUser.username) {
-        log.warn('[getChatMessages v2] Invalid input: chatId or requestingUser is missing.');
-        return [];
-    }
-    const currentUserId = requestingUser.username;
-    const currentUserCompanyId = requestingUser.companyId;
-
-    log.debug(`[getChatMessages v2] Fetching messages for chat ${chatId}, User: ${currentUserId}, Limit: ${limit}, Before: ${beforeTimestamp}`);
-
+async function getChatMessages(chatId, requestingUser, limit = 100, beforeTimestamp = null) {
     try {
-        // 1. Получаем данные чата для информации о прочтении
-        const chatData = await getChatById(chatId);
-        if (!chatData || !chatData.participants) {
-            log.warn(`[getChatMessages v2] Chat data or participants not found for chat ${chatId}`);
-            return [];
-        }
-        const participants = chatData.participants;
-        const lastReadTimestamps = chatData.lastReadTimestamp || {};
-
-        // 2. Определяем ID "других" участников
-        const otherParticipantIds = Object.keys(participants).filter(pId =>
-             pId !== currentUserId && pId !== currentUserCompanyId
-        );
-
-        // 3. Находим максимальный timestamp прочтения *другими*
-        let maxOtherLastReadTimestamp = 0;
-        otherParticipantIds.forEach(pId => {
-            if (lastReadTimestamps[pId] && lastReadTimestamps[pId] > maxOtherLastReadTimestamp) {
-                maxOtherLastReadTimestamp = lastReadTimestamps[pId];
-            }
-        });
-        log.debug(`[getChatMessages v2] Max lastReadTimestamp for others in chat ${chatId}: ${maxOtherLastReadTimestamp}`);
-
-        // 4. Запрашиваем ВСЕ сообщения для данного chatId
-        //    Используем ТОЛЬКО фильтрацию по chatId.
-        const query = db.ref('messages')
-                      .orderByChild('chatId') // <<< ТОЛЬКО ЭТОТ ИНДЕКС
-                      .equalTo(chatId);
-
-        const snapshot = await query.once('value');
-        const messagesData = snapshot.val();
-
-        if (!messagesData) {
-            log.debug(`[getChatMessages v2] No messages found for chat ${chatId}.`);
-            return [];
-        }
-
-        // 5. Преобразуем в массив и добавляем ID
-        let messagesArray = Object.entries(messagesData).map(([id, data]) => ({
-            id: id,
-            ...data
-        }));
-
-        // 6. Сортируем ВСЕ сообщения чата по timestamp (ПО УБЫВАНИЮ - новые сверху)
-        messagesArray.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-        log.debug(`[getChatMessages v2] Total messages fetched and sorted: ${messagesArray.length}`);
-
-        // 7. Применяем пагинацию (limit и beforeTimestamp) к отсортированному массиву
-        let paginatedMessages;
-        if (beforeTimestamp && typeof beforeTimestamp === 'number' && beforeTimestamp > 0) {
-            // Ищем индекс первого сообщения, которое СТАРШЕ (меньше timestamp) 'beforeTimestamp'
-            // В массиве, отсортированном DESC, ищем первый элемент <= (beforeTimestamp - 1)
-            const startIndex = messagesArray.findIndex(msg => (msg.timestamp || 0) < beforeTimestamp);
-            if (startIndex === -1) {
-                paginatedMessages = []; // Нет сообщений старше
-                log.debug(`[getChatMessages v2] No messages found before ${beforeTimestamp}`);
-            } else {
-                // Берем 'limit' сообщений, начиная с найденного индекса
-                paginatedMessages = messagesArray.slice(startIndex, startIndex + limit);
-                log.debug(`[getChatMessages v2] Sliced ${paginatedMessages.length} messages starting from index ${startIndex}`);
-            }
+        let query = admin.database().ref('messages').child(chatId);
+        
+        if (beforeTimestamp) {
+            query = query.orderByChild('timestamp').endAt(beforeTimestamp);
         } else {
-            // Берем самые ПОСЛЕДНИЕ 'limit' сообщений
-            paginatedMessages = messagesArray.slice(0, limit);
-            log.debug(`[getChatMessages v2] Sliced latest ${paginatedMessages.length} messages.`);
+            query = query.orderByChild('timestamp');
         }
-
-        // 8. Обогащаем ТОЛЬКО ПАГИНИРОВАННЫЕ сообщения информацией о прочтении
-        const enrichedPaginatedMessages = paginatedMessages.map(msg => {
-            const isOwn = msg.senderId === currentUserId;
-            let isReadByRecipient = false;
-            if (isOwn && maxOtherLastReadTimestamp > 0 && msg.timestamp <= maxOtherLastReadTimestamp) {
-                isReadByRecipient = true;
-            }
-            return {
-                ...msg,
-                isOwnMessage: isOwn,
-                isReadByRecipient: isReadByRecipient
-            };
+        
+        if (limit) {
+            query = query.limitToLast(limit);
+        }
+        
+        const snapshot = await query.once('value');
+        const messages = [];
+        
+        snapshot.forEach(child => {
+            messages.push({
+                id: child.key,
+                ...child.val()
+            });
         });
-
-        // 9. Сортируем результат старые сверху для отображения
-        enrichedPaginatedMessages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-
-        log.info(`[getChatMessages v2] Processed and returning ${enrichedPaginatedMessages.length} messages for chat ${chatId}.`);
-        return enrichedPaginatedMessages;
-
+        
+        // Сортируем по времени, новые в конце
+        return messages.sort((a, b) => a.timestamp - b.timestamp);
     } catch (error) {
-        log.error(`[FirebaseService] Error fetching messages v2 for chat ${chatId}:`, error);
-        return []; // Возвращаем пустой массив при ошибке
+        log.error('[Firebase] Ошибка при получении сообщений:', error);
+        throw error;
     }
 }
 
@@ -1131,6 +1081,7 @@ async function getCompanyLogoDataUri(companyId) {
     }
     return '/images/placeholder-company.png'; // Путь к дефолтному лого компании
 }
+
 async function updateLastReadTimestamp(chatId, readerId, timestamp) {
     if (!chatId || !readerId || typeof timestamp !== 'number') {
         log.warn(`[updateLastReadTimestamp] Invalid input. Chat: ${chatId}, Reader: ${readerId}, Timestamp: ${timestamp}`);
@@ -1148,6 +1099,22 @@ async function updateLastReadTimestamp(chatId, readerId, timestamp) {
     }
 }
 
+/**
+ * Атомарно обновляет данные чата.
+ * @param {string} chatId ID чата.
+ * @param {object} updates Объект с полями для обновления.
+ * @returns {Promise<boolean>} Успешность операции.
+ */
+async function updateChatAtomic(chatId, updates) {
+    try {
+        const chatRef = db.ref(`chats/${chatId}`);
+        await chatRef.update(updates);
+        return true;
+    } catch (error) {
+        log.error('[Firebase] Ошибка при атомарном обновлении чата:', error);
+        return false;
+    }
+}
 
 // --- ЭКСПОРТ ВСЕХ ФУНКЦИЙ ---
 module.exports = {
@@ -1185,12 +1152,13 @@ module.exports = {
     deleteNotification,
     clearAllNotificationsForUser,
     // Chats (Новые функции)
-    getChatById, getUserChats, createChat, findExistingChat, updateChatMetadataOnNewMessage, resetUnreadCount,
+    getChatById, getUserChats, createChat, findExistingChat, updateChatMetadata, updateChat, resetUnreadCount,
     updateLastReadTimestamp, 
     // Messages (Новые функции)
     createMessage,
     getChatMessages,
     // Helpers (Новые функции)
     getUserAvatarDataUri,
-    getCompanyLogoDataUri
+    getCompanyLogoDataUri,
+    updateChatAtomic
 };

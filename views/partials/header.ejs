@@ -1,5 +1,6 @@
 <!-- views/partials/header.ejs -->
-<header class="main-header">
+<!-- views/partials/header.ejs -->
+<header class="main-header" data-username="<%= (typeof currentUser !== 'undefined' && currentUser && currentUser.username) ? currentUser.username : '' %>">
     <nav class="header-content">
         <a href="/" class="brand-logo">
             <img src="/images/logo.svg" alt="Real Estate Logo" class="logo-img">
@@ -19,11 +20,15 @@
                             <i class="fas fa-calendar-check"></i>
                             <span>Мои бронирования</span>
                         </a>
+                        <%# --- FIX: Corrected nested EJS tags --- %>
                         <a href="/chats" class="nav-link">
                             <i class="fas fa-comments"></i>
                             <span>Мои чаты</span>
-                            <span class="unread-chats-badge" id="tenantChatsBadge" style="display: none;">0</span> <%# Счетчик для Tenant %>
+                            <span class="unread-chats-badge" id="tenantChatsBadge" style="<%= locals.totalUnreadChatCount > 0 ? 'display: inline-block;' : 'display: none;' %>">
+                                <%= locals.totalUnreadChatCount > 9 ? '9+' : locals.totalUnreadChatCount %>
+                            </span>
                         </a>
+                        <%# --- END FIX --- %>
                     <% } %>
                     <%# Управление Арендами (для всех кроме Tenant) %>
                     <% if (currentUser.role === 'Admin' || currentUser.role === 'Owner' || currentUser.role === 'Staff') { %>
@@ -33,13 +38,17 @@
                         </a>
                     <% } %>
                     <%# Чаты для Owner/Staff %>
-                     <% if ((currentUser.role === 'Owner' || currentUser.role === 'Staff') && currentUser.companyId) { %>
+                    <% if ((currentUser.role === 'Owner' || currentUser.role === 'Staff') && currentUser.companyId) { %>
+                        <%# --- FIX: Corrected nested EJS tags --- %>
                         <a href="/chats" class="nav-link">
                             <i class="fas fa-headset"></i>
                             <span>Чаты компании</span>
-                            <span class="unread-chats-badge" id="companyChatsBadge" style="display: none;">0</span> <%# Счетчик для Owner/Staff %>
+                            <span class="unread-chats-badge" id="companyChatsBadge" style="<%= locals.totalUnreadChatCount > 0 ? 'display: inline-block;' : 'display: none;' %>">
+                                <%= locals.totalUnreadChatCount > 9 ? '9+' : locals.totalUnreadChatCount %>
+                            </span>
                         </a>
-                     <% } %>
+                         <%# --- END FIX --- %>
+                    <% } %>
                     <%# Добавить объект (для Admin и Owner с завершенным профилем) %>
                     <% if (currentUser.role === 'Admin' || (currentUser.role === 'Owner' && currentUser.companyProfileCompleted)) { %>
                          <a href="/properties/add" class="nav-link">
@@ -76,7 +85,7 @@
 
             <%# Блок профиля и уведомлений для авторизованных %>
             <% if (currentUser) { %>
-                <div class="user-profile-wrapper"> 
+                <div class="user-profile-wrapper">
                     <!-- === Кнопка Уведомлений (Колокольчик) === -->
                     <button id="notificationToggleBtn" type="button" title="Уведомления" class="notification-btn">
                         <i class="fas fa-bell"></i>
@@ -85,35 +94,37 @@
                     <!-- === Конец Кнопки Уведомлений === -->
 
                    <div class="user-profile">
-    <a href="/profile" class="profile-link" title="Профиль">
-        <div class="user-info">
-            <span class="user-name" id="headerUserName"><%= currentUser.fullName || currentUser.username %></span>
-            <div class="user-sub-info">
-                <span class="user-role" id="headerUserRole"><%= currentUser.role %></span>
-                <% if (currentUser.role === 'Tenant') { %>
-                    <span class="user-balance profile-sub-optional" id="headerUserBalance"><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(currentUser.balance ?? 0) %></span>
-                <% } else { %>
-                    <span class="user-balance profile-sub-optional" id="headerUserBalance" style="display: none;"></span>
-                <% } %>
-            </div>
-        </div>
-        <div class="avatar-container" id="headerAvatarContainer">
-            <%
-                let avatarSrc = '/images/placeholder-avatar.png';
-                if (currentUser && currentUser.imageData && typeof currentUser.imageData === 'string') {
-                    try { let imageType = currentUser.imageData.startsWith('/9j/')?'image/jpeg':'image/png'; avatarSrc = `data:${imageType};base64,${currentUser.imageData}`; }
-                    catch (e) { console.error("[Header EJS] Error creating avatar data URI:", e); }
-                }
-            %>
-            <img src="<%= avatarSrc %>" alt="Avatar" class="user-avatar" id="headerUserAvatar">
-        </div>
-    </a>
-    <form action="/logout" method="POST" class="logout-form">
-        <button type="submit" class="btn btn-logout" title="Выйти">
-            <i class="fas fa-sign-out-alt"></i>
-        </button>
-    </form>
-</div>
+                        <a href="/profile" class="profile-link" title="Профиль">
+                            <div class="user-info">
+                                <span class="user-name" id="headerUserName"><%= currentUser.fullName || currentUser.username %></span>
+                                <div class="user-sub-info">
+                                    <span class="user-role" id="headerUserRole"><%= currentUser.role %></span>
+                                    <% if (currentUser.role === 'Tenant') { %>
+                                        <span class="user-balance profile-sub-optional" id="headerUserBalance"><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(currentUser.balance ?? 0) %></span>
+                                    <% } else { %>
+                                        <span class="user-balance profile-sub-optional" id="headerUserBalance" style="display: none;"></span>
+                                    <% } %>
+                                </div>
+                            </div>
+                            <div class="avatar-container" id="headerAvatarContainer">
+                                <%# --- FIX: Removed potentially problematic try/catch --- %>
+                                <%
+                                    let avatarSrc = '/images/placeholder-avatar.png';
+                                    if (currentUser && currentUser.imageData && typeof currentUser.imageData === 'string') {
+                                        let imageType = currentUser.imageData.startsWith('/9j/')?'image/jpeg':'image/png';
+                                        avatarSrc = `data:${imageType};base64,${currentUser.imageData}`;
+                                    }
+                                %>
+                                <img src="<%= avatarSrc %>" alt="Avatar" class="user-avatar" id="headerUserAvatar">
+                                <%# --- END FIX --- %>
+                            </div>
+                        </a>
+                        <form action="/logout" method="POST" class="logout-form">
+                            <button type="submit" class="btn btn-logout" title="Выйти">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </button>
+                        </form>
+                    </div>
 
                     <!-- === Глобальная Панель Уведомлений (ВНУТРИ WRAPPER) === -->
                     <div class="notification-panel global-notification-panel" id="globalNotificationPanel">
@@ -138,7 +149,7 @@
             <span class="hamburger-line"></span>
         </button>
     </nav>
-    
+
     <!-- ===== Модальное окно обновления ===== -->
     <div id="updateModalOverlay" style="display: none;">
          <div id="updateModalContent" class="">
@@ -842,456 +853,447 @@
     }
 }
 </style>
-
+<!-- views/partials/header.ejs -->
+<!-- ======================== ГЛОБАЛЬНЫЙ СКРИПТ ДЛЯ HEADER ======================== -->
+<!-- Подключаем Socket.IO клиент -->
+<script src="/socket.io/socket.io.js"></script>
 <script>
-// Скрипт для мобильного меню
-document.addEventListener('DOMContentLoaded', function() {
-    const mobileToggle = document.querySelector('.mobile-nav-toggle');
-    const navLinks = document.querySelector('.main-nav-links');
-    
-    if(mobileToggle && navLinks) {
-        mobileToggle.addEventListener('click', function() {
-            navLinks.classList.toggle('open');
-            mobileToggle.classList.toggle('active');
+    // Глобальная функция для обновления бейджа чата в хедере
+    window.updateHeaderChatBadge = function(count) {
+        console.log('[Header] Updating chat badge with count:', count);
+        try {
+            const tenantBadge = document.getElementById('tenant-chat-badge');
+            const companyBadge = document.getElementById('company-chat-badge');
             
-            // Анимация гамбургера
-            const lines = mobileToggle.querySelectorAll('.hamburger-line');
-            if(mobileToggle.classList.contains('active')) {
-                lines[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
-                lines[1].style.opacity = '0';
-                lines[2].style.transform = 'rotate(-45deg) translate(5px, -5px)';
-            } else {
-                lines[0].style.transform = 'none';
-                lines[1].style.opacity = '1';
-                lines[2].style.transform = 'none';
-            }
-        });
-    }
-});
+            console.log('[Header] Found badges:', {
+                tenantBadge: !!tenantBadge,
+                companyBadge: !!companyBadge
+            });
 
-// Функция для сокращения полного имени до Фамилии И. О.
-function shortenFullName(fullName) {
-    if (!fullName) return '';
-    const nameParts = fullName.trim().split(' ');
-    if (nameParts.length < 2) return fullName; // Если менее 2 частей, возвращаем как есть
-    const lastName = nameParts[0];
-    const initials = nameParts.slice(1).map(part => part[0] + '.').join(' ');
-    return `${lastName} ${initials}`;
-}
+            // Проверяем, какой бейдж активен (видим)
+            const targetBadge = tenantBadge?.style.display !== 'none' ? tenantBadge : 
+                              (companyBadge?.style.display !== 'none' ? companyBadge : null);
 
-// Функция для сокращения названия компании
-function shortenCompanyName(companyName, maxLength = 15) {
-    if (!companyName || companyName.length <= maxLength) return companyName;
-    return companyName.substring(0, maxLength) + '...';
-}
-
-// Обновление имени и компании при загрузке страницы
-document.addEventListener('DOMContentLoaded', function() {
-    const userNameElement = document.getElementById('headerUserName');
-    const companyElement = document.querySelector('.user-sub-info .user-company span');
-    if (userNameElement) {
-        userNameElement.textContent = shortenFullName(userNameElement.textContent);
-    }
-    if (companyElement) {
-        companyElement.textContent = shortenCompanyName(companyElement.textContent);
-    }
-});
-
-// Обновление имени и компании при изменении данных профиля
-(function() {
-    const socket = io({ reconnectionAttempts: 5, reconnectionDelay: 3000 });
-    socket.on('profile_data_updated', (data) => {
-        const headerUserNameEl = document.getElementById('headerUserName');
-        const headerCompanySpanEl = document.querySelector('.user-sub-info .user-company span');
-        if (headerUserNameEl && data?.fullName) {
-            headerUserNameEl.textContent = shortenFullName(data.fullName);
-        }
-        if (headerCompanySpanEl && data?.companyName) {
-            headerCompanySpanEl.textContent = shortenCompanyName(data.companyName);
-        }
-    });
-})();
-
-</script>
-
-<%# --- Подключение и логика Socket.IO клиента И AutoUpdater --- %>
-<% if (currentUser) { %>
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        // Обертка IIFE
-        (function() {
-            // === Переменные и Константы ===
-            const MAX_GLOBAL_HISTORY_ITEMS = 15; // Лимит для DOM
-            const currentUsernameForStorage = "<%= currentUser.username %>"; // Имя пользователя для Socket.IO
-            let isNotificationPanelOpen = false;
-            let notificationTimeoutId = null;
-            let socket = null;
-
-            // Переменные DOM
-            let globalNotificationList = null;
-            let globalNoNotificationsMsg = null;
-            let notificationToggleButton = null;
-            let globalNotificationPanel = null;
-            let unreadBadgeHeader = null;
-            let globalClearNotificationsBtn = null;
-
-            // === Функции Уведомлений ===
-
-            function generateUniqueId() { return '_' + Math.random().toString(36).substring(2, 9) + Date.now(); }
-
-            // Функция показа всплывающих JS-уведомлений
-            function showJsNotification(type, text, duration = 7000, playSound = true, allowHtml = false) {
-                if (notificationTimeoutId) clearTimeout(notificationTimeoutId);
-                const container = document.getElementById('js-messages-rentals') || document.getElementById('js-messages') || document.body.querySelector('main.container') || document.body;
-                if (!container) { console.warn("No suitable container for JS notification."); return; }
-                if (playSound) { try { const audio = new Audio('/sounds/notification.mp3'); audio.play().catch(e => console.warn("Audio playback failed:", e)); } catch (e) { console.error("Error playing sound:", e); } }
-                const notifDiv = document.createElement('div');
-                notifDiv.className = `flash-message flash-${type} js-popup-notification`;
-                notifDiv.style.cssText = 'opacity:0; transform:translateY(-10px); transition: opacity 0.5s ease, transform 0.5s ease; margin-top: 10px; cursor: pointer; z-index: 1056; position: relative;';
-                const closeButtonHtml = `<button type="button" class="close-flash" onclick="event.stopPropagation(); this.parentElement.remove()">×</button>`;
-                if (allowHtml) { notifDiv.innerHTML = text + closeButtonHtml; }
-                else { const textNode = document.createTextNode(text); notifDiv.appendChild(textNode); notifDiv.insertAdjacentHTML('beforeend', closeButtonHtml); }
-                notifDiv.addEventListener('click', () => notifDiv.remove());
-                container.prepend(notifDiv);
-                requestAnimationFrame(() => { notifDiv.style.opacity = '1'; notifDiv.style.transform = 'translateY(0)'; });
-                notificationTimeoutId = setTimeout(() => { notifDiv.style.opacity = '0'; notifDiv.style.transform = 'translateY(-10px)'; setTimeout(() => notifDiv.remove(), 500); }, duration);
-            }
-
-             // Создание HTML элемента для уведомления в панели
-             function createNotificationElement(notification) {
-                 const li = document.createElement('li');
-                 li.className = `notification-item ${notification.type}`;
-                 if (notification.read !== true) { li.classList.add('unread'); }
-                 li.dataset.id = notification.id;
-                 li.dataset.bookingId = notification.bookingId || '';
-                 let iconClass = 'fa-info-circle'; if (notification.type === 'success') iconClass = 'fa-check-circle'; else if (notification.type === 'warning') iconClass = 'fa-exclamation-triangle'; else if (notification.type === 'error') iconClass = 'fa-times-circle'; else if (notification.type === 'info') iconClass = 'fa-bell';
-                 let ts = notification.timestamp; if(typeof ts === 'number') ts = new Date(ts); else if(typeof ts === 'string') ts = new Date(ts); else ts = new Date();
-                 const timeString = ts.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-                 const dateString = ts.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
-                 li.innerHTML = `
-                     <div class="icon"><i class="fas ${iconClass}"></i></div>
-                     <div class="content"><span class="title">${notification.title||''}</span><div class="message">${notification.message||''}</div><div class="timestamp">${dateString} ${timeString}</div></div>
-                     <button class="close-btn" title="Удалить уведомление">×</button>`;
-                 li.querySelector('.close-btn').addEventListener('click', function(event) { event.stopPropagation(); removeNotificationFromPanel(notification.id); });
-                 return li;
-             }
-
-             // Отображение НАЧАЛЬНЫХ уведомлений (из Firebase)
-            function displayInitialNotifications(notifications) {
-                if (!globalNotificationList || !globalNoNotificationsMsg || !Array.isArray(notifications)) return;
-                globalNotificationList.innerHTML = ''; // Очищаем
-
-                if (notifications.length === 0) {
-                    globalNotificationList.appendChild(globalNoNotificationsMsg);
-                    globalNoNotificationsMsg.style.display = 'block';
-                } else {
-                    globalNoNotificationsMsg.style.display = 'none';
-                    notifications.forEach(notification => {
-                        const li = createNotificationElement(notification);
-                        globalNotificationList.appendChild(li);
-                    });
+            if (targetBadge) {
+                console.log('[Header] Updating badge:', targetBadge.id);
+                targetBadge.textContent = count;
+                targetBadge.style.display = count > 0 ? 'inline-block' : 'none';
+                
+                // Добавляем анимацию для новых сообщений
+                if (count > 0) {
+                    targetBadge.classList.add('pulse');
+                    setTimeout(() => targetBadge.classList.remove('pulse'), 1000);
                 }
-                updateUnreadCountHeader(null, true); // Пересчитываем бейдж
+            } else {
+                console.warn('[Header] No visible badge found to update');
             }
+        } catch (error) {
+            console.error('[Header] Error updating chat badge:', error);
+        }
+    };
 
-            // Добавление НОВОГО уведомления (из Socket.IO)
-            function addNewNotification(type, title, message, bookingId = null, allowHtmlInPopup = false) {
-                 if (globalNotificationList && globalNoNotificationsMsg) {
-                     globalNoNotificationsMsg.style.display = 'none';
-                     const newNotificationData = { id: generateUniqueId(), type, title, message, timestamp: Date.now(), read: false, bookingId };
-                     const li = createNotificationElement(newNotificationData);
-                     globalNotificationList.prepend(li); // Добавляем В НАЧАЛО
-                     // Ограничиваем количество элементов в DOM
-                     while (globalNotificationList.children.length > MAX_GLOBAL_HISTORY_ITEMS + 1) { // +1 for the "no-notifications" item
-                         const lastItem = globalNotificationList.lastElementChild;
-                         if (lastItem && !lastItem.classList.contains('no-notifications')) {
-                             globalNotificationList.removeChild(lastItem);
-                         } else {
-                             break; // Stop if we reached the placeholder or list is empty
-                         }
-                     }
-                 }
-                 showJsNotification(type, message, 7000, true, allowHtmlInPopup);
-                 // Обновляем счетчик, если панель закрыта (инкрементально)
-                 if (!isNotificationPanelOpen) { updateUnreadCountHeader(1); }
-                 // Если панель открыта, полный пересчет лучше делать при открытии/закрытии
-                 else { updateUnreadCountHeader(null, true); }
+    // Используем IIFE для изоляции области видимости основного скрипта
+    (function() {
+        console.log("[Header Script] Initializing...");
+
+        // --- Переменные и константы ---
+        const MAX_GLOBAL_HISTORY_ITEMS = 15;
+        let isNotificationPanelOpen = false;
+        let notificationTimeoutId = null;
+        let socket = null; // Глобальная переменная сокета для этого скрипта
+        let currentUsername = null; // Инициализируем как null
+        // Переменные для элементов DOM
+        let globalNotificationList = null;
+        let globalNoNotificationsMsg = null;
+        let notificationToggleButton = null;
+        let globalNotificationPanel = null;
+        let unreadNotificationBadgeHeader = null; // Бейдж уведомлений (колокольчик)
+        let globalClearNotificationsBtn = null;
+
+        // --- Функции для УВЕДОМЛЕНИЙ (Колокольчик) ---
+        function generateUniqueId() { return '_' + Math.random().toString(36).substring(2, 9) + Date.now(); }
+
+        function createNotificationElement(notification) {
+            const li = document.createElement('li');
+            li.className = `notification-item ${notification.type || 'info'}`;
+            if (notification.read !== true) { li.classList.add('unread'); }
+            li.dataset.id = notification.id;
+            li.dataset.bookingId = notification.bookingId || '';
+            let iconClass = 'fa-info-circle';
+            switch(notification.type) {
+                case 'success': iconClass = 'fa-check-circle'; break;
+                case 'warning': iconClass = 'fa-exclamation-triangle'; break;
+                case 'error':   iconClass = 'fa-times-circle'; break;
+                case 'info':    iconClass = 'fa-bell'; break;
+                case 'booking': iconClass = 'fa-calendar-check'; break;
+            }
+            let ts = notification.timestamp;
+            let d = new Date(); // Fallback date
+             try {
+                if (typeof ts === 'number') {
+                    d = new Date(ts);
+                    if (isNaN(d.getTime())) d = new Date(); // Check validity
+                } else if (typeof ts === 'string') {
+                    d = new Date(Date.parse(ts));
+                    if (isNaN(d.getTime())) d = new Date();
+                } else {
+                    d = new Date();
+                }
+             } catch (e) {
+                 console.warn("Error parsing notification timestamp, using current time:", e);
+                 d = new Date();
              }
 
-             // Удаление уведомления (DOM + сервер)
-             function removeNotificationFromPanel(notificationId) {
-                 const item = globalNotificationList ? globalNotificationList.querySelector(`.notification-item[data-id="${notificationId}"]`) : null;
-                 if (!item) return;
-                 const wasUnread = item.classList.contains('unread');
-                 item.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-                 item.style.opacity = 0; item.style.transform = 'translateX(20px)';
-                 setTimeout(() => {
-                      item.remove();
-                      // Отправляем на сервер ID для удаления из БД, только если ID не временный
-                      if (socket && notificationId && !notificationId.startsWith('_')) {
-                          socket.emit('delete_notification', notificationId);
-                      }
-                      // Показываем "Нет уведомлений", если список пуст
-                      if (globalNotificationList && globalNotificationList.children.length === 1 && globalNotificationList.contains(globalNoNotificationsMsg)) {
-                          globalNoNotificationsMsg.style.display = 'block';
-                      }
-                      // Пересчитываем бейдж, если удалили непрочитанное
-                      if (wasUnread) { updateUnreadCountHeader(null, true); }
-                 }, 300);
-             }
+            const timeString = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            const dateString = d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+            li.innerHTML = `
+                <div class="icon"><i class="fas ${iconClass}"></i></div>
+                <div class="content">
+                    <span class="title">${notification.title||''}</span>
+                    <div class="message">${notification.message||''}</div>
+                    <div class="timestamp">${dateString} ${timeString}</div>
+                </div>
+                <button class="close-btn" title="Удалить уведомление">×</button>`;
+            const closeBtn = li.querySelector('.close-btn');
+            if (closeBtn) { closeBtn.addEventListener('click', function(event) { event.stopPropagation(); removeNotificationFromPanel(notification.id); }); }
+            if (notification.bookingId) { li.addEventListener('click', () => { window.location.href = `/rentals`; toggleNotificationPanel(); }); }
+            return li;
+        }
 
-             // Очистка всех уведомлений (DOM + сервер)
-             function clearAllNotifications() {
-                  if (!confirm("Удалить все уведомления?")) return; // Запрашиваем подтверждение
-                  if (globalNotificationList && globalNoNotificationsMsg) {
-                      globalNotificationList.innerHTML = ''; // Удаляем все li
-                      globalNotificationList.appendChild(globalNoNotificationsMsg);
-                      globalNoNotificationsMsg.style.display = 'block';
-                  }
-                  if (socket) { socket.emit('clear_all_notifications'); }
-                  updateUnreadCountHeader(0, true); // Сбрасываем счетчик
+        function displayInitialNotifications(notifications) {
+             if (!globalNotificationList || !Array.isArray(notifications)) {
+                 console.warn("Cannot display initial notifications: list container not found or data invalid.");
+                 return;
+             }
+              // Пересоздаем плейсхолдер, если нужно
+              if (!globalNoNotificationsMsg) {
+                  globalNoNotificationsMsg = document.createElement('li');
+                  globalNoNotificationsMsg.className = 'no-notifications';
+                  globalNoNotificationsMsg.style.cssText = "text-align: center; color: #95a5a6; padding: 15px; font-style: italic; font-size: 0.85rem;";
+                  globalNoNotificationsMsg.textContent = 'Нет новых уведомлений';
               }
 
-             // Пометка видимых как прочитанных (DOM + сервер)
-             function markAllVisibleAsReadAndNotifyServer() {
-                 if (!globalNotificationList || !socket) return;
-                 const idsToMark = [];
-                 const items = globalNotificationList.querySelectorAll('.notification-item.unread');
-                 if (items.length === 0) return; // Нет непрочитанных для пометки
-                 items.forEach(item => {
-                     item.classList.remove('unread');
-                     const id = item.dataset.id;
-                     // Отправляем на сервер только реальные ID из Firebase
-                     if (id && !id.startsWith('_')) {
-                         idsToMark.push(id);
-                     }
-                 });
-                 if (idsToMark.length > 0) {
-                     socket.emit('mark_notifications_read', idsToMark);
-                     console.log(`[Notifications] Sent 'mark_notifications_read' for IDs:`, idsToMark);
-                 }
-                 updateUnreadCountHeader(0, true); // Сбрасываем счетчик в UI
+             globalNotificationList.innerHTML = ''; // Очищаем список
+             if (notifications.length === 0) {
+                 globalNotificationList.appendChild(globalNoNotificationsMsg); // Показываем сообщение
+             } else {
+                 notifications.forEach(notification => {
+                      if (notification && notification.id) { // Проверка валидности уведомления
+                          globalNotificationList.appendChild(createNotificationElement(notification));
+                      } else { console.warn("Skipping invalid initial notification object:", notification); }
+                  });
+                  // Удаляем плейсхолдер, если он вдруг остался
+                  if (globalNoNotificationsMsg.parentNode === globalNotificationList) {
+                       globalNotificationList.removeChild(globalNoNotificationsMsg);
+                  }
              }
+             updateUnreadNotificationCountHeader(null, true); // Пересчитываем бейдж
+        }
 
-            // Функция обновления счетчика непрочитанных
-            function updateUnreadCountHeader(change = null, forceRecalculate = false) {
-                if (!unreadBadgeHeader || !globalNotificationList) return;
-                let count = 0;
-                if (forceRecalculate || change === 0) {
-                    // Полный пересчет по элементам в DOM
-                    count = globalNotificationList.querySelectorAll('.notification-item.unread').length;
-                } else if (change !== null) {
-                    // Инкрементальное изменение (может быть неточно при быстром добавлении/удалении)
-                    const currentCount = parseInt(unreadBadgeHeader.textContent) || 0;
-                    count = Math.max(0, currentCount + change);
-                } else {
-                    // Если не пересчитывать и нет инкремента, ничего не делаем
-                    return;
-                }
+        function addNewNotificationToPanel(notificationData) {
+             if (!globalNotificationList) return;
+              if (!globalNoNotificationsMsg) { // Пересоздаем если нужно
+                   globalNoNotificationsMsg = document.createElement('li');
+                   globalNoNotificationsMsg.className = 'no-notifications';
+                   globalNoNotificationsMsg.style.cssText = "text-align: center; color: #95a5a6; padding: 15px; font-style: italic; font-size: 0.85rem;";
+                   globalNoNotificationsMsg.textContent = 'Нет новых уведомлений';
+              }
+             const placeholder = globalNotificationList.querySelector('.no-notifications');
+             if(placeholder) placeholder.remove();
+             if (notificationData && notificationData.id) {
+                 const li = createNotificationElement(notificationData);
+                 globalNotificationList.prepend(li); // Добавляем В НАЧАЛО
+                 // Ограничиваем количество элементов
+                 while (globalNotificationList.children.length > MAX_GLOBAL_HISTORY_ITEMS) { const lastItem = globalNotificationList.lastElementChild; if (lastItem) globalNotificationList.removeChild(lastItem); else break; }
+             } else { console.warn("Attempted to add invalid notification data:", notificationData); }
+             // Обновляем счетчик уведомлений в шапке
+             if (!isNotificationPanelOpen) { updateUnreadNotificationCountHeader(1); } else { updateUnreadNotificationCountHeader(null, true); }
+        }
 
-                count = Math.max(0, count); // Убедимся, что не отрицательное
-                if (count > 0) {
-                    unreadBadgeHeader.textContent = count > 9 ? '9+' : count;
-                    unreadBadgeHeader.style.display = 'inline-block';
-                } else {
-                    unreadBadgeHeader.style.display = 'none';
-                }
+        function removeNotificationFromPanel(notificationId) {
+             const item = globalNotificationList ? globalNotificationList.querySelector(`.notification-item[data-id="${notificationId}"]`) : null;
+             if (!item) return;
+             const wasUnread = item.classList.contains('unread');
+             item.style.transition = 'opacity 0.3s ease, transform 0.3s ease'; item.style.opacity = 0; item.style.transform = 'translateX(20px)';
+             setTimeout(() => {
+                  if (item.parentNode) item.remove();
+                  if (socket && notificationId && !notificationId.startsWith('_')) { socket.emit('delete_notification', notificationId); }
+                  if (globalNotificationList && globalNotificationList.children.length === 0) {
+                        if (!globalNoNotificationsMsg) { // Пересоздаем если нужно
+                            globalNoNotificationsMsg = document.createElement('li');
+                            globalNoNotificationsMsg.className = 'no-notifications';
+                            globalNoNotificationsMsg.style.cssText="text-align: center; color: #95a5a6; padding: 15px; font-style: italic; font-size: 0.85rem;";
+                            globalNoNotificationsMsg.textContent = 'Нет новых уведомлений';
+                       }
+                       globalNotificationList.appendChild(globalNoNotificationsMsg);
+                  }
+                  if (wasUnread) { updateUnreadNotificationCountHeader(null, true); }
+             }, 300);
+        }
+
+        function clearAllNotifications() {
+             if (!confirm("Удалить все уведомления?")) return;
+             if (globalNotificationList) {
+                 globalNotificationList.innerHTML = '';
+                  if (!globalNoNotificationsMsg) { // Пересоздаем если нужно
+                       globalNoNotificationsMsg = document.createElement('li');
+                       globalNoNotificationsMsg.className = 'no-notifications';
+                       globalNoNotificationsMsg.style.cssText="text-align: center; color: #95a5a6; padding: 15px; font-style: italic; font-size: 0.85rem;";
+                       globalNoNotificationsMsg.textContent = 'Нет новых уведомлений';
+                  }
+                 globalNotificationList.appendChild(globalNoNotificationsMsg);
+             }
+             if (socket) { socket.emit('clear_all_notifications'); }
+             updateUnreadNotificationCountHeader(0, true);
+        }
+
+        function markAllVisibleNotificationsAsRead() {
+             if (!globalNotificationList || !socket) return;
+             const idsToMark = []; const items = globalNotificationList.querySelectorAll('.notification-item.unread');
+             if (items.length === 0) return;
+             items.forEach(item => { item.classList.remove('unread'); const id = item.dataset.id; if (id && !id.startsWith('_')) { idsToMark.push(id); } });
+             if (idsToMark.length > 0) { socket.emit('mark_notifications_read', idsToMark); console.log(`[Notifications] Sent 'mark_notifications_read' for IDs:`, idsToMark); }
+             updateUnreadNotificationCountHeader(0, true);
+        }
+
+        function updateUnreadNotificationCountHeader(change = null, forceRecalculate = false) {
+            if (!unreadNotificationBadgeHeader || !globalNotificationList) return;
+            let count = 0;
+            if (forceRecalculate || change === 0) { count = globalNotificationList.querySelectorAll('.notification-item.unread').length; }
+            else if (change !== null) { const currentCount = parseInt(unreadNotificationBadgeHeader.textContent) || 0; count = Math.max(0, currentCount + change); }
+            else { return; }
+            count = Math.max(0, count);
+            if (count > 0) { unreadNotificationBadgeHeader.textContent = count > 9 ? '9+' : count; unreadNotificationBadgeHeader.style.display = 'inline-block'; }
+            else { unreadNotificationBadgeHeader.style.display = 'none'; }
+        }
+
+        function toggleNotificationPanel() {
+             if (!globalNotificationPanel) return;
+             isNotificationPanelOpen = !globalNotificationPanel.classList.contains('active');
+             globalNotificationPanel.classList.toggle('active', isNotificationPanelOpen);
+             if (isNotificationPanelOpen) { markAllVisibleNotificationsAsRead(); }
+        }
+
+        function showToastNotification(data) {
+             const container = document.getElementById('toast-notification-container'); if (!container || !data) return; const toastId = `toast-${data.id || Date.now()}`; const existingToast = document.getElementById(toastId); if (existingToast) existingToast.remove(); const toastDiv = document.createElement('div'); toastDiv.className = `toast-notification ${data.type || 'info'}`; toastDiv.id = toastId;
+             toastDiv.onclick = (e) => { if (!e.target.closest('button') && data.chatId) { window.location.href = `/chats/${data.chatId}`; hideToast(toastDiv); } };
+             let iconClass = 'fa-comment-dots'; let borderColor = 'var(--primary-accent, #0d6efd)'; if (data.type === 'error') { iconClass = 'fa-exclamation-circle'; borderColor = 'var(--danger-color, #dc3545)'; } else if (data.type === 'warning') { iconClass = 'fa-exclamation-triangle'; borderColor = 'var(--warning-color, #ffc107)'; } else if (data.type === 'success') { iconClass = 'fa-check-circle'; borderColor = 'var(--success-color, #198754)'; } toastDiv.style.borderLeftColor = borderColor;
+             toastDiv.innerHTML = `<div class="toast-icon" style="color: ${borderColor};"><i class="fas ${iconClass}"></i></div> <div class="toast-content"> <h5 class="toast-title">${data.senderName || 'Уведомление'}</h5> <p class="toast-message">${data.text || ''}</p> ${data.chatId ? `<div class="toast-actions"> <button class="btn-toast-read" data-chat-id="${data.chatId}">Прочитано</button> <button class="btn-toast-open" data-chat-id="${data.chatId}">Перейти</button> </div>` : ''} </div>`;
+             if (data.chatId) { const readButton = toastDiv.querySelector('.btn-toast-read'); const openButton = toastDiv.querySelector('.btn-toast-open'); if (readButton) readButton.addEventListener('click', (e) => { e.stopPropagation(); markChatAsRead(data.chatId); hideToast(toastDiv); }); if (openButton) openButton.addEventListener('click', (e) => { e.stopPropagation(); window.location.href = `/chats/${data.chatId}`; hideToast(toastDiv); }); }
+             container.prepend(toastDiv); requestAnimationFrame(() => { toastDiv.classList.add('show'); });
+             if (data.chatId && data.type !== 'error') { try { new Audio('/sounds/new_message.mp3').play().catch(e => {}); } catch (e) {} } setTimeout(() => { hideToast(toastDiv); }, 7000);
+        }
+        function hideToast(toastElement) {
+             if (!toastElement || !toastElement.parentNode) return; toastElement.classList.remove('show'); toastElement.classList.add('hide'); setTimeout(() => { if (toastElement.parentNode) toastElement.parentNode.removeChild(toastElement); }, 500);
+        }
+        function markChatAsRead(chatId) {
+             if (socket && chatId) { socket.emit('mark_chat_read', chatId); console.log(`Sent mark_chat_read event for chat ${chatId} from toast`); }
+        }
+
+        // --- Основной Запуск Скрипта ---
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("[Header Script] DOMContentLoaded fired.");
+            // --- Получаем username из data-атрибута ТЕГА HEADER ---
+            const headerElement = document.querySelector('.main-header'); // Находим сам хедер
+            if (headerElement) {
+                currentUsername = headerElement.dataset.username || null; // Читаем атрибут
+            } else {
+                console.error("[Header Script] Cannot find header element (.main-header) to read username!");
+                currentUsername = null;
             }
 
-             // Функция переключения панели
-             function toggleNotificationPanel() {
-                 if (!globalNotificationPanel) return;
-                 isNotificationPanelOpen = !globalNotificationPanel.classList.contains('active');
-                 globalNotificationPanel.classList.toggle('active', isNotificationPanelOpen);
-                 // Если панель открывается, помечаем видимые как прочитанные
-                 if (isNotificationPanelOpen) {
-                     markAllVisibleAsReadAndNotifyServer();
-                 }
-             }
+            if (currentUsername) {
+                 console.log("[Header Script] Current user identified from header data:", currentUsername);
+            } else {
+                 console.log("[Header Script] No current user identified from header data.");
+            }
 
-            // === Основной Запуск Скрипта ===
-            document.addEventListener('DOMContentLoaded', () => {
-                // Инициализация DOM
-                globalNotificationList = document.getElementById('globalNotificationList');
-                globalNoNotificationsMsg = globalNotificationList ? globalNotificationList.querySelector('.no-notifications') : null;
-                notificationToggleButton = document.getElementById('notificationToggleBtn');
-                globalNotificationPanel = document.getElementById('globalNotificationPanel');
-                unreadBadgeHeader = notificationToggleButton ? notificationToggleButton.querySelector('#unreadCountBadgeHeader') : null;
-                globalClearNotificationsBtn = document.getElementById('globalClearNotificationsBtn');
+            // --- Инициализация DOM элементов ---
+            globalNotificationList = document.getElementById('globalNotificationList');
+            if (globalNotificationList && !globalNotificationList.querySelector('.no-notifications')) {
+                 globalNoNotificationsMsg = document.createElement('li');
+                 globalNoNotificationsMsg.className = 'no-notifications';
+                 globalNoNotificationsMsg.style.cssText = "text-align: center; color: #95a5a6; padding: 15px; font-style: italic; font-size: 0.85rem;";
+                 globalNoNotificationsMsg.textContent = 'Нет новых уведомлений';
+                 globalNotificationList.appendChild(globalNoNotificationsMsg);
+            } else if (globalNotificationList) {
+                 globalNoNotificationsMsg = globalNotificationList.querySelector('.no-notifications');
+            }
+            notificationToggleButton = document.getElementById('notificationToggleBtn');
+            globalNotificationPanel = document.getElementById('globalNotificationPanel');
+            unreadNotificationBadgeHeader = notificationToggleButton ? notificationToggleButton.querySelector('#unreadCountBadgeHeader') : null;
+            globalClearNotificationsBtn = document.getElementById('globalClearNotificationsBtn');
 
-                // Привязка обработчиков
-                if (notificationToggleButton) { notificationToggleButton.addEventListener('click', (event) => { event.stopPropagation(); toggleNotificationPanel(); }); }
-                if (globalClearNotificationsBtn) { globalClearNotificationsBtn.addEventListener('click', clearAllNotifications); }
-                // Закрытие панели по клику вне ее
-                document.addEventListener('click', (event) => {
-                    if (isNotificationPanelOpen && globalNotificationPanel && notificationToggleButton &&
-                        !globalNotificationPanel.contains(event.target) &&
-                        event.target !== notificationToggleButton && !notificationToggleButton.contains(event.target))
-                    {
-                        toggleNotificationPanel();
-                    }
-                });
+            // --- Логируем найденные элементы ---
+            console.log("DOM Elements (after init):", {
+                globalNotificationList: !!globalNotificationList,
+                globalNoNotificationsMsg: !!globalNoNotificationsMsg,
+                notificationToggleButton: !!notificationToggleButton,
+                globalNotificationPanel: !!globalNotificationPanel,
+                unreadNotificationBadgeHeader: !!unreadNotificationBadgeHeader,
+                globalClearNotificationsBtn: !!globalClearNotificationsBtn
+            });
 
-                // --- Инициализация Socket.IO ---
+            // --- Привязка обработчиков событий к кнопкам ---
+            if (notificationToggleButton) { notificationToggleButton.addEventListener('click', (event) => { event.stopPropagation(); toggleNotificationPanel(); }); }
+            if (globalClearNotificationsBtn) { globalClearNotificationsBtn.addEventListener('click', clearAllNotifications); }
+            document.addEventListener('click', (event) => { if (isNotificationPanelOpen && globalNotificationPanel && notificationToggleButton && !globalNotificationPanel.contains(event.target) && event.target !== notificationToggleButton && !notificationToggleButton.contains(event.target)) { toggleNotificationPanel(); } });
+
+         
+            // --- Инициализация Socket.IO (ТОЛЬКО ЕСЛИ ПОЛЬЗОВАТЕЛЬ АВТОРИЗОВАН) ---
+            if (currentUsername && !window.socket) { // Добавляем проверку на существование сокета
                 try {
-                    console.log('[Socket.IO Client] Attempting to connect...');
-                    socket = io({ reconnectionAttempts: 5, reconnectionDelay: 3000 });
-                    if (!currentUsernameForStorage) { console.error("[Socket.IO Client] Username missing. Cannot register."); return; }
+                    console.log('[Header Script] Attempting Socket.IO connection...');
+                    window.socket = io({ reconnectionAttempts: 5, reconnectionDelay: 3000 });
 
-                    socket.on('connect', () => {
-                        console.log('[Socket.IO Client] Connected! Socket ID:', socket.id);
-                        console.log(`[Socket.IO Client] Registering user: ${currentUsernameForStorage}`);
-                        socket.emit('register_user', currentUsernameForStorage);
+                    window.socket.on('connect', () => {
+                        console.log('[Socket.IO Client] Connected! Socket ID:', window.socket.id);
+                        console.log(`[Socket.IO Client] Registering user: ${currentUsername}`);
+                        window.socket.emit('register_user', currentUsername);
                     });
-                    socket.on('disconnect', (reason) => { console.warn(`[Socket.IO Client] Disconnected. Reason: ${reason}`); });
-                    socket.on('connect_error', (err) => { console.error(`[Socket.IO Client] Connection Error: ${err.message}`); });
 
-                    // --- ОБНОВЛЕННЫЕ ОБРАБОТЧИКИ БАЗОВЫХ СОБЫТИЙ ---
-                    socket.on('balance_updated', (newBalance) => {
+                    window.socket.on('disconnect', (reason) => { console.warn(`[Socket.IO Client] Disconnected. Reason: ${reason}`); });
+                    window.socket.on('connect_error', (err) => { console.error(`[Socket.IO Client] Connection Error: ${err.message}`); });
+
+
+                    // --- Обработчики событий от Сервера ---
+                    window.socket.on('balance_updated', (newBalance) => {
                         console.log('[Socket.IO Client] Received event: balance_updated, Data:', newBalance);
                         const headerBalanceEl = document.getElementById('headerUserBalance');
-                        // Обновляем только если элемент существует и роль Tenant (проверяем по элементу роли)
                         const headerRoleEl = document.getElementById('headerUserRole');
                         if (headerBalanceEl && headerRoleEl && headerRoleEl.textContent === 'Tenant' && typeof newBalance === 'number') {
-                            try {
-                                headerBalanceEl.textContent = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(newBalance);
-                                headerBalanceEl.style.display = 'inline'; // Убедимся, что он видим
-                            } catch(e) {
-                                console.error("Error formatting balance:", e);
-                                headerBalanceEl.textContent = "Ошибка";
-                            }
-                        } else if (headerBalanceEl) {
-                             headerBalanceEl.style.display = 'none'; // Скрываем, если роль не Tenant
-                        }
+                            try { headerBalanceEl.textContent = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(newBalance); headerBalanceEl.style.display = 'inline'; } catch(e) { console.error("Error formatting balance:", e); headerBalanceEl.textContent = "Ошибка"; }
+                        } else if (headerBalanceEl) { headerBalanceEl.style.display = 'none'; }
                     });
 
-                    socket.on('avatar_updated', () => {
+                    window.socket.on('avatar_updated', () => {
                         console.log('[Socket.IO Client] Received event: avatar_updated');
                         const headerAvatarEl = document.getElementById('headerUserAvatar');
-                        // Обновляем src с добавлением временной метки для обхода кэша
-                        if (headerAvatarEl) {
-                            headerAvatarEl.src = headerAvatarEl.src.split('?')[0] + '?t=' + Date.now();
-                        }
-                        // Обновляем аватар на странице профиля, если она открыта
-                        const profileAvatarEl = document.querySelector('.profile-avatar'); // Используем класс
-                        if (profileAvatarEl && profileAvatarEl.src !== headerAvatarEl?.src) { // Проверяем, что это не тот же img
-                            profileAvatarEl.src = profileAvatarEl.src.split('?')[0] + '?t=' + Date.now();
-                        }
-                         // Обновляем аватар на странице редактирования профиля
-                         const profileEditAvatarEl = document.querySelector('.current-avatar-display img');
-                         if (profileEditAvatarEl && profileEditAvatarEl.src !== headerAvatarEl?.src) {
-                              profileEditAvatarEl.src = profileEditAvatarEl.src.split('?')[0] + '?t=' + Date.now();
+                        if (headerAvatarEl) { headerAvatarEl.src = headerAvatarEl.src.split('?')[0] + '?t=' + Date.now(); }
+                        const profileAvatarEl = document.querySelector('.profile-avatar'); if (profileAvatarEl && profileAvatarEl.src !== headerAvatarEl?.src) { profileAvatarEl.src = profileAvatarEl.src.split('?')[0] + '?t=' + Date.now(); }
+                        const profileEditAvatarEl = document.querySelector('.current-avatar-display img'); if (profileEditAvatarEl && profileEditAvatarEl.src !== headerAvatarEl?.src) { profileEditAvatarEl.src = profileEditAvatarEl.src.split('?')[0] + '?t=' + Date.now(); }
+                    });
+
+                    window.socket.on('profile_data_updated', (data) => {
+                         console.log('[Socket.IO Client] Received event: profile_data_updated, Data:', data);
+                         const headerUserNameEl = document.getElementById('headerUserName');
+                         const headerUserRoleEl = document.getElementById('headerUserRole');
+                         const headerBalanceEl = document.getElementById('headerUserBalance');
+                         const headerCompanyContainerEl = document.querySelector('.user-sub-info .user-company');
+                         const headerCompanySpanEl = headerCompanyContainerEl ? headerCompanyContainerEl.querySelector('span') : null;
+                         const addPropertyLink = document.querySelector('.main-nav-links a[href="/properties/add"]');
+                         if (headerUserNameEl && data?.fullName) { headerUserNameEl.textContent = shortenFullName(data.fullName); }
+                         if (headerUserRoleEl && data?.role) { headerUserRoleEl.textContent = data.role; if (headerBalanceEl) { headerBalanceEl.style.display = (data.role === 'Tenant') ? 'inline' : 'none'; } }
+                         if (headerCompanyContainerEl) {
+                             const shouldShowCompany = (data?.role === 'Owner' || data?.role === 'Staff') && data?.companyName;
+                             headerCompanyContainerEl.style.display = shouldShowCompany ? 'inline-flex' : 'none';
+                             if (shouldShowCompany) {
+                                 if (headerCompanySpanEl) headerCompanySpanEl.textContent = shortenCompanyName(data.companyName);
+                                 headerCompanyContainerEl.title = data.companyName;
+                             }
+                         }
+                         if (addPropertyLink && typeof data?.role !== 'undefined' && typeof data?.companyProfileCompleted !== 'undefined') { // Проверка наличия полей
+                             const canAddProperty = data.role === 'Admin' || (data.role === 'Owner' && data.companyProfileCompleted === true);
+                             addPropertyLink.style.display = canAddProperty ? 'inline' : 'none';
                          }
                     });
 
-                    socket.on('profile_data_updated', (data) => {
-                        console.log('[Socket.IO Client] Received event: profile_data_updated, Data:', data);
-
-                        const headerUserNameEl = document.getElementById('headerUserName');
-                        const headerUserRoleEl = document.getElementById('headerUserRole');
-                        const headerBalanceEl = document.getElementById('headerUserBalance'); // Получаем элемент баланса
-                        const headerCompanyContainerEl = document.querySelector('.user-sub-info .user-company');
-                        const headerCompanySpanEl = headerCompanyContainerEl ? headerCompanyContainerEl.querySelector('span') : null;
-                        const addPropertyLink = document.querySelector('.main-nav-links a[href="/properties/add"]');
-
-                        if (headerUserNameEl && data?.fullName) {
-                            headerUserNameEl.textContent = shortenFullName(data.fullName);
-                        }
-                        if (headerUserRoleEl && data?.role) {
-                            headerUserRoleEl.textContent = data.role;
-
-                            // Показываем/скрываем баланс в зависимости от НОВОЙ роли
-                            if (headerBalanceEl) {
-                                headerBalanceEl.style.display = (data.role === 'Tenant') ? 'inline' : 'none';
-                                // Значение баланса обновится отдельным событием 'balance_updated', если нужно
-                            }
-                        }
-
-                        // Обновляем отображение компании
-                        if (headerCompanyContainerEl) {
-                            const shouldShowCompany = (data?.role === 'Owner' || data?.role === 'Staff') && data?.companyName;
-                            headerCompanyContainerEl.style.display = shouldShowCompany ? 'inline-flex' : 'none';
-                            if (shouldShowCompany) {
-                                if (headerCompanySpanEl) {
-                                    headerCompanySpanEl.textContent = shortenCompanyName(data.companyName);
-                                }
-                                headerCompanyContainerEl.title = data.companyName;
-                            }
-                        }
-
-                        // Обновляем видимость ссылки "Добавить объект"
-                        if (addPropertyLink) {
-                            const canAddProperty = data?.role === 'Admin' || (data?.role === 'Owner' && data?.companyProfileCompleted === true);
-                            // Используем 'inline-block' или 'inline', как в CSS для nav-links a
-                            addPropertyLink.style.display = canAddProperty ? 'inline' : 'none';
-                        }
-                    });
-
-                    socket.on('account_deleted', (data) => {
+                    window.socket.on('account_deleted', (data) => {
                         console.log('[Socket.IO Client] Received event: account_deleted, Data:', data);
-                        if (socket.connected) socket.disconnect();
+                        if (socket && socket.connected) socket.disconnect();
                         alert(data?.message || 'Ваш аккаунт был удален администратором.');
-                        // Принудительный выход через форму
-                        const form = document.createElement('form');
-                        form.method = 'POST';
-                        form.action = '/logout';
-                        document.body.appendChild(form);
-                        form.submit();
+                        const form = document.createElement('form'); form.method = 'POST'; form.action = '/logout'; document.body.appendChild(form); form.submit();
                     });
 
-                    // --- КОНЕЦ БАЗОВЫХ СОБЫТИЙ ---
+                    // ---- ОБНОВЛЕНИЕ СЧЕТЧИКА ЧАТОВ ----
+                    window.socket.on('total_unread_update', (data) => {
+                         console.log('[Socket.IO Client] Received event: total_unread_update, Data:', data);
+                         if (typeof data.totalUnreadCount === 'number') {
+                              if (typeof window.updateHeaderChatBadge === 'function') {
+                                   window.updateHeaderChatBadge(data.totalUnreadCount);
+                              } else { console.error("Function window.updateHeaderChatBadge is not defined!"); }
+                         } else { console.warn('[Socket.IO Client] Invalid total_unread_update data:', data); }
+                    });
 
+                    // ---- УВЕДОМЛЕНИЯ (КОЛОКОЛЬЧИК) ----
+                    window.socket.on('initial_notifications', (initialNotifications) => {
+                        console.log(`[Socket.IO Client] Received event: initial_notifications, Count: ${initialNotifications?.length}`);
+                        displayInitialNotifications(initialNotifications);
+                    });
+                    window.socket.on('new_notification', (data) => {
+                         console.log(`[Socket.IO Client] Received event: new_notification, Data:`, data);
+                         if (data && data.type && data.title && data.message) {
+                              const allowHtml = data.allowHtml === true;
+                              addNewNotificationToPanel({ ...data, id: generateUniqueId(), read: false, timestamp: Date.now() });
+                              showToastNotification({ senderName: data.title, text: data.message, type: data.type, chatId: data.chatId, id: data.id || generateUniqueId() });
+                         } else { console.warn('[Socket.IO Client] Invalid new_notification data:', data); }
+                    });
+                    window.socket.on('booking_confirmed', (data) => { const msg = `Ваша бронь (#${data.bookingId?.substring(0,6)}) для "<strong>${data.propertyTitle || '?'}</strong>" подтверждена.`; if (window.location.pathname !== '/bookings') { showToastNotification({ senderName: 'Бронь подтверждена', text: `Бронь для "${data.propertyTitle || '?'}" подтверждена.`, type: 'success', id: `bk-conf-${data.bookingId}` }); } addNewNotificationToPanel({type:'success', title:'Бронь подтверждена', message:msg, bookingId:data.bookingId, id: `bk-notif-conf-${data.bookingId}`}); });
+                    window.socket.on('booking_rejected', (data) => { const r=data.reason?` Причина: ${data.reason}`:''; const msg = `Ваш запрос (#${data.bookingId?.substring(0,6)}) на "<strong>${data.propertyTitle || '?'}</strong>" отклонен.${r}`; if (window.location.pathname !== '/bookings') { showToastNotification({ senderName: 'Запрос отклонен', text: `Запрос на "${data.propertyTitle || '?'}" отклонен.${r}`, type: 'warning', id: `bk-rej-${data.bookingId}` }); } addNewNotificationToPanel({type:'warning', title:'Запрос отклонен', message:msg, bookingId:data.bookingId, id: `bk-notif-rej-${data.bookingId}`}); });
+                    window.socket.on('booking_cancelled_by_owner', (data) => { const msg = `Ваша активная бронь (#${data.bookingId?.substring(0,6)}) для "<strong>${data.propertyTitle || '?'}</strong>" аннулирована администрацией. Средства возвращены.`; if (window.location.pathname !== '/bookings') { showToastNotification({ senderName: 'Бронь аннулирована', text: `Активная бронь для "${data.propertyTitle || '?'}" аннулирована.`, type: 'error', id: `bk-can-own-${data.bookingId}` }); } addNewNotificationToPanel({type:'error', title:'Бронь аннулирована', message:msg, bookingId:data.bookingId, id: `bk-notif-can-own-${data.bookingId}`}); });
+                    window.socket.on('new_booking_pending', (data) => { const msg = `Запрос на бронь (#${data.bookingId?.substring(0,6)}) для "<strong>${data.propertyTitle || '?'}</strong>" от ${data.tenantName || '?'}.`; if (window.location.pathname !== '/rentals') { const pMsg = `📬 Новый запрос на бронь (#${data.bookingId?.substring(0,6)}) для "<strong>${data.propertyTitle || '?'}</strong>" от ${data.tenantName}. <a href="/rentals" style='color:inherit; font-weight:bold;'>К арендам</a>`; showToastNotification({ senderName: 'Новый запрос на бронь', text: pMsg, type: 'info', id: `bk-new-${data.bookingId}`, allowHtml: true }); } addNewNotificationToPanel({type:'info', title:'Новый запрос', message:msg, bookingId:data.bookingId, id: `bk-notif-new-${data.bookingId}`}); });
+                    window.socket.on('pending_booking_cancelled', (data) => { const msg = `${data.tenantName || '?'} отменил запрос (#${data.bookingId?.substring(0,6)}) на "<strong>${data.propertyTitle || '?'}</strong>".`; if (window.location.pathname !== '/rentals') { showToastNotification({ senderName: 'Запрос отменен арендатором', text: `Запрос (#${data.bookingId?.substring(0,6)}) на "${data.propertyTitle || '?'}" отменен арендатором.`, type: 'warning', id: `bk-can-pend-${data.bookingId}` }); } addNewNotificationToPanel({type:'warning', title:'Запрос отменен', message:msg, bookingId:data.bookingId, id: `bk-notif-can-pend-${data.bookingId}`}); });
+                    window.socket.on('active_booking_cancelled', (data) => { const msg = `${data.tenantName || '?'} отменил активную бронь (#${data.bookingId?.substring(0,6)}) для "<strong>${data.propertyTitle || '?'}</strong>".`; if (window.location.pathname !== '/rentals') { showToastNotification({ senderName: 'Активная бронь отменена', text: `Арендатор отменил активную бронь (#${data.bookingId?.substring(0,6)}) для "${data.propertyTitle || '?'}"`, type: 'error', id: `bk-can-act-${data.bookingId}` }); } addNewNotificationToPanel({type:'error', title:'Активная бронь отменена', message:msg, bookingId:data.bookingId, id: `bk-notif-can-act-${data.bookingId}`}); });
+                    window.socket.on('booking_status_changed', (data) => { let t='Статус...',ty='info',m=`Статус брони (#${data.bookingId?.substring(0,6)}) для "<strong>${data.propertyTitle||'?'}</strong>" (${data.tenantName||'?'}) изменен на "<strong>${data.newStatus}</strong>"`; if(data.newStatus==='Активна'){ty='success';t='Подтверждена';}else if(data.newStatus==='Отклонена'){ty='warning';t='Отклонена';}else if(data.newStatus==='Аннулирована'){ty='error';t='Аннулирована';} if (data.changedBy) m+=` пользователем ${data.changedBy}.`; if (data.reason) m+=` Причина: ${data.reason}.`; if (!window.location.pathname.startsWith('/rentals')) {showToastNotification({senderName: t, text: m, type: ty, id:`bk-stat-${data.bookingId}`});} addNewNotificationToPanel({type: ty, title: t, message: m, bookingId: data.bookingId, id: `bk-notif-stat-${data.bookingId}`}); });
 
-                    // --- ОБРАБОТЧИКИ УВЕДОМЛЕНИЙ (без изменений) ---
-                    socket.on('initial_notifications', (initialNotifications) => {
-                         console.log(`[Socket.IO Client] Received event: initial_notifications, Count: ${initialNotifications?.length}`);
-                         displayInitialNotifications(initialNotifications);
-                     });
+                } catch (e) {
+                    console.error("[Header Script] Error setting up Socket.IO:", e);
+                }
+            } else {
+                console.log("[Header Script] User not logged in, skipping Socket.IO initialization.");
+            }
 
-                    socket.on('booking_confirmed', (data) => { console.log('[Socket.IO Client] Received event: booking_confirmed, Data:', data); const msg = `Ваша бронь (#${data.bookingId?.substring(0,6)}) для объекта "<strong>${data.propertyTitle || '?'}</strong>" (${data.startDate} - ${data.endDate}) была подтверждена.`; addNewNotification('success', 'Бронь подтверждена', msg, data.bookingId, true); });
-                    socket.on('booking_rejected', (data) => { console.log('[Socket.IO Client] Received event: booking_rejected, Data:', data); const r=data.reason?` Причина: ${data.reason}`:''; const msg = `Ваш запрос (#${data.bookingId?.substring(0,6)}) на бронирование объекта "<strong>${data.propertyTitle || '?'}</strong>" был отклонен.${r}`; addNewNotification('warning', 'Запрос отклонен', msg, data.bookingId, true); });
-                    socket.on('booking_cancelled_by_owner', (data) => { console.log('[Socket.IO Client] Received event: booking_cancelled_by_owner, Data:', data); const msg = `Ваша активная бронь (#${data.bookingId?.substring(0,6)}) для объекта "<strong>${data.propertyTitle || '?'}</strong>" была аннулирована администрацией (пользователь ${data.cancelledBy}). Средства возвращены на баланс.`; addNewNotification('error', 'Бронь аннулирована', msg, data.bookingId, true); });
-                    socket.on('new_booking_pending', (data) => { console.log('[Socket.IO Client] Received event: new_booking_pending, Data:', data); const msg = `Поступил новый запрос на бронь (#${data.bookingId?.substring(0,6)}) объекта "<strong>${data.propertyTitle || '?'}</strong>" от ${data.tenantName || '?'}.`; if (!window.location.pathname.startsWith('/rentals')) { const pMsg = `📬 Новый запрос на бронь (#${data.bookingId?.substring(0,6)}) для "<strong>${data.propertyTitle || '?'}</strong>" от ${data.tenantName}. <a href="/rentals" style='color:inherit; font-weight:bold;'>К арендам</a>`; showJsNotification('info', pMsg, 15000, true, true); } addNewNotification('info', 'Новый запрос', msg, data.bookingId, true); });
-                    socket.on('pending_booking_cancelled', (data) => { console.log('[Socket.IO Client] Received event: pending_booking_cancelled, Data:', data); const msg = `Арендатор ${data.tenantName || '?'} отменил свой запрос (#${data.bookingId?.substring(0,6)}) на бронирование объекта "<strong>${data.propertyTitle || '?'}</strong>".`; addNewNotification('warning', 'Запрос отменен', msg, data.bookingId, true); });
-                    socket.on('active_booking_cancelled', (data) => { console.log('[Socket.IO Client] Received event: active_booking_cancelled, Data:', data); const msg = `Арендатор ${data.tenantName || '?'} отменил <strong>активную</strong> бронь (#${data.bookingId?.substring(0,6)}) объекта "<strong>${data.propertyTitle || '?'}</strong>".`; addNewNotification('error', 'Активная бронь отменена', msg, data.bookingId, true); });
-                    socket.on('booking_status_changed', (data) => { console.log('[Socket.IO Client] Received event: booking_status_changed, Data:', data); let t='Статус...',ty='info',m=`Статус брони (#${data.bookingId?.substring(0,6)}) для "<strong>${data.propertyTitle||'?'}</strong>" (Арендатор: ${data.tenantName||'?'}) изменен на "<strong>${data.newStatus}</strong>"`; if(data.newStatus==='Активна'){ty='success';t='Подтверждена';}else if(data.newStatus==='Отклонена'){ty='warning';t='Отклонена';}else if(data.newStatus==='Аннулирована'){ty='error';t='Аннулирована';} if (data.changedBy) m+=` пользователем ${data.changedBy}.`; if (data.reason) m+=` Причина: ${data.reason}.`; if (!window.location.pathname.startsWith('/rentals')) {showJsNotification(ty,m,8000,true,true);} addNewNotification(ty, t, m, data.bookingId, true); });
-                    // --- КОНЕЦ ОБРАБОТЧИКОВ УВЕДОМЛЕНИЙ ---
+            // --- Инициализация логики AutoUpdater ---
+            const modalOverlay = document.getElementById('updateModalOverlay');
+            const modalContent = document.getElementById('updateModalContent');
+            const modalTitle = document.getElementById('updateModalTitle');
+            const modalMessage = document.getElementById('updateModalMessage');
+            const progressContainer = document.getElementById('updateProgressContainer');
+            const progressBar = document.getElementById('updateProgressBar');
+            const restartButtonModal = document.getElementById('updateModalRestartButton');
+            const closeButtonModal = document.getElementById('updateModalCloseButton');
+            const errorDetails = document.getElementById('updateErrorDetails');
+            let updateInfoGlobal = null;
+            let updateListeners = {}; // Для хранения ссылок на функции-слушатели
 
-                } catch(e) { console.error("[Socket.IO Client] Error setting up listeners:", e); }
+            function setModalStatusClass(statusClass) { if (modalContent) { modalContent.className = 'modal-content'; modalContent.classList.add(`status-${statusClass}`); const colors = { info: '#5bc0de', available: '#f0ad4e', downloading: '#f0ad4e', ready: '#5cb85c', error: '#d9534f' }; modalContent.style.borderTopColor = colors[statusClass] || '#5bc0de'; } }
+            function showUpdateModal(statusClass = 'info') { if (!modalOverlay || !modalContent) return; setModalStatusClass(statusClass); modalOverlay.style.display = 'flex'; requestAnimationFrame(() => { modalOverlay.classList.add('visible'); modalContent.style.opacity = '1'; modalContent.style.transform = 'none'; }); }
+            function hideUpdateModal() { if (modalOverlay) { modalOverlay.classList.remove('visible'); modalContent.style.opacity = '0'; modalContent.style.transform = 'translateY(-20px)'; setTimeout(() => { modalOverlay.style.display = 'none'; if(progressBar) progressBar.style.width = '0%'; if(progressContainer) progressContainer.style.display = 'none'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) closeButtonModal.style.display = 'none'; if(errorDetails) errorDetails.style.display = 'none'; }, 300); } }
 
+            if (window.electronUpdater) {
+                 console.log('[Renderer Updater] API found. Setting up listeners.');
+                 if(closeButtonModal) closeButtonModal.onclick = hideUpdateModal;
+                 if(restartButtonModal) restartButtonModal.onclick = () => { console.log('[Renderer Updater] Restart button clicked.'); restartButtonModal.textContent = 'Перезапуск...'; restartButtonModal.disabled = true; if (closeButtonModal) closeButtonModal.disabled = true; window.electronUpdater.send('install-update'); };
 
-                // --- КОД ДЛЯ УПРАВЛЕНИЯ МОДАЛЬНЫМ ОКНОМ ОБНОВЛЕНИЯ (без изменений) ---
-                const modalOverlay = document.getElementById('updateModalOverlay');
-                const modalContent = document.getElementById('updateModalContent');
-                const modalTitle = document.getElementById('updateModalTitle');
-                const modalMessage = document.getElementById('updateModalMessage');
-                const progressContainer = document.getElementById('updateProgressContainer');
-                const progressBar = document.getElementById('updateProgressBar');
-                const restartButtonModal = document.getElementById('updateModalRestartButton');
-                const closeButtonModal = document.getElementById('updateModalCloseButton');
-                const errorDetails = document.getElementById('updateErrorDetails');
-                let listeners = {};
-                let updateInfoGlobal = null;
+                 const handleStatus = (message) => { console.log('[Renderer Updater] Status:', message); if (!message && modalMessage && modalMessage.textContent === 'Установлена последняя версия.') { hideUpdateModal(); return; } const readyMessagePattern = /Версия .* загружена\. Готово к установке\./; if (typeof message === 'string' && !readyMessagePattern.test(message)) { if(modalMessage) modalMessage.textContent = message; if(modalTitle) modalTitle.textContent = 'Статус обновления'; if(progressContainer) progressContainer.style.display = 'none'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } if(errorDetails) errorDetails.style.display = 'none'; showUpdateModal('info'); } if (message === 'Установлена последняя версия.') { setTimeout(hideUpdateModal, 4000); } };
+                 const handleError = (message) => { console.error('[Renderer Updater] Error:', message); if(modalTitle) modalTitle.textContent = 'Ошибка обновления'; if(modalMessage) modalMessage.textContent = 'Не удалось проверить или загрузить обновление.'; if(errorDetails) { errorDetails.textContent = `Детали: ${message}`; errorDetails.style.display = 'block'; } if(progressContainer) progressContainer.style.display = 'none'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } showUpdateModal('error'); };
+                 const handleAvailable = (info) => { console.log('[Renderer Updater] Update available:', info); updateInfoGlobal = info; if(modalTitle) modalTitle.textContent = `Доступна версия ${info.version}`; if(modalMessage) modalMessage.textContent = 'Начинается автоматическая загрузка...'; if(progressBar) progressBar.style.width = '0%'; if(progressContainer) progressContainer.style.display = 'block'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } if(errorDetails) errorDetails.style.display = 'none'; showUpdateModal('available'); };
+                 const handleProgress = (percent) => { const roundedPercent = Math.round(percent); if (roundedPercent % 5 === 0 || percent > 98 || percent < 2) { console.log('[Renderer Updater] Progress:', percent); } if(modalTitle) modalTitle.textContent = 'Загрузка обновления'; if(modalMessage) modalMessage.textContent = `Пожалуйста, подождите... ${roundedPercent}%`; if(progressBar) progressBar.style.width = `${percent}%`; if(progressContainer) progressContainer.style.display = 'block'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } if(errorDetails) errorDetails.style.display = 'none'; showUpdateModal('downloading'); };
+                 const handleReady = (info) => { console.log('%c[Renderer Updater] Update ready!', 'color: green; font-weight: bold;', info); updateInfoGlobal = info; if(modalTitle) modalTitle.textContent = `Обновление ${info.version} готово!`; if(modalMessage) modalMessage.textContent = 'Нажмите кнопку ниже, чтобы перезапустить приложение и установить обновление.'; if(progressContainer) progressContainer.style.display = 'none'; if(errorDetails) errorDetails.style.display = 'none'; if(restartButtonModal) { restartButtonModal.textContent = 'Перезапустить и установить'; restartButtonModal.disabled = false; restartButtonModal.style.display = 'inline-block'; } if(closeButtonModal) { closeButtonModal.style.display = 'none'; } showUpdateModal('ready'); };
 
-                function setModalStatusClass(statusClass) { if (modalContent) { modalContent.className = 'modal-content'; modalContent.classList.add(`status-${statusClass}`); const colors = { info: '#5bc0de', available: '#f0ad4e', downloading: '#f0ad4e', ready: '#5cb85c', error: '#d9534f' }; modalContent.style.borderTopColor = colors[statusClass] || '#5bc0de'; } }
-                function showUpdateModal(statusClass = 'info') { if (!modalOverlay || !modalContent) { console.error("Update modal elements not found!"); return; } setModalStatusClass(statusClass); modalOverlay.style.display = 'flex'; requestAnimationFrame(() => { modalOverlay.style.opacity = '1'; modalContent.style.opacity = '1'; modalContent.style.transform = 'none'; }); }
-                function hideUpdateModal() { if (modalOverlay) { modalOverlay.style.opacity = '0'; modalContent.style.opacity = '0'; modalContent.style.transform = 'translateY(-20px)'; setTimeout(() => { modalOverlay.style.display = 'none'; if(progressBar) progressBar.style.width = '0%'; if(progressContainer) progressContainer.style.display = 'none'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) closeButtonModal.style.display = 'none'; if(errorDetails) errorDetails.style.display = 'none'; }, 300); } }
+                 // Добавляем слушатели и сохраняем функции для удаления (на всякий случай)
+                 updateListeners['update-status'] = window.electronUpdater.on('update-status', handleStatus);
+                 updateListeners['update-error'] = window.electronUpdater.on('update-error', handleError);
+                 updateListeners['update-available'] = window.electronUpdater.on('update-available', handleAvailable);
+                 updateListeners['update-progress'] = window.electronUpdater.on('update-progress', handleProgress);
+                 updateListeners['update-ready'] = window.electronUpdater.on('update-ready', handleReady);
+            } else { console.warn('[Renderer Updater] API "electronUpdater" not found. Auto-update UI disabled.'); }
+             // --- Конец логики AutoUpdater ---
 
-                if (window.electronUpdater && modalOverlay && modalContent && modalTitle && modalMessage && progressContainer && progressBar && restartButtonModal && closeButtonModal && errorDetails) {
-                    console.log('[Renderer Updater] API and modal elements found. Setting up listeners.');
-                    closeButtonModal.onclick = hideUpdateModal;
-                    restartButtonModal.onclick = () => { console.log('[Renderer Updater] Restart button clicked.'); if (restartButtonModal) { restartButtonModal.textContent = 'Перезапуск...'; restartButtonModal.disabled = true; } if (closeButtonModal) { closeButtonModal.disabled = true; } window.electronUpdater.send('install-update'); };
+             // --- Логика мобильного меню ---
+             const mobileToggle = document.querySelector('.mobile-nav-toggle');
+             const navLinks = document.querySelector('.main-nav-links');
+             if(mobileToggle && navLinks) { mobileToggle.addEventListener('click', function() { navLinks.classList.toggle('open'); mobileToggle.classList.toggle('active'); }); }
+             // --- Конец мобильного меню ---
 
-                    listeners['update-status'] = window.electronUpdater.on('update-status', (message) => { console.log('[Renderer Updater] Status:', message); if (!message && modalMessage && modalMessage.textContent === 'Установлена последняя версия.') { hideUpdateModal(); return; } const readyMessagePattern = /Версия .* загружена\. Готово к установке\./; if (typeof message === 'string' && !readyMessagePattern.test(message)) { if(modalMessage) modalMessage.textContent = message; if(modalTitle) modalTitle.textContent = 'Статус обновления'; if(progressContainer) progressContainer.style.display = 'none'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } if(errorDetails) errorDetails.style.display = 'none'; showUpdateModal('info'); } if (message === 'Установлена последняя версия.') { setTimeout(hideUpdateModal, 5000); } });
-                    listeners['update-error'] = window.electronUpdater.on('update-error', (message) => { console.error('[Renderer Updater] Error:', message); if(modalTitle) modalTitle.textContent = 'Ошибка обновления'; if(modalMessage) modalMessage.textContent = 'Не удалось проверить или загрузить обновление.'; if(errorDetails) { errorDetails.textContent = `Детали: ${message}`; errorDetails.style.display = 'block'; } if(progressContainer) progressContainer.style.display = 'none'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } showUpdateModal('error'); });
-                    listeners['update-available'] = window.electronUpdater.on('update-available', (info) => { console.log('[Renderer Updater] Update available:', info); updateInfoGlobal = info; if(modalTitle) modalTitle.textContent = `Доступна версия ${info.version}`; if(modalMessage) modalMessage.textContent = 'Начинается автоматическая загрузка...'; if(progressBar) progressBar.style.width = '0%'; if(progressContainer) progressContainer.style.display = 'block'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } if(errorDetails) errorDetails.style.display = 'none'; showUpdateModal('available'); });
-                    listeners['update-progress'] = window.electronUpdater.on('update-progress', (percent) => { const roundedPercent = Math.round(percent); if (roundedPercent % 5 === 0 || percent > 98 || percent < 2) { console.log('[Renderer Updater] Progress:', percent); } if(modalTitle) modalTitle.textContent = 'Загрузка обновления'; if(modalMessage) modalMessage.textContent = `Пожалуйста, подождите... ${roundedPercent}%`; if(progressBar) progressBar.style.width = `${percent}%`; if(progressContainer) progressContainer.style.display = 'block'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } if(errorDetails) errorDetails.style.display = 'none'; showUpdateModal('downloading'); });
-                    listeners['update-ready'] = window.electronUpdater.on('update-ready', (info) => { console.log('%c[Renderer Updater] Update ready!', 'color: green; font-weight: bold;', info); updateInfoGlobal = info; if(modalTitle) modalTitle.textContent = `Обновление ${info.version} готово!`; if(modalMessage) modalMessage.textContent = 'Нажмите кнопку ниже, чтобы перезапустить приложение и установить обновление.'; if(progressContainer) progressContainer.style.display = 'none'; if(errorDetails) errorDetails.style.display = 'none'; if(restartButtonModal) { restartButtonModal.textContent = 'Перезапустить и установить'; restartButtonModal.disabled = false; restartButtonModal.style.display = 'inline-block'; } if(closeButtonModal) { closeButtonModal.style.display = 'none'; } showUpdateModal('ready'); });
+             // --- Сокращение имени и компании в шапке ---
+             const userNameElement = document.getElementById('headerUserName');
+             const companyElement = document.querySelector('.user-sub-info .user-company span');
+             function shortenFullName(fullName) { if (!fullName) return ''; const nameParts = fullName.trim().split(' '); if (nameParts.length < 2) return fullName; const lastName = nameParts[0]; const initials = nameParts.slice(1).map(part => part[0] + '.').join(' '); return `${lastName} ${initials}`; }
+             function shortenCompanyName(companyName, maxLength = 15) { if (!companyName || companyName.length <= maxLength) return companyName; return companyName.substring(0, maxLength - 1) + '…'; }
+             if (userNameElement && userNameElement.textContent) { userNameElement.textContent = shortenFullName(userNameElement.textContent); }
+             if (companyElement && companyElement.textContent) { companyElement.textContent = shortenCompanyName(companyElement.textContent); }
 
-                } else { console.error('[Renderer Updater] Initialization FAILED. API or modal elements are missing.'); }
-                // --- Конец Кода модального окна обновления ---
-
-            }); // Конец DOMContentLoaded
-        })(); // Конец IIFE
-    </script>
-<% } %>
+        }); // --- Конец DOMContentLoaded ---
+    })(); // --- Конец IIFE ---
+</script>

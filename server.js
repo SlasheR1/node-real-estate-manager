@@ -99,10 +99,12 @@ io.use((socket, next) => {
 app.use(async (req, res, next) => {
     res.locals.currentUser = null;
     res.locals.message = null;
+    res.locals.totalUnreadChatCount = 0; // Инициализируем нулем
 
     if (req.session.message) {
         res.locals.message = req.session.message;
         delete req.session.message;
+        // Не ждем сохранения сессии здесь, чтобы не блокировать запрос
         req.session.save(err => {
             if (err) log.warn("[Session MW:FlashClear] Error saving session after deleting flash message:", err);
         });
@@ -112,6 +114,7 @@ app.use(async (req, res, next) => {
         const username = req.session.user.username;
         log.debug(`[Session MW] Checking session for user: ${username}`);
         try {
+            // Получаем свежие данные пользователя (как и раньше)
             const freshUser = await firebaseService.getUserByUsername(username);
             if (freshUser) {
                 log.debug(`[Session MW] Fresh data found for ${username}. Updating session...`);
@@ -121,36 +124,62 @@ app.use(async (req, res, next) => {
                     phone: freshUser.Phone || null, imageData: freshUser.ImageData || null,
                     companyId: freshUser.companyId || null,
                     companyProfileCompleted: freshUser.companyProfileCompleted === true,
-                    companyName: req.session.user.companyName || null
+                    companyName: req.session.user.companyName || null // Берем из старой сессии, если в БД нет
                 };
                 if (freshUser.Role === 'Tenant') { updatedSessionUser.balance = freshUser.Balance ?? 0; }
+                // Загружаем имя компании, если нужно (как и раньше)
                 if (updatedSessionUser.companyId && !updatedSessionUser.companyName) {
                     try {
                         const company = await firebaseService.getCompanyById(updatedSessionUser.companyId);
                         updatedSessionUser.companyName = company?.companyName || null;
                     } catch (companyError) { log.warn(`[Session MW] Failed fetch company name for ${username}:`, companyError); }
                 }
+
+                // *** НОВОЕ: Получаем и считаем непрочитанные чаты ДЛЯ ШАПКИ ***
+                try {
+                     const readerId = (updatedSessionUser.role === 'Owner' || updatedSessionUser.role === 'Staff') ? updatedSessionUser.companyId : updatedSessionUser.username;
+                     if (readerId) {
+                          const userChats = await firebaseService.getUserChats(updatedSessionUser.username, updatedSessionUser.companyId);
+                          let initialUnreadCount = 0;
+                          userChats.forEach(chat => {
+                               if (chat && chat.unreadCounts && chat.unreadCounts[readerId] && chat.unreadCounts[readerId] > 0) {
+                                    initialUnreadCount++;
+                               }
+                          });
+                          res.locals.totalUnreadChatCount = initialUnreadCount; // Устанавливаем в locals
+                          log.debug(`[Session MW] Initial unread chat count for ${username}: ${initialUnreadCount}`);
+                     } else {
+                          log.warn(`[Session MW] Could not determine readerId for initial unread count for ${username}`);
+                     }
+                } catch (chatCountError) {
+                     log.error(`[Session MW] Error getting initial chat count for ${username}:`, chatCountError);
+                     res.locals.totalUnreadChatCount = 0; // В случае ошибки ставим 0
+                }
+                // *** КОНЕЦ НОВОГО БЛОКА ***
+
+                // Обновляем сессию и locals
                 req.session.user = updatedSessionUser;
                 res.locals.currentUser = updatedSessionUser;
-                res.locals.companyId = updatedSessionUser.companyId;
-                const { imageData, ...loggableSession } = updatedSessionUser;
-                log.debug(`[Session MW] Session object updated for ${username}:`, loggableSession);
+                // Не сохраняем сессию здесь синхронно, чтобы не замедлять рендеринг
                 req.session.save(err => { if (err) log.error(`[Session MW] Error persisting updated session for ${username}:`, err); });
-            } else {
+
+            } else { // Пользователь из сессии не найден в БД
                 log.warn(`[Session MW] User ${username} not found in DB. Destroying session.`);
                 return req.session.destroy((err) => { if (err) log.error("[Session MW] Error destroying session:", err); res.clearCookie('connect.sid'); res.redirect('/login'); });
             }
-        } catch (error) {
+        } catch (error) { // Ошибка при получении данных из БД
             log.error(`[Session MW] Error fetching/processing session data for ${username}:`, error);
+            // Используем старые данные из сессии, если они есть
             res.locals.currentUser = req.session.user;
-            res.locals.companyId = req.session.user?.companyId || null;
+            // res.locals.totalUnreadChatCount останется 0
         }
-    } else {
+    } else { // Пользователя нет в сессии
          res.locals.currentUser = null;
-         res.locals.companyId = null;
+         res.locals.totalUnreadChatCount = 0;
     }
     next();
 });
+
 
 // --- Глобальные Middleware для Owner ---
 app.use(checkCompanyProfile);
@@ -186,51 +215,111 @@ app.get('/', async (req, res, next) => {
     }
 });
 
+// --- Глобальные объекты для отслеживания состояния ---
+const unreadMessages = new Map();
+
+// Функция для отправки начальных уведомлений и счетчиков
+async function sendInitialNotificationsAndCounts(socket, userId) {
+    if (!socket || !userId) {
+        console.warn('[Socket.IO] Cannot send initial data: missing socket or userId');
+        return;
+    }
+
+    try {
+        const user = await firebaseService.getUserByUsername(userId);
+        if (!user) {
+            console.warn(`[Socket.IO] User ${userId} not found for initial data`);
+            return;
+        }
+
+        // Получаем чаты пользователя
+        const userChats = await firebaseService.getUserChats(userId, user.companyId);
+        if (!userChats) return;
+
+        // Обновляем бейдж в хедере
+        await updateHeaderBadge(userId);
+
+        // Обновляем бейджи для каждого чата
+        for (const chat of userChats) {
+            await updateChatListBadge(userId, chat.id);
+        }
+
+        console.log(`[Socket.IO] Initial notifications and counts sent for user ${userId}`);
+    } catch (error) {
+        console.error('[Socket.IO] Error sending initial data:', error);
+    }
+}
+
 // --- Логика Socket.IO ---
 const userSockets = {};
-app.set('userSockets', userSockets);
+const lastUnreadUpdates = {};
+
+// Функция для подсчета непрочитанных сообщений
+async function getUnreadCount(chatId, userId) {
+    try {
+        const chat = await firebaseService.getChatById(chatId);
+        if (!chat || !chat.messages) {
+            console.log(`[UnreadCount] No messages found for chat ${chatId}`);
+            return 0;
+        }
+
+        const user = await firebaseService.getUserByUsername(userId);
+        if (!user) {
+            console.warn(`[UnreadCount] User ${userId} not found`);
+            return 0;
+        }
+
+        // Определяем readerId на основе роли пользователя
+        const readerId = (user.Role === 'Owner' || user.Role === 'Staff') ? 
+            user.companyId : userId;
+
+        // Получаем время последнего прочтения
+        const lastRead = chat.participants?.[readerId]?.lastRead || 0;
+        console.log(`[UnreadCount] Last read time for ${readerId} in chat ${chatId}: ${lastRead}`);
+
+        // Считаем непрочитанные сообщения
+        const unreadCount = chat.messages.filter(msg => {
+            const isAfterLastRead = msg.timestamp > lastRead;
+            const isFromOther = msg.senderCompanyId !== user.companyId;
+            return isAfterLastRead && isFromOther;
+        }).length;
+
+        console.log(`[UnreadCount] Found ${unreadCount} unread messages for ${readerId} in chat ${chatId}`);
+        return unreadCount;
+    } catch (error) {
+        console.error('[UnreadCount] Error calculating unread count:', error);
+        return 0;
+    }
+}
+
+// Функция для обновления времени последнего прочтения
+async function markChatAsRead(chatId, userId) {
+    try {
+        const user = await firebaseService.getUserByUsername(userId);
+        if (!user) {
+            console.warn(`[MarkRead] User ${userId} not found`);
+            return;
+        }
+
+        const readerId = (user.Role === 'Owner' || user.Role === 'Staff') ? 
+            user.companyId : userId;
+
+        const now = new Date().toISOString();
+        await firebaseService.updateChat(chatId, {
+            [`participants.${readerId}.lastRead`]: now
+        });
+
+        console.log(`[MarkRead] Updated last read time for ${readerId} in chat ${chatId} to ${now}`);
+    } catch (error) {
+        console.error('[MarkRead] Error marking chat as read:', error);
+    }
+}
 
 io.on('connection', (socket) => {
     const socketId = socket.id;
     log.info(`[Socket.IO] Клиент подключился: ${socketId}`);
     let associatedUserId = null;
-
-    // Функция получения и отправки ОБЩЕГО числа непрочитанных чатов
-    const sendTotalUnreadCount = async (userId, userCompanyId) => {
-        if (!userId || !socket.connected) return;
-        try {
-            const chats = await firebaseService.getUserChats(userId, userCompanyId);
-            const user = await firebaseService.getUserByUsername(userId); // Получаем пользователя для определения readerId
-            const readerId = (user?.Role === 'Owner' || user?.Role === 'Staff') ? userCompanyId : userId;
-            let totalUnread = 0;
-            if (readerId) {
-                 chats.forEach(chat => { if (chat.unreadCounts?.[readerId] > 0) { totalUnread++; } });
-            }
-            log.info(`[Socket.IO] Sending 'total_unread_update' to user ${userId}. Count: ${totalUnread}`);
-            socket.emit('total_unread_update', { totalUnreadCount: totalUnread });
-        } catch (error) { log.error(`[Socket.IO] Error calculating/sending total unread count for ${userId}:`, error); }
-    };
-
-    // Функция отправки начальных уведомлений И СЧЕТЧИКОВ ЧАТОВ
-    const sendInitialNotificationsAndCounts = async (userId) => {
-         if (!userId || !socket.connected) return;
-         try {
-             const notificationLimit = 20;
-             const lastNotifications = await firebaseService.getLastNotifications(userId, notificationLimit);
-             if (!socket.connected) return;
-             log.info(`[Socket.IO] Отправка ${lastNotifications.length} начальных уведомлений пользователю ${userId} (сокет ${socketId})`);
-             socket.emit('initial_notifications', lastNotifications);
-
-             // Отправляем общий счетчик непрочитанных ЧАТОВ
-             const userSessionData = socket.request.session?.user;
-             if (userSessionData && userSessionData.username === userId) {
-                  await sendTotalUnreadCount(userId, userSessionData.companyId);
-             } else { // Fallback, если сессия сокета запаздывает
-                 const userFromDb = await firebaseService.getUserByUsername(userId);
-                 if (userFromDb) await sendTotalUnreadCount(userId, userFromDb.companyId);
-             }
-         } catch (error) { log.error(`[Socket.IO] Ошибка при получении начальных данных для ${userId}:`, error); }
-    };
+    let initialDataSent = false;
 
     // Ассоциация пользователя с сокетом
     const session = socket.request.session;
@@ -241,10 +330,20 @@ io.on('connection', (socket) => {
             if (socketUser && socketUser.username) {
                 associatedUserId = socketUser.username;
                 const oldSocketId = userSockets[associatedUserId];
-                if (oldSocketId && oldSocketId !== socketId) { log.warn(`[Socket.IO] Пользователь ${associatedUserId} переподключился (${socketId}). Отключаем старый сокет ${oldSocketId}.`); io.sockets.sockets.get(oldSocketId)?.disconnect(true); delete userSockets[associatedUserId]; }
-                userSockets[associatedUserId] = socketId; socket.userId = associatedUserId; socket.join(`user:${associatedUserId}`);
+                if (oldSocketId && oldSocketId !== socketId) { 
+                    log.warn(`[Socket.IO] Пользователь ${associatedUserId} переподключился (${socketId}). Отключаем старый сокет ${oldSocketId}.`); 
+                    io.sockets.sockets.get(oldSocketId)?.disconnect(true); 
+                    delete userSockets[associatedUserId]; 
+                }
+                userSockets[associatedUserId] = socketId; 
+                socket.userId = associatedUserId; 
+                socket.join(`user:${associatedUserId}`);
                 log.info(`[Socket.IO] Пользователь ${associatedUserId} ассоциирован (сессия). Сокет ${socketId} в комнате user:${associatedUserId}.`);
-                sendInitialNotificationsAndCounts(associatedUserId);
+                
+                if (!initialDataSent) {
+                    sendInitialNotificationsAndCounts(socket, associatedUserId);
+                    initialDataSent = true;
+                }
             } else { log.warn(`[Socket.IO] Пользователь не найден в сессии для сокета ${socketId}.`); }
         });
     } else { log.warn(`[Socket.IO] Сессия не найдена для сокета ${socketId}.`); }
@@ -256,144 +355,198 @@ io.on('connection', (socket) => {
              if (!associatedUserId || associatedUserId !== userIdFromClient) {
                  if(associatedUserId && userSockets[associatedUserId] === socketId) { delete userSockets[associatedUserId]; }
                  socket.rooms.forEach(room => { if(room !== socketId) socket.leave(room); });
-                 associatedUserId = userIdFromClient; userSockets[associatedUserId] = socketId; socket.userId = associatedUserId;
+                associatedUserId = userIdFromClient; 
+                userSockets[associatedUserId] = socketId; 
+                socket.userId = associatedUserId;
                  socket.join(`user:${associatedUserId}`);
                  log.info(`[Socket.IO] Пользователь ${associatedUserId} зарегистрирован/перерегистрирован (событие). Сокет ${socketId} в комнате user:${associatedUserId}.`);
-                 sendInitialNotificationsAndCounts(associatedUserId);
-             } else {
-                 log.debug(`[Socket.IO] Пользователь ${associatedUserId} уже зарегистрирован. Повторная отправка данных.`);
-                 sendInitialNotificationsAndCounts(associatedUserId);
+                
+                if (!initialDataSent) {
+                    sendInitialNotificationsAndCounts(socket, associatedUserId);
+                    initialDataSent = true;
+                }
              }
          } else { log.warn(`[Socket.IO] 'register_user' с пустым userId от ${socketId}.`); }
     });
 
-    // --- ВОССТАНОВЛЕННЫЕ Обработчики для УВЕДОМЛЕНИЙ (Колокольчик) ---
-    socket.on('mark_notifications_read', async (notificationIds) => {
-        const userId = socket.userId;
-        if (userId && Array.isArray(notificationIds) && notificationIds.length > 0) {
-            log.info(`[Socket.IO] Пользователь ${userId} запросил пометку уведомлений как прочитанных: [${notificationIds.join(', ')}]`);
-            await firebaseService.markNotificationsAsRead(userId, notificationIds);
-            // Обновление счетчика для колокольчика на клиенте не требуется напрямую отсюда,
-            // т.к. клиент сам обновляет UI при открытии панели
-        } else {
-            log.warn(`[Socket.IO] Получено 'mark_notifications_read' с невалидными данными от сокета ${socketId}. UserId: ${userId}, Ids: ${notificationIds}`);
-        }
-    });
-
-    socket.on('delete_notification', async (notificationId) => {
-        const userId = socket.userId;
-        if (userId && notificationId) {
-             log.info(`[Socket.IO] Пользователь ${userId} запросил удаление уведомления: ${notificationId}`);
-             await firebaseService.deleteNotification(userId, notificationId);
-             // Клиент сам удаляет из DOM, серверу не нужно ничего отправлять обратно
-        } else {
-             log.warn(`[Socket.IO] Получено 'delete_notification' с невалидными данными от сокета ${socketId}. UserId: ${userId}, NotificationId: ${notificationId}`);
-        }
-    });
-
-    socket.on('clear_all_notifications', async () => {
-        const userId = socket.userId;
-        if (userId) {
-             log.info(`[Socket.IO] Пользователь ${userId} запросил очистку всех уведомлений.`);
-             await firebaseService.clearAllNotificationsForUser(userId);
-              // Отправляем сигнал, что уведомления очищены, чтобы клиент обновил панель
-             socket.emit('initial_notifications', []);
-             // Также обнуляем счетчик в хедере (если он отслеживает уведомления колокольчика)
-             // socket.emit('total_unread_notifications_update', { totalUnreadCount: 0 }); // Пример, если есть отдельный счетчик
-        } else {
-             log.warn(`[Socket.IO] Получено 'clear_all_notifications' от неассоциированного сокета ${socketId}.`);
-        }
-     });
-    // --- КОНЕЦ ВОССТАНОВЛЕННЫХ ОБРАБОТЧИКОВ ---
-
-    // --- Обработчик пометки СООБЩЕНИЙ ЧАТА прочитанными ---
+    // Обновляем обработчик mark_chat_read
     socket.on('mark_chat_read', async (chatId) => {
-        const userId = socket.userId; // ID пользователя, который прочитал
-        const sessionUser = socket.request.session?.user;
-        const ioInstance = socket.server; // io сервер
+        try {
+            console.log(`[DEBUG] === Start mark_chat_read ===`);
+            console.log(`[DEBUG] Parameters: chatId=${chatId}, userId=${socket.userId}`);
 
-        if (!userId || !chatId || !sessionUser) {
-            log.warn(`[Socket.IO] Invalid 'mark_chat_read' event data. UserID: ${userId}, ChatID: ${chatId}`);
-            return;
-        }
-
-        // Определяем ID "читателя" - это может быть username или companyId
-        const readerId = (sessionUser.role === 'Owner' || sessionUser.role === 'Staff')
-            ? sessionUser.companyId
-            : sessionUser.username;
-
-        if (readerId) {
-            const readTimestamp = Date.now(); // <<< ВРЕМЯ ПРОЧТЕНИЯ ОПРЕДЕЛЕНО ЗДЕСЬ
-            log.info(`[Socket.IO] User ${userId} marked chat ${chatId} as read via socket event (Reader ID: ${readerId}, Timestamp: ${readTimestamp})`);
-
-            // 1. Обновляем lastReadTimestamp в Firebase
-            const tsUpdateSuccess = await firebaseService.updateLastReadTimestamp(chatId, readerId, readTimestamp);
-            // 2. Сбрасываем счетчик непрочитанных в Firebase
-            const unreadResetSuccess = await firebaseService.resetUnreadCount(chatId, readerId);
-
-            // --- Убрана проверка if (tsUpdateSuccess && unreadResetSuccess), т.к. firebaseService может не возвращать boolean ---
-            // Продолжаем отправку сокет-событий в любом случае, полагаясь, что запись в БД прошла успешно (или почти успешно)
-
-            // 3. Отправляем 'unread_count_update' обратно СЕБЕ (для списка чатов)
-            socket.emit('unread_count_update', { chatId: chatId, unreadCount: 0 });
-            log.info(`[Socket.IO] Emitted 'unread_count_update'(0) back to self (${userId}) for chat ${chatId}`);
-
-            // 4. Отправляем ОБЩИЙ счетчик непрочитанных СЕБЕ
-            // Вызываем функцию, определенную выше в io.on('connection')
-            await sendTotalUnreadCount(userId, sessionUser.companyId);
-
-            // 5. Уведомляем ДРУГИХ участников о прочтении (для галочек)
-             try { // Оборачиваем в try/catch на случай ошибки получения данных чата
-                 const chatData = await firebaseService.getChatById(chatId);
-                 if (chatData && chatData.participants) {
-                     const participants = chatData.participants;
-                     // Находим ID ВСЕХ других участников
-                     const otherParticipantIds = Object.keys(participants).filter(pId =>
-                        pId !== userId &&
-                        !((sessionUser.role === 'Owner' || sessionUser.role === 'Staff') && pId === sessionUser.companyId)
-                     );
-
-                     // Получаем список username'ов всех, кого нужно уведомить
-                     const otherUsernamesToNotify = [];
-                     const companyIdsToNotify = [];
-                     otherParticipantIds.forEach(pId => {
-                          const isCompany = !(pId.includes('@') || pId.length < 10);
-                          if(isCompany) { companyIdsToNotify.push(pId); } else { otherUsernamesToNotify.push(pId); }
-                     });
-                     for (const cId of companyIdsToNotify) {
-                          try {
-                              const company = await firebaseService.getCompanyById(cId);
-                              if (company) { if (company.ownerUsername) otherUsernamesToNotify.push(company.ownerUsername); if (company.staff) otherUsernamesToNotify.push(...Object.keys(company.staff)); }
-                          } catch(e){ log.error(`Error fetching company ${cId} for read notification:`, e); }
-                     }
-                     const finalUsernames = [...new Set(otherUsernamesToNotify)].filter(Boolean);
-
-                     // Отправляем событие 'messages_read_up_to' каждому
-                     finalUsernames.forEach(username => {
-                          // Не отправляем уведомление о прочтении самому себе
-                          if (username !== userId) {
-                               const userRoom = `user:${username}`;
-                               // <<< ИСПОЛЬЗУЕМ ПРАВИЛЬНУЮ ПЕРЕМЕННУЮ readTimestamp >>>
-                               ioInstance.to(userRoom).emit('messages_read_up_to', {
-                                   chatId: chatId,
-                                   readerId: readerId,
-                                   readUpToTimestamp: readTimestamp // <<< ИСПРАВЛЕНО ЗДЕСЬ
-                               });
-                               log.info(`[Socket.IO] Emitted 'messages_read_up_to' to room ${userRoom} for chat ${chatId} (Reader: ${readerId})`);
-                          }
-                     });
-                 } else {
-                      log.warn(`[Socket.IO] Could not get chat data for ${chatId} to notify others about read status.`);
-                 }
-            } catch (chatError) {
-                 log.error(`[Socket.IO] Error getting chat data or notifying others in mark_chat_read for ${chatId}:`, chatError);
+            const user = await firebaseService.getUserByUsername(socket.userId);
+            if (!user) {
+                console.warn(`[Socket.IO] User ${socket.userId} not found for mark_chat_read`);
+                return;
             }
-        } else {
-             log.warn(`[Socket.IO] Could not determine readerId for 'mark_chat_read' from user ${userId}`);
-        }
-    }); // Конец обработчика mark_chat_read
+            console.log(`[DEBUG] User found:`, {
+                username: user.username,
+                role: user.Role,
+                companyId: user.companyId
+            });
 
-    // --- Обработчик отключения клиента ---
+            // Определяем readerId на основе роли пользователя
+            const readerId = (user.Role === 'Owner' || user.Role === 'Staff') ? 
+                user.companyId : user.username;
+            console.log(`[DEBUG] Determined readerId: ${readerId}`);
+
+            const chat = await firebaseService.getChatById(chatId);
+            if (!chat) {
+                console.warn(`[Socket.IO] Chat ${chatId} not found for mark_chat_read`);
+                return;
+            }
+            console.log(`[DEBUG] Chat before update:`, {
+                id: chat.id,
+                unreadCounts: chat.unreadCounts,
+                participants: chat.participants
+            });
+
+            // Обнуляем счетчик непрочитанных для этого readerId
+            if (!chat.unreadCounts) {
+                chat.unreadCounts = {};
+            }
+            
+            const oldCount = chat.unreadCounts[readerId] || 0;
+            chat.unreadCounts[readerId] = 0;
+            
+            console.log(`[DEBUG] Updating unread count:`, {
+                readerId,
+                oldCount,
+                newCount: 0
+            });
+
+            // Сохраняем обновленные счетчики в Firebase
+            await firebaseService.updateChat(chatId, { 
+                unreadCounts: chat.unreadCounts,
+                [`participants.${readerId}.lastRead`]: new Date().toISOString()
+            });
+            
+            console.log(`[DEBUG] Chat after update:`, {
+                id: chat.id,
+                unreadCounts: chat.unreadCounts,
+                participants: chat.participants
+            });
+
+            // Получаем все чаты пользователя для подсчета общего количества непрочитанных
+            const userChats = await firebaseService.getUserChats(user.username, user.companyId);
+            console.log(`[DEBUG] All user chats:`, userChats.map(c => ({
+                id: c.id,
+                unreadCounts: c.unreadCounts
+            })));
+
+            let totalUnread = 0;
+            for (const userChat of userChats) {
+                if (userChat.unreadCounts && userChat.unreadCounts[readerId]) {
+                    totalUnread += userChat.unreadCounts[readerId];
+                    console.log(`[DEBUG] Adding to total from chat ${userChat.id}:`, {
+                        chatUnread: userChat.unreadCounts[readerId],
+                        newTotal: totalUnread
+                    });
+                }
+            }
+
+            // Отправляем обновления клиенту
+            socket.emit('chat_list_unread_update', {
+                chatId: chatId,
+                unreadCount: 0,
+                timestamp: Date.now()
+            });
+
+            socket.emit('header_unread_update', {
+                totalUnreadCount: totalUnread,
+                timestamp: Date.now()
+            });
+
+            console.log(`[DEBUG] Sent socket updates:`, {
+                chatId,
+                unreadCount: 0,
+                totalUnread,
+                userId: socket.userId
+            });
+
+            console.log(`[DEBUG] === End mark_chat_read ===`);
+
+        } catch (error) {
+            console.error('[Socket.IO] Error in mark_chat_read:', error);
+        }
+    });
+
+    // Обновляем обработчик new_message
+    socket.on('new_message', async (data) => {
+        if (!data || !data.chatId || !data.message) return;
+
+        try {
+            const chat = await firebaseService.getChatById(data.chatId);
+            if (!chat) return;
+
+            // Обновляем lastMessage в чате
+            await firebaseService.updateChat(data.chatId, {
+                lastMessage: {
+                    timestamp: new Date().toISOString(),
+                    senderId: data.message.senderId
+                }
+            });
+
+            // Получаем всех участников чата
+            const participants = Array.isArray(chat.participants) ? 
+                chat.participants : Object.keys(chat.participants);
+
+            // Обновляем бейджи для всех участников
+            for (const participantId of participants) {
+                if (participantId === data.message.senderId) continue;
+
+                const unreadCount = await getUnreadCount(data.chatId, participantId);
+                io.to(`user:${participantId}`).emit('chat_list_unread_update', {
+                    chatId: data.chatId,
+                    unreadCount,
+                    timestamp: Date.now()
+                });
+
+                // Обновляем общий счетчик
+                const user = await firebaseService.getUserByUsername(participantId);
+                const userChats = await firebaseService.getUserChats(participantId, user?.companyId);
+                
+                let totalUnread = 0;
+                for (const chat of userChats) {
+                    totalUnread += await getUnreadCount(chat.id, participantId);
+                }
+
+                io.to(`user:${participantId}`).emit('header_unread_update', {
+                    totalUnreadCount: totalUnread,
+                    timestamp: Date.now()
+                });
+            }
+        } catch (error) {
+            console.error('[Socket.IO] Error in new_message:', error);
+        }
+    });
+
+    // Обработчик initial_unread_counts при подключении
+    socket.on('get_initial_unread_counts', async () => {
+        const userId = socket.userId;
+        if (!userId) return;
+
+        try {
+            const user = await firebaseService.getUserByUsername(userId);
+            if (!user) return;
+
+            const userChats = await firebaseService.getUserChats(userId, user.companyId);
+            if (!userChats) return;
+
+            // Обновляем бейдж в хедере
+            await updateHeaderBadge(userId);
+
+            // Обновляем бейджи для каждого чата
+            for (const chat of userChats) {
+                await updateChatListBadge(userId, chat.id);
+            }
+        } catch (error) {
+            console.error('[Socket.IO] Error getting initial unread counts:', error);
+        }
+    });
+
+    // Обработчик отключения
     socket.on('disconnect', (reason) => {
         log.info(`[Socket.IO] Клиент отключился: ${socketId}. Причина: ${reason}`);
         const userId = socket.userId;
@@ -403,7 +556,7 @@ io.on('connection', (socket) => {
         } else if (userId) { log.warn(`[Socket.IO] Отключенный сокет ${socketId} не совпал с ${userSockets[userId]} для ${userId}.`); }
         else { let foundUserId = Object.keys(userSockets).find(uid => userSockets[uid] === socketId); if (foundUserId) { log.info(`[Socket.IO] Удаление пользователя ${foundUserId} (сокет ${socketId}) через поиск.`); delete userSockets[foundUserId]; } else { log.warn(`[Socket.IO] Не найден пользователь для ${socketId}.`); } }
     });
-}); // --- Конец io.on('connection') ---
+});
 
 // --- Обработка 404 и 500 ---
 app.use((req, res, next) => {
@@ -424,3 +577,258 @@ httpServer.listen(port, () => {
 });
 
 module.exports = httpServer;
+
+// Функция для получения актуального количества непрочитанных сообщений
+async function getActualUnreadCount(userId, chatId = null) {
+    try {
+        const user = await firebaseService.getUserByUsername(userId);
+        if (!user) {
+            console.error('[UnreadCount] User not found:', userId);
+            return 0;
+        }
+
+        const readerId = userId;
+        const userChats = await firebaseService.getUserChats(userId, user.companyId);
+        
+        if (!userChats) return 0;
+
+        if (chatId) {
+            // Возвращаем количество непрочитанных для конкретного чата
+            const chat = userChats.find(c => c.id === chatId);
+            return (chat?.unreadCounts?.[readerId] || 0);
+        } else {
+            // Возвращаем общее количество непрочитанных
+            return userChats.reduce((total, chat) => {
+                return total + (chat.unreadCounts?.[readerId] || 0);
+            }, 0);
+        }
+    } catch (error) {
+        console.error('[UnreadCount] Error getting unread count:', error);
+        return 0;
+    }
+}
+
+// Функция для обновления и отправки счетчиков
+async function updateAndEmitUnreadCounts(userId, chatId = null) {
+    try {
+        const socket = io.sockets.sockets.get(userSockets[userId]);
+        if (!socket) return;
+
+        // Получаем актуальные данные
+        const totalUnread = await getActualUnreadCount(userId);
+        const chatUnread = chatId ? await getActualUnreadCount(userId, chatId) : null;
+
+        // Отправляем обновление общего счетчика
+        socket.emit('total_unread_update', {
+            totalUnreadCount: totalUnread,
+            timestamp: Date.now()
+        });
+
+        // Если указан конкретный чат, отправляем и его обновление
+        if (chatId !== null) {
+            socket.emit('unread_count_update', {
+                chatId,
+                unreadCount: chatUnread
+            });
+        }
+
+        console.log(`[UnreadCount] Updated counts for user ${userId}:`, {
+            totalUnread,
+            chatUnread: chatId ? chatUnread : 'not requested'
+        });
+    } catch (error) {
+        console.error('[UnreadCount] Error updating counts:', error);
+    }
+}
+
+async function handleIncomingMessage(socket, message) {
+    try {
+        if (!socket.userId || !message || !message.chatId) {
+            console.error('Invalid message data:', { socketUserId: socket.userId, message });
+            return;
+        }
+
+        console.log(`[${new Date().toISOString()}] Processing new message from user ${socket.userId} in chat ${message.chatId}`);
+        
+        const timestamp = Date.now();
+        console.log(`Message timestamp: ${new Date(timestamp).toISOString()}`);
+
+        const messageData = {
+            text: message.text,
+            senderId: socket.userId,
+            timestamp: timestamp,
+            chatId: message.chatId
+        };
+
+        // Get chat and validate
+        const chat = await firebaseService.getChat(message.chatId);
+        if (!chat) {
+            console.error(`Chat ${message.chatId} not found`);
+            return;
+        }
+
+        // Update chat metadata with last message info
+        await firebaseService.updateChat(message.chatId, {
+            lastMessage: messageData.text,
+            lastMessageTimestamp: timestamp,
+            lastMessageSenderId: socket.userId
+        });
+
+        // Save message
+        const savedMessage = await firebaseService.createMessage(messageData);
+        console.log(`Message saved with timestamp ${new Date(timestamp).toISOString()}`);
+
+        // Get participants
+        const participants = chat.participants ? Object.values(chat.participants).filter(p => p) : [];
+        console.log(`Found ${participants.length} participants in chat`);
+
+        // Get sender's info
+        const sender = await firebaseService.getUserByUsername(socket.userId);
+        console.log(`Message sender: ${sender.username}, role: ${sender.role}`);
+
+        // Update unread counts for each participant
+        for (const participant of participants) {
+            // Skip if participant is the sender
+            if (participant === socket.userId) {
+                console.log(`Skipping sender ${participant}`);
+                continue;
+            }
+
+            // Update badges for the participant
+            await updateChatListBadge(participant, message.chatId);
+            await updateHeaderBadge(participant);
+            console.log(`Updated badges for participant ${participant}`);
+        }
+
+        // Broadcast message to all participants
+        io.to(message.chatId).emit('new_message', {
+            ...messageData,
+            timestampFormatted: new Date(timestamp).toLocaleString('ru-RU', {
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            })
+        });
+
+        console.log('Message broadcast complete');
+
+    } catch (error) {
+        console.error('Error in handleIncomingMessage:', error);
+    }
+}
+
+async function updateHeaderBadge(userId) {
+    try {
+        const user = await firebaseService.getUserByUsername(userId);
+        if (!user) {
+            log.warn(`[HeaderBadge] Пользователь не найден: ${userId}`);
+            return 0;
+        }
+
+        // Получаем все чаты пользователя
+        const chats = await firebaseService.getUserChats(userId, user.companyId);
+        let totalUnread = 0;
+
+        // Подсчитываем непрочитанные сообщения во всех чатах
+        for (const chat of chats) {
+            const lastReadTime = chat.lastRead?.[userId] || 0;
+            const messages = await firebaseService.getChatMessages(chat.id, user, 100);
+            
+            const unreadCount = messages.filter(msg => 
+                msg.timestamp > lastReadTime && 
+                msg.senderId !== userId
+            ).length;
+
+            totalUnread += unreadCount;
+        }
+
+        // Отправляем обновление через сокет
+        if (io && userSockets[userId]) {
+            io.to(`user:${userId}`).emit('header_unread_update', {
+                totalUnreadCount: totalUnread,
+                timestamp: Date.now()
+            });
+            log.info(`[HeaderBadge] Отправлено обновление для ${userId}: total=${totalUnread}`);
+        } else {
+            log.debug(`[HeaderBadge] Сокет не найден для пользователя ${userId}`);
+        }
+
+        return totalUnread;
+    } catch (error) {
+        log.error('[HeaderBadge] Ошибка:', error);
+        return 0;
+    }
+}
+
+async function updateChatListBadge(userId, chatId) {
+    try {
+        const user = await firebaseService.getUserByUsername(userId);
+        if (!user) {
+            log.warn(`[ChatListBadge] Пользователь не найден: ${userId}`);
+            return;
+        }
+
+        const chat = await firebaseService.getChatById(chatId);
+        if (!chat) {
+            log.warn(`[ChatListBadge] Чат не найден: ${chatId}`);
+            return;
+        }
+
+        // Получаем время последнего прочтения
+        const lastReadTime = chat.lastRead?.[userId] || 0;
+
+        // Получаем сообщения и считаем непрочитанные
+        const messages = await firebaseService.getChatMessages(chatId, user, 100);
+        const unreadCount = messages.filter(msg => 
+            msg.timestamp > lastReadTime && 
+            msg.senderId !== userId
+        ).length;
+
+        // Отправляем обновление через сокет
+        if (io && userSockets[userId]) {
+            io.to(`user:${userId}`).emit('chat_list_unread_update', {
+                chatId,
+                unreadCount,
+                timestamp: Date.now()
+            });
+            log.info(`[ChatListBadge] Обновлен счетчик для чата ${chatId}, пользователь ${userId}: ${unreadCount}`);
+        } else {
+            log.debug(`[ChatListBadge] Сокет не найден для пользователя ${userId}`);
+        }
+    } catch (error) {
+        log.error('[ChatListBadge] Ошибка:', error);
+    }
+}
+
+async function markChatRead(chatId, userId) {
+    try {
+        const user = await firebaseService.getUserByUsername(userId);
+        if (!user) {
+            log.warn(`[MarkRead] Пользователь не найден: ${userId}`);
+            return;
+        }
+
+        const chat = await firebaseService.getChatById(chatId);
+        if (!chat) {
+            log.warn(`[MarkRead] Чат не найден: ${chatId}`);
+            return;
+        }
+
+        // Обновляем время последнего прочтения
+        const updates = {
+            [`lastRead.${userId}`]: Date.now()
+        };
+
+        await firebaseService.updateChatAtomic(chatId, updates);
+
+        // Отправляем обновления счетчиков
+        await updateChatListBadge(userId, chatId);
+        await updateHeaderBadge(userId);
+
+        log.info(`[MarkRead] Чат ${chatId} помечен как прочитанный для ${userId}`);
+    } catch (error) {
+        log.error('[MarkRead] Ошибка:', error);
+    }
+}

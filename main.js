@@ -105,7 +105,7 @@ function createWindow () {
   console.log('Loading URL: http://localhost:3000/');
   mainWindow.loadURL('http://localhost:3000/');
 
-   mainWindow.webContents.openDevTools();
+//   mainWindow.webContents.openDevTools();
 
   mainWindow.on('closed', function () {
     console.log('Main window closed.');
