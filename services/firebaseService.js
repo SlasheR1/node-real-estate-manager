@@ -1,4 +1,4 @@
-// services/firebaseService.js
+// services/firebaseService.js (Полная версия с изменениями для чатов и счетчиков)
 const admin = require('firebase-admin');
 const db = admin.database();
 const log = require('electron-log');
@@ -22,13 +22,35 @@ async function getUserByUsername(username) {
             // Добавляем Username в объект, так как ключ узла не всегда передается
             userData.Username = username;
         }
+        // log.debug(`[FirebaseService] Fetched user ${username}:`, userData ? 'Found' : 'Not Found');
         return userData;
     } catch (error) {
         log.error(`[FirebaseService] Error fetching user ${username}:`, error);
         return null; // Возвращаем null при ошибке, чтобы не ломать Promise.allSettled
     }
 }
-
+async function calculateTotalUnreadChats(userId, companyId, readerId) {
+    let totalUnreadMessages = 0; // Считаем сообщения, а не чаты
+    try {
+        if (!userId || !readerId) {
+             log.warn(`[calculateTotalUnreadChats] Cannot calculate count: userId or readerId is missing.`);
+             return 0;
+        }
+        // Получаем ВСЕ чаты, доступные пользователю userId/companyId
+        const userChats = await getUserChats(userId, companyId); // Используем существующую функцию
+        userChats.forEach(chat => {
+            // Суммируем счетчик для конкретного readerId из каждого чата
+            if (chat && chat.unreadCounts && chat.unreadCounts[readerId] && typeof chat.unreadCounts[readerId] === 'number' && chat.unreadCounts[readerId] > 0) {
+                totalUnreadMessages += chat.unreadCounts[readerId]; // Суммируем КОЛИЧЕСТВО СООБЩЕНИЙ
+            }
+        });
+        log.debug(`[calculateTotalUnreadChats] User: ${userId}, Reader: ${readerId}, Total unread MESSAGES: ${totalUnreadMessages}`);
+    } catch (error) {
+        log.error(`[calculateTotalUnreadChats] Error for user ${userId}, reader ${readerId}:`, error);
+    }
+    // Возвращаем именно количество сообщений, а не чатов
+    return totalUnreadMessages;
+}
 /**
  * Получает список всех пользователей.
  * @returns {Promise<Array<object>>} Массив объектов пользователей.
@@ -38,7 +60,9 @@ async function getAllUsers() {
         const snapshot = await db.ref('users').once('value');
         const usersData = snapshot.val();
         // Преобразуем объект в массив, добавляя ключ (username) в каждый объект
-        return usersData ? Object.entries(usersData).map(([username, data]) => ({ Username: username, ...data })) : [];
+        const userList = usersData ? Object.entries(usersData).map(([username, data]) => ({ Username: username, ...data })) : [];
+        // log.info(`[FirebaseService] Fetched ${userList.length} users.`);
+        return userList;
     } catch (error) {
         log.error("[FirebaseService] Error fetching all users:", error);
         throw error; // Пробрасываем ошибку для обработки выше
@@ -60,6 +84,37 @@ async function saveUser(user) {
         delete userToSave.username;
         // Удаляем другие поля, которых не должно быть в БД (например, DisplayAvatarSrc)
         delete userToSave.DisplayAvatarSrc;
+
+        // Дополнительная очистка полей в зависимости от роли (ВАЖНО!)
+        if (userToSave.Role !== 'Tenant') {
+             delete userToSave.Balance;
+             delete userToSave.BalanceHistory;
+             log.debug(`[saveUser] Removed Tenant-specific fields for ${username} (Role: ${userToSave.Role})`);
+        } else {
+             // Убедимся, что у Tenant есть эти поля (даже если они null/0)
+             if (!userToSave.hasOwnProperty('Balance')) userToSave.Balance = 0;
+             if (!userToSave.hasOwnProperty('BalanceHistory')) userToSave.BalanceHistory = {};
+        }
+        if (userToSave.Role !== 'Owner') {
+             delete userToSave.companyProfileCompleted;
+             log.debug(`[saveUser] Removed Owner-specific fields for ${username} (Role: ${userToSave.Role})`);
+        } else {
+             // Убедимся, что у Owner есть это поле (даже если false)
+             if (!userToSave.hasOwnProperty('companyProfileCompleted')) userToSave.companyProfileCompleted = false;
+        }
+        if (userToSave.Role !== 'Staff' && userToSave.Role !== 'Owner') {
+            // Убедимся, что у Admin и Tenant нет companyId
+            delete userToSave.companyId;
+        }
+
+        // Убираем undefined значения перед сохранением
+        Object.keys(userToSave).forEach(key => {
+            if (userToSave[key] === undefined) {
+                 log.warn(`[saveUser] Found undefined value for key '${key}' in user ${username}. Setting to null.`);
+                 userToSave[key] = null; // Заменяем undefined на null
+            }
+        });
+
 
         await db.ref(`users/${username}`).set(userToSave);
         log.info(`[FirebaseService] User ${username} saved/updated.`);
@@ -89,7 +144,10 @@ async function deleteUser(username) {
                     .catch(err => log.warn(`[FirebaseService] Failed to remove user ${username} from staff of company ${user.companyId} during deletion: ${err.message}`)); // Логируем, но не прерываем удаление
         }
         // TODO: Подумать об удалении чатов/сообщений пользователя? (Сложно и может быть не нужно)
-        // TODO: Подумать об удалении уведомлений пользователя?
+        // TODO: Подумать об удалении уведомлений пользователя? (Да, стоит удалить)
+        await db.ref(`user_notifications/${username}`).remove(); // Удаляем все уведомления
+        log.info(`[FirebaseService] Removed notifications for deleted user ${username}.`);
+
         await db.ref(`users/${username}`).remove();
         log.info(`[FirebaseService] User ${username} deleted.`);
     } catch (error) {
@@ -108,14 +166,20 @@ async function deleteUser(username) {
  */
 async function getCompanyById(companyId) {
     try {
-        if (!companyId) return null;
+        if (!companyId) {
+            log.warn("[FirebaseService] getCompanyById called with empty ID.");
+            return null;
+        }
         const snapshot = await db.ref(`companies/${companyId}`).once('value');
         const companyData = snapshot.val();
-         if (companyData) companyData.companyId = companyId; // Добавляем ID в объект
+        if (companyData) {
+            companyData.companyId = companyId; // Добавляем ID в объект для удобства
+        }
+        // log.debug(`[FirebaseService] Fetched company ${companyId}:`, companyData ? 'Found' : 'Not Found');
         return companyData;
     } catch (error) {
         log.error(`[FirebaseService] Error fetching company ${companyId}:`, error);
-        throw error;
+        throw error; // Пробрасываем ошибку
     }
 }
 
@@ -164,12 +228,19 @@ async function updateCompany(companyId, updates) {
             throw new Error("Missing companyId or updates object.");
         }
         // Удаляем undefined поля из updates перед сохранением
-        Object.keys(updates).forEach(key => updates[key] === undefined && delete updates[key]);
-        if (Object.keys(updates).length === 0) {
+        const cleanedUpdates = { ...updates }; // Создаем копию
+        Object.keys(cleanedUpdates).forEach(key => {
+            if (cleanedUpdates[key] === undefined) {
+                 log.warn(`[updateCompany] Removing undefined key '${key}' before updating company ${companyId}.`);
+                 delete cleanedUpdates[key];
+            }
+        });
+
+        if (Object.keys(cleanedUpdates).length === 0) {
             log.warn(`[FirebaseService] No valid updates provided for company ${companyId}.`);
             return;
         }
-        await db.ref(`companies/${companyId}`).update(updates);
+        await db.ref(`companies/${companyId}`).update(cleanedUpdates);
         log.info(`[FirebaseService] Company ${companyId} updated.`);
     } catch (error) {
         log.error(`[FirebaseService] Error updating company ${companyId}:`, error);
@@ -197,6 +268,8 @@ async function addStaffToCompany(companyId, staffUsername) {
         // Убедимся, что удаляем поля Tenant'а, если они были
         updates[`/users/${staffUsername}/Balance`] = null;
         updates[`/users/${staffUsername}/BalanceHistory`] = null;
+        // Убедимся, что удаляем флаг Owner'а
+        updates[`/users/${staffUsername}/companyProfileCompleted`] = null;
 
         await db.ref().update(updates);
         log.info(`[FirebaseService] Staff ${staffUsername} added to company ${companyId}. User role set to Staff.`);
@@ -208,7 +281,7 @@ async function addStaffToCompany(companyId, staffUsername) {
 
 /**
  * Удаляет пользователя из персонала компании.
- * Обновляет запись компании и запись пользователя (сбрасывает роль и companyId).
+ * Обновляет запись компании и запись пользователя (сбрасывает роль на Tenant и companyId).
  * @param {string} companyId ID компании.
  * @param {string} staffUsername Логин удаляемого пользователя.
  * @returns {Promise<void>}
@@ -224,8 +297,10 @@ async function removeStaffFromCompany(companyId, staffUsername) {
         updates[`/users/${staffUsername}/companyId`] = null;      // Убираем companyId у пользователя
         updates[`/users/${staffUsername}/Role`] = 'Tenant';       // Возвращаем роль Tenant по умолчанию
         // Добавляем поля Tenant'а
-        updates[`/users/${staffUsername}/Balance`] = 0;
-        updates[`/users/${staffUsername}/BalanceHistory`] = {};
+        updates[`/users/${staffUsername}/Balance`] = 0;           // Сбрасываем баланс
+        updates[`/users/${staffUsername}/BalanceHistory`] = {};    // Очищаем историю
+        // Удаляем флаг Owner'а, если он был (на всякий случай)
+        updates[`/users/${staffUsername}/companyProfileCompleted`] = null;
 
         await db.ref().update(updates);
         log.info(`[FirebaseService] Staff ${staffUsername} removed from company ${companyId}. User role reset to Tenant.`);
@@ -320,7 +395,6 @@ async function getPropertyById(propertyId) {
         const propertyData = snapshot.val();
         if (propertyData && typeof propertyData === 'object') {
             propertyData.Id = propertyId; // Добавляем ID
-            // Добавим лог перед возвратом
             log.debug(`[FirebaseService] getPropertyById - Found property ${propertyId}, Company ID: ${propertyData.companyId}`);
             return propertyData;
         } else {
@@ -341,8 +415,9 @@ async function getAllProperties() {
     try {
         const snapshot = await db.ref('properties').once('value');
         const propertiesData = snapshot.val();
-        // Преобразуем объект в массив, добавляя ключ (ID) в каждый объект
-        return propertiesData ? Object.entries(propertiesData).map(([id, data]) => ({ Id: id, ...data })) : [];
+        const propertyList = propertiesData ? Object.entries(propertiesData).map(([id, data]) => ({ Id: id, ...data })) : [];
+        // log.info(`[FirebaseService] Fetched ${propertyList.length} properties.`);
+        return propertyList;
     } catch (error) {
         log.error("[FirebaseService] Error fetching all properties:", error);
         throw error;
@@ -356,11 +431,15 @@ async function getAllProperties() {
  */
 async function getPropertiesByCompanyId(companyId) {
     try {
-        if (!companyId) return [];
+        if (!companyId) {
+            log.warn("[FirebaseService] getPropertiesByCompanyId called with empty companyId.");
+            return [];
+        }
         const snapshot = await db.ref('properties').orderByChild('companyId').equalTo(companyId).once('value');
         const propertiesData = snapshot.val();
-        // Преобразуем объект в массив, добавляя ключ (ID) в каждый объект
-        return propertiesData ? Object.entries(propertiesData).map(([id, data]) => ({ Id: id, ...data })) : [];
+        const propertyList = propertiesData ? Object.entries(propertiesData).map(([id, data]) => ({ Id: id, ...data })) : [];
+        // log.info(`[FirebaseService] Fetched ${propertyList.length} properties for company ${companyId}.`);
+        return propertyList;
     } catch (error) {
         log.error(`[FirebaseService] Error fetching properties for company ${companyId}:`, error);
         throw error;
@@ -385,6 +464,11 @@ async function saveProperty(property) {
             if (!propertyId) throw new Error("Failed to generate property ID.");
             property.Id = propertyId; // Добавляем ID обратно в объект
             log.info(`[FirebaseService] Generated new ID for property: ${propertyId}`);
+            // Устанавливаем дату добавления только при создании
+            if (!property.AddedDate) property.AddedDate = new Date().toISOString();
+            // Устанавливаем начальный рейтинг при создании
+            if (property.Rating === undefined) property.Rating = 0;
+            if (property.NumberOfReviews === undefined) property.NumberOfReviews = 0;
         }
 
         // Убедимся, что нет undefined полей перед сохранением
@@ -399,10 +483,12 @@ async function saveProperty(property) {
         delete propertyToSave.DisplayImageSrc;
         delete propertyToSave.CalculatedDailyPrice;
         delete propertyToSave.SortableAddedDate;
+        delete propertyToSave.AdditionalImages; // Удаляем массив DataURL'ов перед сохранением
 
         await db.ref(`properties/${propertyId}`).set(propertyToSave);
         log.info(`[FirebaseService] Property ${propertyId} (Company: ${propertyToSave.companyId}) saved.`);
-        return propertyToSave; // Возвращаем сохраненный объект
+        // Возвращаем сохраненный объект с доп. полями, если они нужны дальше
+        return { ...propertyToSave, AdditionalImages: property.AdditionalImages || [] };
     } catch (error) {
         error.message = `[FirebaseService] Error saving property ${property?.Id || 'new'}: ${error.message}`;
         log.error(error.message);
@@ -418,7 +504,8 @@ async function saveProperty(property) {
 async function deleteProperty(propertyId) {
     try {
         if (!propertyId) throw new Error("Property ID required for deletion.");
-        // TODO: Подумать об удалении связанных бронирований/отзывов? Или оставить как есть?
+        // TODO: Подумать об удалении связанных бронирований/отзывов/чатов?
+        // Сейчас просто удаляем объект.
         await db.ref(`properties/${propertyId}`).remove();
         log.info(`[FirebaseService] Property ${propertyId} deleted.`);
     } catch (error) {
@@ -437,10 +524,16 @@ async function deleteProperty(propertyId) {
  */
 async function getBookingById(bookingId) {
     try {
-        if (!bookingId) return null;
+        if (!bookingId) {
+             log.warn("[FirebaseService] getBookingById called with empty ID.");
+             return null;
+        }
         const snapshot = await db.ref(`bookings/${bookingId}`).once('value');
         const bookingData = snapshot.val();
-        if (bookingData) bookingData.Id = bookingId; // Добавляем ID
+        if (bookingData) {
+            bookingData.Id = bookingId; // Добавляем ID
+        }
+        // log.debug(`[FirebaseService] Fetched booking ${bookingId}:`, bookingData ? 'Found' : 'Not Found');
         return bookingData;
     } catch (error) {
         log.error(`[FirebaseService] Error fetching booking ${bookingId}:`, error);
@@ -456,7 +549,9 @@ async function getAllBookings() {
     try {
         const snapshot = await db.ref('bookings').once('value');
         const bookingsData = snapshot.val();
-        return bookingsData ? Object.entries(bookingsData).map(([id, data]) => ({ Id: id, ...data })) : [];
+        const bookingList = bookingsData ? Object.entries(bookingsData).map(([id, data]) => ({ Id: id, ...data })) : [];
+        // log.info(`[FirebaseService] Fetched ${bookingList.length} total bookings.`);
+        return bookingList;
     } catch (error) {
         log.error("[FirebaseService] Error fetching all bookings:", error);
         throw error;
@@ -470,10 +565,15 @@ async function getAllBookings() {
  */
 async function getBookingsByUserId(userId) {
     try {
-        if (!userId) return [];
+        if (!userId) {
+            log.warn("[FirebaseService] getBookingsByUserId called with empty userId.");
+            return [];
+        }
         const snapshot = await db.ref('bookings').orderByChild('UserId').equalTo(userId).once('value');
         const bookingsData = snapshot.val();
-        return bookingsData ? Object.entries(bookingsData).map(([id, data]) => ({ Id: id, ...data })) : [];
+        const bookingList = bookingsData ? Object.entries(bookingsData).map(([id, data]) => ({ Id: id, ...data })) : [];
+        // log.info(`[FirebaseService] Fetched ${bookingList.length} bookings for user ${userId}.`);
+        return bookingList;
     } catch (error) {
         log.error(`[FirebaseService] Error fetching bookings for user ${userId}:`, error);
         throw error;
@@ -493,6 +593,8 @@ async function saveBooking(booking) {
             bookingId = db.ref('bookings').push().key;
              if (!bookingId) throw new Error("Failed to generate booking ID.");
             booking.Id = bookingId;
+            // Добавляем дату создания, если ее нет
+            if (!booking.CreatedAt) booking.CreatedAt = new Date().toISOString();
         }
         await db.ref(`bookings/${bookingId}`).set(booking);
         log.info(`[FirebaseService] Booking ${bookingId} saved.`);
@@ -529,11 +631,15 @@ async function deleteBooking(bookingId) {
  */
 async function getPropertyReviews(propertyId) {
     try {
-        if (!propertyId) return [];
+        if (!propertyId) {
+             log.warn("[FirebaseService] getPropertyReviews called with empty propertyId.");
+             return [];
+        }
         const snapshot = await db.ref(`properties/${propertyId}/reviews`).once('value');
         const reviewsData = snapshot.val();
-        // Преобразуем объект в массив, добавляя ключ (reviewId) в каждый объект
-        return reviewsData ? Object.entries(reviewsData).map(([id, data]) => ({ reviewId: id, ...data })) : [];
+        const reviewList = reviewsData ? Object.entries(reviewsData).map(([id, data]) => ({ reviewId: id, ...data })) : [];
+        // log.debug(`[FirebaseService] Fetched ${reviewList.length} reviews for property ${propertyId}.`);
+        return reviewList;
     } catch (error) {
         log.error(`[FirebaseService] Error fetching reviews for property ${propertyId}:`, error);
         throw error;
@@ -549,21 +655,22 @@ async function getPropertyReviews(propertyId) {
 async function hasUserReviewedProperty(propertyId, userId) {
     try {
         if (!propertyId || !userId) return false;
-        // Ищем хотя бы один отзыв по userId
         const snapshot = await db.ref(`properties/${propertyId}/reviews`)
-                                .orderByChild('userId') // Убедитесь, что поле называется 'userId' в отзывах
+                                .orderByChild('userId') // Убедитесь, что поле называется 'userId'
                                 .equalTo(userId)
-                                .limitToFirst(1) // Достаточно одного совпадения
+                                .limitToFirst(1)
                                 .once('value');
-        return snapshot.exists(); // true, если что-то найдено
+        const exists = snapshot.exists();
+        // log.debug(`[FirebaseService] User ${userId} reviewed property ${propertyId}: ${exists}`);
+        return exists;
     } catch (error) {
         log.error(`[FirebaseService] Error checking review status for prop ${propertyId}, user ${userId}:`, error);
-        return true; // Fail safe - лучше не дать оставить второй отзыв, чем разрешить случайно
+        return true; // Fail safe
     }
 }
 
 
-// --- Уведомления (Notifications) ---
+// --- Уведомления (Notifications - колокольчик) ---
 
 /**
  * Добавляет новое уведомление для пользователя.
@@ -586,12 +693,12 @@ async function addNotification(userId, notificationData) {
         }
         const notificationPayload = {
             id: notificationId,
-            timestamp: admin.database.ServerValue.TIMESTAMP,
+            timestamp: admin.database.ServerValue.TIMESTAMP, // Используем серверное время для точности
             read: false,
             type: notificationData.type,
             title: notificationData.title,
             message: notificationData.message,
-            ...(notificationData.bookingId && { bookingId: notificationData.bookingId })
+            ...(notificationData.bookingId && { bookingId: notificationData.bookingId }) // Добавляем bookingId, если он есть
         };
         await newNotifRef.set(notificationPayload);
         log.info(`[FirebaseService:addNotification] Notification ${notificationId} added for user ${userId}`);
@@ -609,15 +716,21 @@ async function addNotification(userId, notificationData) {
  * @returns {Promise<Array<object>>} Массив объектов уведомлений (новые сверху).
  */
 async function getLastNotifications(userId, limit = 20) {
-    if (!userId) return [];
+    if (!userId) {
+        log.warn("[FirebaseService:getLastNotifications] Called with empty userId.");
+        return [];
+    }
     try {
         const snapshot = await db.ref(`user_notifications/${userId}`)
-                                .orderByChild('timestamp')
-                                .limitToLast(limit)
+                                .orderByChild('timestamp') // Сортируем по времени
+                                .limitToLast(limit) // Берем последние N
                                 .once('value');
         const data = snapshot.val();
         if (!data) return [];
-        return Object.values(data).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)); // Сортируем новые сверху
+        // Преобразуем в массив и сортируем еще раз на клиенте (новые сверху)
+        const notificationList = Object.values(data).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        // log.debug(`[FirebaseService:getLastNotifications] Fetched ${notificationList.length} notifications for ${userId}.`);
+        return notificationList;
     } catch (error) {
         log.error(`[FirebaseService:getLastNotifications] Error fetching for user ${userId}:`, error);
         return [];
@@ -646,7 +759,7 @@ async function markNotificationsAsRead(userId, notificationIds) {
         });
         if (validIdsCount === 0) {
              log.info(`[FirebaseService:markNotificationsAsRead] No valid notification IDs provided for user ${userId}.`);
-             return true;
+             return true; // Считаем успехом, т.к. делать нечего
         }
         await db.ref().update(updates);
         log.info(`[FirebaseService:markNotificationsAsRead] Marked ${validIdsCount} notifications as read for user ${userId}`);
@@ -707,11 +820,15 @@ async function clearAllNotificationsForUser(userId) {
  * @returns {Promise<object|null>} Данные чата или null, если не найден.
  */
 async function getChatById(chatId) {
-    if (!chatId) return null;
+    if (!chatId) {
+        log.warn("[FirebaseService] getChatById called with empty ID.");
+        return null;
+    }
     try {
         const snapshot = await db.ref(`chats/${chatId}`).once('value');
         const chatData = snapshot.val();
         if (chatData) chatData.id = chatId; // Добавляем ID для удобства
+        // log.debug(`[FirebaseService] Fetched chat ${chatId}:`, chatData ? 'Found' : 'Not Found');
         return chatData;
     } catch (error) {
         log.error(`[FirebaseService] Error fetching chat ${chatId}:`, error);
@@ -733,15 +850,14 @@ async function getUserChats(userId, companyId) {
         const chatIds = new Set(); // Используем Set для уникальности ID
 
         // Загружаем чаты пользователя
-        // Сортируем по значению (timestamp) и берем последние (самые свежие)
         const userChatsSnapshot = await db.ref(`user_chats/${userId}`)
                                         .orderByValue() // Сортируем по timestamp'у
                                         .limitToLast(100) // Ограничиваем количество для производительности
                                         .once('value');
-        const userChatIds = userChatsSnapshot.val();
-        if (userChatIds) {
-            Object.keys(userChatIds).forEach(id => chatIds.add(id));
-            log.debug(`[getUserChats] Found ${Object.keys(userChatIds).length} chat IDs for user ${userId}`);
+        const userChatIdsObject = userChatsSnapshot.val();
+        if (userChatIdsObject) {
+            Object.keys(userChatIdsObject).forEach(id => chatIds.add(id));
+            log.debug(`[getUserChats] Found ${Object.keys(userChatIdsObject).length} chat IDs for user ${userId}`);
         }
 
         // Загружаем чаты компании (если применимо)
@@ -750,10 +866,10 @@ async function getUserChats(userId, companyId) {
                                                .orderByValue()
                                                .limitToLast(100)
                                                .once('value');
-            const companyChatIds = companyChatsSnapshot.val();
-            if (companyChatIds) {
-                Object.keys(companyChatIds).forEach(id => chatIds.add(id));
-                log.debug(`[getUserChats] Found ${Object.keys(companyChatIds).length} chat IDs for company ${companyId}`);
+            const companyChatIdsObject = companyChatsSnapshot.val();
+            if (companyChatIdsObject) {
+                Object.keys(companyChatIdsObject).forEach(id => chatIds.add(id));
+                log.debug(`[getUserChats] Found ${Object.keys(companyChatIdsObject).length} chat IDs for company ${companyId}`);
             }
         }
 
@@ -786,12 +902,12 @@ async function getUserChats(userId, companyId) {
 
 /**
  * Создает новую запись чата в /chats.
- * @param {object} chatData Данные нового чата.
+ * @param {object} chatData Данные нового чата. Должен содержать `participants` (объект или массив).
  * @returns {Promise<string>} ID созданного чата.
  */
 async function createChat(chatData) {
     if (!chatData || !chatData.participants) {
-        throw new Error("Invalid chat data provided for creation.");
+        throw new Error("Invalid chat data provided for creation (missing participants).");
     }
     try {
         const newChatRef = db.ref('chats').push();
@@ -802,28 +918,33 @@ async function createChat(chatData) {
         if (chatData.createdAt === undefined) chatData.createdAt = admin.database.ServerValue.TIMESTAMP;
         if (chatData.lastMessageTimestamp === undefined) chatData.lastMessageTimestamp = admin.database.ServerValue.TIMESTAMP;
 
-        // Инициализируем счетчики непрочитанных сообщений для всех участников,
+        // Инициализируем счетчики непрочитанных и время прочтения для всех участников,
         // только если они не были предоставлены
-        if (!chatData.unreadCounts) {
-            chatData.unreadCounts = {};
-            if (Array.isArray(chatData.participants)) {
-                // Если participants - массив
-                chatData.participants.forEach(participantId => {
-                    if (participantId) {
-                        chatData.unreadCounts[participantId] = 0;
-                    }
-                });
-            } else if (typeof chatData.participants === 'object') {
-                // Если participants - объект
-                Object.keys(chatData.participants).forEach(participantId => {
-                    if (participantId) {
-                        chatData.unreadCounts[participantId] = 0;
-                    }
-                });
-            } else {
-                throw new Error("Invalid participants format. Must be array or object.");
-            }
+        if (!chatData.unreadCounts) chatData.unreadCounts = {};
+        if (!chatData.lastReadTimestamp) chatData.lastReadTimestamp = {};
+
+        let participantIds = [];
+        if (Array.isArray(chatData.participants)) {
+             participantIds = chatData.participants.filter(Boolean);
+             // Преобразуем массив в объект для хранения в БД
+             const participantsObj = {};
+             participantIds.forEach(id => { participantsObj[id] = true; });
+             chatData.participants = participantsObj;
+        } else if (typeof chatData.participants === 'object') {
+             participantIds = Object.keys(chatData.participants).filter(id => chatData.participants[id]);
+        } else {
+             throw new Error("Invalid participants format. Must be array or object.");
         }
+
+        participantIds.forEach(participantId => {
+            if (!chatData.unreadCounts.hasOwnProperty(participantId)) {
+                chatData.unreadCounts[participantId] = 0; // Изначально 0
+            }
+            // Изначально время прочтения не ставим, или ставим 0? Ставим 0.
+             if (!chatData.lastReadTimestamp.hasOwnProperty(participantId)) {
+                 chatData.lastReadTimestamp[participantId] = 0;
+             }
+        });
 
         await newChatRef.set(chatData);
         log.info(`[FirebaseService] Chat ${newChatId} created.`);
@@ -845,11 +966,9 @@ async function findExistingChat(tenantId, companyId, propertyId = null) {
     if (!tenantId || !companyId) return null;
     log.debug(`[findExistingChat] Searching for chat: Tenant=${tenantId}, Company=${companyId}, Property=${propertyId}`);
     try {
-        // Загружаем чаты пользователя (т.к. их обычно меньше, чем у компании)
-        const userChatLinks = await db.ref(`user_chats/${tenantId}`).once('value');
+        const userChatLinks = await db.ref(`user_chats/${tenantId}`).orderByValue().once('value');
         const userChatIdsObject = userChatLinks.val() || {};
-         // Сортируем ID чатов по timestamp'у (desc), чтобы сначала проверять недавние
-         const userChatIds = Object.entries(userChatIdsObject)
+        const userChatIds = Object.entries(userChatIdsObject)
                                   .sort(([, tsA], [, tsB]) => (tsB || 0) - (tsA || 0))
                                   .map(([id]) => id);
 
@@ -859,32 +978,27 @@ async function findExistingChat(tenantId, companyId, propertyId = null) {
         }
         log.debug(`[findExistingChat] Found ${userChatIds.length} chats for user ${tenantId}. Checking participants and property...`);
 
-        // Последовательно проверяем чаты пользователя
         for (const chatId of userChatIds) {
             const chat = await getChatById(chatId);
-            // Проверяем наличие второго участника (компании)
             if (chat && chat.participants && chat.participants[companyId]) {
-                // Проверяем соответствие propertyId
-                if (propertyId) { // Если ищем чат по конкретному объекту
+                if (propertyId) {
                     if (chat.propertyId === propertyId) {
                         log.debug(`[findExistingChat] Found existing chat ${chatId} matching property ${propertyId}.`);
-                        return chatId; // Нашли чат с нужным propertyId
+                        return chatId;
                     }
-                } else { // Если ищем общий чат (propertyId не указан)
-                    if (!chat.propertyId) { // Ищем чат БЕЗ привязки к объекту
+                } else {
+                    if (!chat.propertyId) { // Ищем общий чат
                         log.debug(`[findExistingChat] Found existing general chat ${chatId} (no property linked).`);
                         return chatId;
                     }
                 }
             }
         }
-
         log.debug(`[findExistingChat] No existing chat found matching criteria.`);
-        return null; // Не нашли подходящий чат
-
+        return null;
     } catch (error) {
         log.error(`[FirebaseService] Error finding existing chat for ${tenantId}/${companyId}:`, error);
-        return null; // Возвращаем null при ошибке
+        return null;
     }
 }
 
@@ -894,68 +1008,72 @@ async function findExistingChat(tenantId, companyId, propertyId = null) {
  * Использует транзакцию для атомарного увеличения счетчиков непрочитанных.
  * @param {string} chatId ID чата.
  * @param {object} data Данные для обновления: { lastMessageText, lastMessageTimestamp, lastMessageSenderId, recipientsToIncrementUnread }
+ * @returns {Promise<boolean>} true если обновление успешно, иначе false.
  */
 async function updateChatMetadata(chatId, data) {
+    if (!chatId || !data) {
+        log.warn('[updateChatMetadata] Invalid parameters:', { chatId, data });
+        return false;
+    }
+    const chatRef = db.ref(`chats/${chatId}`);
     try {
-        if (!chatId || !data) {
-            console.error('[updateChatMetadata] Invalid parameters:', { chatId, data });
+        const transactionResult = await chatRef.transaction(currentData => {
+            if (currentData === null) {
+                log.warn(`[updateChatMetadata TX] Chat ${chatId} not found.`);
+                return undefined; // Отменяем транзакцию
+            }
+            // Обновляем основные метаданные
+            if (data.lastMessageText !== undefined) currentData.lastMessageText = data.lastMessageText;
+            if (data.lastMessageTimestamp !== undefined) currentData.lastMessageTimestamp = data.lastMessageTimestamp;
+            if (data.lastMessageSenderId !== undefined) currentData.lastMessageSenderId = data.lastMessageSenderId;
+
+            // Атомарно обновляем счетчики непрочитанных
+            if (data.recipientsToIncrementUnread && Array.isArray(data.recipientsToIncrementUnread)) {
+                if (!currentData.unreadCounts) { currentData.unreadCounts = {}; }
+                data.recipientsToIncrementUnread.forEach(recipientId => {
+                    if (recipientId) { // Пропускаем пустые ID
+                        currentData.unreadCounts[recipientId] = (currentData.unreadCounts[recipientId] || 0) + 1;
+                    }
+                });
+                log.debug(`[updateChatMetadata TX] Incremented unread counts for recipients in chat ${chatId}. New counts:`, currentData.unreadCounts);
+            }
+            return currentData;
+        });
+
+        if (!transactionResult.committed || !transactionResult.snapshot.exists()) {
+            log.error(`[updateChatMetadata] Transaction failed for chat ${chatId}.`);
             return false;
         }
-
-        const chatRef = admin.database().ref(`chats/${chatId}`);
-        const chatSnapshot = await chatRef.once('value');
-        
-        if (!chatSnapshot.exists()) {
-            console.error('[updateChatMetadata] Chat not found:', chatId);
-            return false;
-        }
-
-        const chat = chatSnapshot.val();
-        const updates = {};
-
-        // Update last message info
-        if (data.lastMessageText) updates.lastMessageText = data.lastMessageText;
-        if (data.lastMessageTimestamp) updates.lastMessageTimestamp = data.lastMessageTimestamp;
-        if (data.lastMessageSenderId) updates.lastMessageSenderId = data.lastMessageSenderId;
-
-        // Update unread counts
-        if (data.recipientsToIncrementUnread && Array.isArray(data.recipientsToIncrementUnread)) {
-            if (!chat.unreadCounts) chat.unreadCounts = {};
-            
-            data.recipientsToIncrementUnread.forEach(recipientId => {
-                if (recipientId) {
-                    chat.unreadCounts[recipientId] = (chat.unreadCounts[recipientId] || 0) + 1;
-                }
-            });
-            
-            updates.unreadCounts = chat.unreadCounts;
-        }
-
-        // Update chat with all changes
-        await chatRef.update(updates);
-        console.log('[updateChatMetadata] Successfully updated chat metadata for:', chatId);
+        log.info(`[updateChatMetadata] Successfully updated metadata for chat ${chatId}.`);
         return true;
     } catch (error) {
-        console.error('[updateChatMetadata] Error updating chat metadata:', error);
+        log.error(`[FirebaseService] Error updating chat metadata for ${chatId}:`, error);
         return false;
     }
 }
 
 /**
- * Обновляет данные чата.
+ * Обновляет данные чата. НЕ ИСПОЛЬЗУЕТ ТРАНЗАКЦИЮ.
+ * Используйте `updateChatMetadata` для счетчиков.
  * @param {string} chatId ID чата.
  * @param {object} updates Объект с полями для обновления.
- * @returns {Promise<void>}
+ * @returns {Promise<boolean>} Успешность операции.
  */
 async function updateChat(chatId, updates) {
-    if (!chatId || !updates) {
+    if (!chatId || !updates || typeof updates !== 'object') {
         log.warn(`[updateChat] Invalid input. Chat: ${chatId}, UpdateData:`, updates);
         return false;
     }
-
     try {
-        await db.ref(`chats/${chatId}`).update(updates);
-        log.info(`[updateChat] Successfully updated chat ${chatId}`);
+        // Очищаем от undefined
+        const cleanedUpdates = { ...updates };
+        Object.keys(cleanedUpdates).forEach(key => cleanedUpdates[key] === undefined && delete cleanedUpdates[key]);
+        if (Object.keys(cleanedUpdates).length === 0) {
+             log.info(`[updateChat] No valid fields to update for chat ${chatId}.`);
+             return true; // Считаем успехом, т.к. нечего обновлять
+        }
+        await db.ref(`chats/${chatId}`).update(cleanedUpdates);
+        log.info(`[updateChat] Successfully updated chat ${chatId} with:`, cleanedUpdates);
         return true;
     } catch (error) {
         log.error(`[FirebaseService] Error updating chat ${chatId}:`, error);
@@ -967,121 +1085,32 @@ async function updateChat(chatId, updates) {
  * Сбрасывает счетчик непрочитанных сообщений для указанного участника чата.
  * @param {string} chatId ID чата.
  * @param {string} readerId ID пользователя или компании, который прочитал сообщения.
+ * @returns {Promise<boolean>} Успешность операции.
  */
 async function resetUnreadCount(chatId, readerId) {
     if (!chatId || !readerId) {
         log.warn(`[resetUnreadCount] Invalid chatId or readerId. Chat: ${chatId}, Reader: ${readerId}`);
-        return;
+        return false;
     }
     log.debug(`[resetUnreadCount] Resetting unread count for reader ${readerId} in chat ${chatId}`);
     try {
         // Используем update, чтобы создать поле, если его нет, или установить 0
         await db.ref(`chats/${chatId}/unreadCounts`).update({ [readerId]: 0 });
         log.info(`[resetUnreadCount] Unread count reset for ${readerId} in chat ${chatId}.`);
+        return true;
     } catch (error) {
         log.error(`[FirebaseService] Error resetting unread count for ${readerId} in chat ${chatId}:`, error);
-    }
-}
-
-
-// --- Сообщения (Messages) ---
-
-/**
- * Создает новое сообщение в /messages.
- * @param {object} messageData Данные сообщения (chatId, senderId, senderRole, text, timestamp).
- * @returns {Promise<object>} Созданный объект сообщения с присвоенным ID и timestamp.
- */
-async function createMessage(messageData) {
-    try {
-        const messageRef = admin.database().ref('messages').child(messageData.chatId).push();
-        messageData.id = messageRef.key;
-        messageData.timestamp = messageData.timestamp || Date.now();
-        
-        await messageRef.set(messageData);
-        return messageData;
-    } catch (error) {
-        log.error('[Firebase] Ошибка при создании сообщения:', error);
-        throw error;
+        return false;
     }
 }
 
 /**
- * Получает сообщения для конкретного чата с пагинацией.
+ * Обновляет время последнего прочтения для участника чата.
  * @param {string} chatId ID чата.
- * @param {number} [limit=100] Количество сообщений для загрузки.
- * @param {number|null} [beforeTimestamp=null] Timestamp самого старого загруженного сообщения (для загрузки более старых).
- * @returns {Promise<Array<object>>} Массив объектов сообщений, отсортированных по времени (старые сверху).
+ * @param {string} readerId ID пользователя или компании.
+ * @param {number} timestamp Метка времени прочтения (Date.now()).
+ * @returns {Promise<boolean>} Успешность операции.
  */
-async function getChatMessages(chatId, requestingUser, limit = 100, beforeTimestamp = null) {
-    try {
-        let query = admin.database().ref('messages').child(chatId);
-        
-        if (beforeTimestamp) {
-            query = query.orderByChild('timestamp').endAt(beforeTimestamp);
-        } else {
-            query = query.orderByChild('timestamp');
-        }
-        
-        if (limit) {
-            query = query.limitToLast(limit);
-        }
-        
-        const snapshot = await query.once('value');
-        const messages = [];
-        
-        snapshot.forEach(child => {
-            messages.push({
-                id: child.key,
-                ...child.val()
-            });
-        });
-        
-        // Сортируем по времени, новые в конце
-        return messages.sort((a, b) => a.timestamp - b.timestamp);
-    } catch (error) {
-        log.error('[Firebase] Ошибка при получении сообщений:', error);
-        throw error;
-    }
-}
-
-// --- Вспомогательные функции для аватаров/лого ---
-
-/**
- * Получает Data URI для аватара пользователя.
- * @param {string} username Логин пользователя.
- * @returns {Promise<string>} Data URI или путь к плейсхолдеру.
- */
-async function getUserAvatarDataUri(username) {
-    try {
-        const user = await getUserByUsername(username);
-        if (user && user.ImageData) {
-            let type = user.ImageData.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
-            return `data:${type};base64,${user.ImageData}`;
-        }
-    } catch (e) {
-        log.warn(`[getUserAvatarDataUri] Error fetching/processing avatar for ${username}:`, e.message);
-    }
-    return '/images/placeholder-avatar.png'; // Путь к дефолтному аватару
-}
-
-/**
- * Получает Data URI для логотипа компании.
- * @param {string} companyId ID компании.
- * @returns {Promise<string>} Data URI или путь к плейсхолдеру.
- */
-async function getCompanyLogoDataUri(companyId) {
-     try {
-        const company = await getCompanyById(companyId);
-        if (company && company.companyLogoData) {
-            let type = company.companyLogoData.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
-            return `data:${type};base64,${company.companyLogoData}`;
-        }
-    } catch (e) {
-        log.warn(`[getCompanyLogoDataUri] Error fetching/processing logo for ${companyId}:`, e.message);
-    }
-    return '/images/placeholder-company.png'; // Путь к дефолтному лого компании
-}
-
 async function updateLastReadTimestamp(chatId, readerId, timestamp) {
     if (!chatId || !readerId || typeof timestamp !== 'number') {
         log.warn(`[updateLastReadTimestamp] Invalid input. Chat: ${chatId}, Reader: ${readerId}, Timestamp: ${timestamp}`);
@@ -1100,20 +1129,231 @@ async function updateLastReadTimestamp(chatId, readerId, timestamp) {
 }
 
 /**
- * Атомарно обновляет данные чата.
+ * Атомарно сбрасывает счетчик непрочитанных и обновляет время последнего прочтения.
  * @param {string} chatId ID чата.
- * @param {object} updates Объект с полями для обновления.
+ * @param {string} readerId ID прочитавшего участника.
+ * @param {number} readTimestamp Время прочтения (Date.now()).
+ * @returns {Promise<boolean>} Успешность операции.
+ */
+async function resetUnreadCountAndTimestamp(chatId, readerId, readTimestamp) {
+     if (!chatId || !readerId || typeof readTimestamp !== 'number') {
+         log.warn(`[resetUnreadCountAndTimestamp] Invalid input. Chat: ${chatId}, Reader: ${readerId}, Timestamp: ${readTimestamp}`);
+         return false;
+     }
+     log.debug(`[resetUnreadCountAndTimestamp] Resetting count and timestamp for ${readerId} in chat ${chatId}`);
+     try {
+         const updates = {};
+         updates[`/chats/${chatId}/unreadCounts/${readerId}`] = 0; // Сброс счетчика
+         updates[`/chats/${chatId}/lastReadTimestamp/${readerId}`] = readTimestamp; // Обновление времени
+         await db.ref().update(updates); // Используем multi-path update
+         log.info(`[resetUnreadCountAndTimestamp] Count reset and timestamp updated for ${readerId} in chat ${chatId}.`);
+         return true;
+     } catch (error) {
+         log.error(`[FirebaseService] Error in resetUnreadCountAndTimestamp for ${readerId} in chat ${chatId}:`, error);
+         return false;
+     }
+}
+
+/**
+ * Атомарно обновляет данные чата (общий метод).
+ * Используйте его, если нужно обновить несколько полей за раз.
+ * @param {string} chatId ID чата.
+ * @param {object} updates Объект с путями и значениями для обновления.
  * @returns {Promise<boolean>} Успешность операции.
  */
 async function updateChatAtomic(chatId, updates) {
     try {
-        const chatRef = db.ref(`chats/${chatId}`);
-        await chatRef.update(updates);
+        if (!chatId || !updates || typeof updates !== 'object' || Object.keys(updates).length === 0) {
+            log.warn('[FirebaseService] updateChatAtomic called with invalid chatId or empty updates.');
+            return false;
+        }
+        // Создаем правильные пути для атомарного обновления
+        const atomicUpdates = {};
+        for (const key in updates) {
+             atomicUpdates[`/chats/${chatId}/${key}`] = updates[key];
+        }
+        await db.ref().update(atomicUpdates);
+        log.info(`[FirebaseService] Atomic update performed on chat ${chatId}.`);
         return true;
     } catch (error) {
-        log.error('[Firebase] Ошибка при атомарном обновлении чата:', error);
+        log.error(`[FirebaseService] Error during atomic update for chat ${chatId}:`, error);
         return false;
     }
+}
+
+
+// --- Сообщения (Messages) ---
+
+/**
+ * Создает новое сообщение в /messages/{chatId}.
+ * @param {object} messageData Данные сообщения {chatId, senderId, senderRole, text, timestamp?}.
+ * @returns {Promise<object>} Созданный объект сообщения с присвоенным ID и timestamp.
+ */
+async function createMessage(messageData) {
+    try {
+        if (!messageData || !messageData.chatId || !messageData.senderId || !messageData.text) {
+            throw new Error("Missing required fields for creating message (chatId, senderId, text).");
+        }
+        const messageRef = db.ref(`messages/${messageData.chatId}`).push();
+        const messageId = messageRef.key;
+        if (!messageId) throw new Error("Failed to generate message ID.");
+
+        // Используем серверное время, если timestamp не передан
+        const timestamp = messageData.timestamp || admin.database.ServerValue.TIMESTAMP;
+
+        const messageToSave = {
+             id: messageId, // Дублируем ID в объект
+             chatId: messageData.chatId,
+             senderId: messageData.senderId,
+             senderRole: messageData.senderRole || 'Unknown', // Добавляем роль, если есть
+             text: messageData.text,
+             timestamp: timestamp
+        };
+
+        await messageRef.set(messageToSave);
+        log.info(`[FirebaseService] Message ${messageId} created in chat ${messageData.chatId}.`);
+
+        // Возвращаем объект с потенциально разрешенным серверным timestamp'ом
+        // Firebase не возвращает разрешенное значение сразу, нужно делать read или передавать Date.now()
+        // Для простоты вернем то, что сохранили, предполагая, что ServerValue сработает
+        // Или лучше сразу использовать Date.now() при создании? Используем Date.now(), если timestamp не передан.
+        const finalTimestamp = messageData.timestamp || Date.now();
+        return { ...messageToSave, timestamp: finalTimestamp };
+
+    } catch (error) {
+        log.error('[FirebaseService] Error creating message:', error);
+        throw error;
+    }
+}
+
+/**
+ * Получает сообщения для конкретного чата с пагинацией.
+ * Включает логику для определения, прочитано ли сообщение получателем.
+ * @param {string} chatId ID чата.
+ * @param {object} requestingUser Объект текущего пользователя (для определения isOwnMessage и isReadByRecipient).
+ * @param {number} [limit=50] Количество сообщений для загрузки.
+ * @param {number|null} [beforeTimestamp=null] Timestamp самого старого загруженного сообщения (для загрузки более старых).
+ * @returns {Promise<Array<object>>} Массив объектов сообщений, отсортированных по времени (старые сверху).
+ */
+async function getChatMessages(chatId, requestingUser, limit = 50, beforeTimestamp = null) {
+    if (!chatId || !requestingUser || !requestingUser.username) {
+        log.warn('[getChatMessages] Invalid parameters: chatId or requestingUser missing.');
+        return [];
+    }
+    log.debug(`[getChatMessages] Fetching messages for chat ${chatId}, user ${requestingUser.username}, limit ${limit}, before ${beforeTimestamp}`);
+
+    try {
+        let query = db.ref(`messages/${chatId}`).orderByChild('timestamp');
+
+        if (beforeTimestamp && typeof beforeTimestamp === 'number' && beforeTimestamp > 0) {
+            // End before the specified timestamp (exclusive, so subtract 1ms)
+             query = query.endAt(beforeTimestamp - 1);
+             log.debug(`[getChatMessages] Applying endAt filter: ${beforeTimestamp - 1}`);
+        }
+
+        // Берем последние N сообщений (до endAt, если он есть)
+        query = query.limitToLast(limit);
+
+        const snapshot = await query.once('value');
+        if (!snapshot.exists()) {
+            log.info(`[getChatMessages] No messages found for chat ${chatId}.`);
+            return [];
+        }
+
+        const messagesData = snapshot.val();
+        const messagesArray = messagesData ? Object.entries(messagesData).map(([id, data]) => ({ id: id, ...data })) : [];
+
+        if (messagesArray.length === 0) {
+            log.info(`[getChatMessages] Message data object was empty for chat ${chatId}.`);
+            return [];
+        }
+
+        // Сортируем сообщения по timestamp (старые в начале)
+        messagesArray.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+        log.debug(`[getChatMessages] Fetched ${messagesArray.length} messages for chat ${chatId}.`);
+
+        // Получаем данные чата один раз для определения времени прочтения
+        const chatData = await getChatById(chatId);
+        const participantsData = chatData?.participants || {};
+        const lastReadTimestamps = chatData?.lastReadTimestamp || {};
+
+        // Определяем ID других участников (не текущего пользователя/его компании)
+        const currentParticipantId = (requestingUser.role === 'Owner' || requestingUser.role === 'Staff') ? requestingUser.companyId : requestingUser.username;
+        const otherParticipantIds = Object.keys(participantsData).filter(pId => pId !== currentParticipantId);
+
+        // Определяем минимальное время прочтения среди ВСЕХ ДРУГИХ участников
+        let minOtherReadTimestamp = Infinity;
+        otherParticipantIds.forEach(pId => {
+            const readTs = lastReadTimestamps[pId];
+            if (typeof readTs === 'number' && readTs > 0) {
+                minOtherReadTimestamp = Math.min(minOtherReadTimestamp, readTs);
+            } else {
+                // Если хоть один не прочитал (нет timestamp'а или он 0), считаем, что никто не прочитал
+                minOtherReadTimestamp = 0;
+            }
+        });
+        if (minOtherReadTimestamp === Infinity) minOtherReadTimestamp = 0; // Если других участников нет или никто не читал
+        log.debug(`[getChatMessages] Min read timestamp by others for chat ${chatId}: ${minOtherReadTimestamp}`);
+
+        // Обогащаем каждое сообщение
+        const enrichedMessages = messagesArray.map(msg => {
+             const isOwn = msg.senderId === requestingUser.username;
+             // Сообщение прочитано получателем(ями), если ОНО СВОЕ (isOwn = true)
+             // И его timestamp МЕНЬШЕ ИЛИ РАВЕН минимальному времени прочтения ДРУГИХ участников
+             const isRead = isOwn && msg.timestamp <= minOtherReadTimestamp;
+             return {
+                 ...msg,
+                 isOwnMessage: isOwn,
+                 isReadByRecipient: isRead // Флаг для галочек
+             };
+        });
+
+        return enrichedMessages;
+
+    } catch (error) {
+        log.error(`[FirebaseService] Error fetching messages for chat ${chatId}:`, error);
+        throw error;
+    }
+}
+
+
+// --- Вспомогательные функции для аватаров/лого ---
+
+/**
+ * Получает Data URI для аватара пользователя.
+ * @param {string} username Логин пользователя.
+ * @returns {Promise<string>} Data URI или путь к плейсхолдеру.
+ */
+async function getUserAvatarDataUri(username) {
+    try {
+        const user = await getUserByUsername(username);
+        if (user && user.ImageData && typeof user.ImageData === 'string') {
+            // Простая проверка на JPEG или PNG по началу base64 строки
+            let type = user.ImageData.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
+            return `data:${type};base64,${user.ImageData}`;
+        }
+    } catch (e) {
+        log.warn(`[getUserAvatarDataUri] Error fetching/processing avatar for ${username}:`, e.message);
+    }
+    return '/images/placeholder-avatar.png'; // Путь к дефолтному аватару
+}
+
+/**
+ * Получает Data URI для логотипа компании.
+ * @param {string} companyId ID компании.
+ * @returns {Promise<string>} Data URI или путь к плейсхолдеру.
+ */
+async function getCompanyLogoDataUri(companyId) {
+     try {
+        const company = await getCompanyById(companyId);
+        if (company && company.companyLogoData && typeof company.companyLogoData === 'string') {
+            let type = company.companyLogoData.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
+            return `data:${type};base64,${company.companyLogoData}`;
+        }
+    } catch (e) {
+        log.warn(`[getCompanyLogoDataUri] Error fetching/processing logo for ${companyId}:`, e.message);
+    }
+    return '/images/placeholder-company.png'; // Путь к дефолтному лого компании
 }
 
 // --- ЭКСПОРТ ВСЕХ ФУНКЦИЙ ---
@@ -1151,14 +1391,22 @@ module.exports = {
     markNotificationsAsRead,
     deleteNotification,
     clearAllNotificationsForUser,
-    // Chats (Новые функции)
-    getChatById, getUserChats, createChat, findExistingChat, updateChatMetadata, updateChat, resetUnreadCount,
-    updateLastReadTimestamp, 
-    // Messages (Новые функции)
+    // Chats
+    getChatById,
+    getUserChats,
+    createChat,
+    findExistingChat,
+    updateChatMetadata, // Для атомарного обновления счетчиков и метаданных
+    updateChat,         // Для простого обновления (не счетчиков)
+    resetUnreadCount,   // Для сброса счетчика отдельно (можно удалить, если не используется)
+    updateLastReadTimestamp, // Для обновления времени прочтения отдельно (можно удалить, если не используется)
+    resetUnreadCountAndTimestamp, // НОВАЯ ФУНКЦИЯ для атомарного сброса/установки
+    updateChatAtomic,   // Общий метод для атомарных обновлений
+    // Messages
     createMessage,
     getChatMessages,
-    // Helpers (Новые функции)
+    // Helpers
     getUserAvatarDataUri,
     getCompanyLogoDataUri,
-    updateChatAtomic
+    calculateTotalUnreadChats
 };

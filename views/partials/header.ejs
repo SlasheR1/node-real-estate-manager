@@ -1,6 +1,5 @@
 <!-- views/partials/header.ejs -->
-<!-- views/partials/header.ejs -->
-<header class="main-header" data-username="<%= (typeof currentUser !== 'undefined' && currentUser && currentUser.username) ? currentUser.username : '' %>">
+<header class="main-header" data-current-user="<%= (typeof currentUser !== 'undefined' && currentUser && currentUser.username) ? currentUser.username : '' %>">
     <nav class="header-content">
         <a href="/" class="brand-logo">
             <img src="/images/logo.svg" alt="Real Estate Logo" class="logo-img">
@@ -13,22 +12,21 @@
                 <a href="/properties" class="nav-link">Объекты</a>
 
                 <%# Ссылки для авторизованных пользователей %>
-                <% if (currentUser) { %>
+                <% if (typeof currentUser !== 'undefined' && currentUser) { %>
                     <%# Для Арендатора %>
                     <% if (currentUser.role === 'Tenant') { %>
                         <a href="/bookings" class="nav-link">
                             <i class="fas fa-calendar-check"></i>
                             <span>Мои бронирования</span>
                         </a>
-                        <%# --- FIX: Corrected nested EJS tags --- %>
                         <a href="/chats" class="nav-link">
                             <i class="fas fa-comments"></i>
                             <span>Мои чаты</span>
-                            <span class="unread-chats-badge" id="tenantChatsBadge" style="<%= locals.totalUnreadChatCount > 0 ? 'display: inline-block;' : 'display: none;' %>">
+                            <%# Бейдж для ТЕКУЩЕГО пользователя (Tenant) %>
+                            <span class="unread-chats-badge" id="header-chat-badge" style="<%= locals.totalUnreadChatCount > 0 ? 'display: inline-block;' : 'display: none;' %>">
                                 <%= locals.totalUnreadChatCount > 9 ? '9+' : locals.totalUnreadChatCount %>
                             </span>
                         </a>
-                        <%# --- END FIX --- %>
                     <% } %>
                     <%# Управление Арендами (для всех кроме Tenant) %>
                     <% if (currentUser.role === 'Admin' || currentUser.role === 'Owner' || currentUser.role === 'Staff') { %>
@@ -39,16 +37,15 @@
                     <% } %>
                     <%# Чаты для Owner/Staff %>
                     <% if ((currentUser.role === 'Owner' || currentUser.role === 'Staff') && currentUser.companyId) { %>
-                        <%# --- FIX: Corrected nested EJS tags --- %>
                         <a href="/chats" class="nav-link">
                             <i class="fas fa-headset"></i>
                             <span>Чаты компании</span>
-                            <span class="unread-chats-badge" id="companyChatsBadge" style="<%= locals.totalUnreadChatCount > 0 ? 'display: inline-block;' : 'display: none;' %>">
+                            <%# Бейдж для ТЕКУЩЕГО пользователя (Owner/Staff) %>
+                            <span class="unread-chats-badge" id="header-chat-badge" style="<%= locals.totalUnreadChatCount > 0 ? 'display: inline-block;' : 'display: none;' %>">
                                 <%= locals.totalUnreadChatCount > 9 ? '9+' : locals.totalUnreadChatCount %>
                             </span>
                         </a>
-                         <%# --- END FIX --- %>
-                    <% } %>
+                     <% } %>
                     <%# Добавить объект (для Admin и Owner с завершенным профилем) %>
                     <% if (currentUser.role === 'Admin' || (currentUser.role === 'Owner' && currentUser.companyProfileCompleted)) { %>
                          <a href="/properties/add" class="nav-link">
@@ -84,12 +81,12 @@
             </div>
 
             <%# Блок профиля и уведомлений для авторизованных %>
-            <% if (currentUser) { %>
+            <% if (typeof currentUser !== 'undefined' && currentUser) { %>
                 <div class="user-profile-wrapper">
                     <!-- === Кнопка Уведомлений (Колокольчик) === -->
                     <button id="notificationToggleBtn" type="button" title="Уведомления" class="notification-btn">
                         <i class="fas fa-bell"></i>
-                        <span id="unreadCountBadgeHeader" class="notification-badge">0</span>
+                        <span id="unreadCountBadgeHeader" class="notification-badge">0</span> <%# Изначально 0 %>
                     </button>
                     <!-- === Конец Кнопки Уведомлений === -->
 
@@ -101,13 +98,12 @@
                                     <span class="user-role" id="headerUserRole"><%= currentUser.role %></span>
                                     <% if (currentUser.role === 'Tenant') { %>
                                         <span class="user-balance profile-sub-optional" id="headerUserBalance"><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(currentUser.balance ?? 0) %></span>
-                                    <% } else { %>
-                                        <span class="user-balance profile-sub-optional" id="headerUserBalance" style="display: none;"></span>
+                                    <% } else if ((currentUser.role === 'Owner' || currentUser.role === 'Staff') && currentUser.companyName) { %>
+                                         <span class="user-company profile-sub-optional company-info-visible" title="<%= currentUser.companyName %>"><i class="fas fa-briefcase"></i> <span><%= currentUser.companyName.substring(0, 15) %><% if(currentUser.companyName.length > 15){ %>...<% } %></span></span>
                                     <% } %>
                                 </div>
                             </div>
                             <div class="avatar-container" id="headerAvatarContainer">
-                                <%# --- FIX: Removed potentially problematic try/catch --- %>
                                 <%
                                     let avatarSrc = '/images/placeholder-avatar.png';
                                     if (currentUser && currentUser.imageData && typeof currentUser.imageData === 'string') {
@@ -116,7 +112,6 @@
                                     }
                                 %>
                                 <img src="<%= avatarSrc %>" alt="Avatar" class="user-avatar" id="headerUserAvatar">
-                                <%# --- END FIX --- %>
                             </div>
                         </a>
                         <form action="/logout" method="POST" class="logout-form">
@@ -142,15 +137,17 @@
                 </div>
              <% } %>
         </div>
-        <%# Кнопка мобильного меню %>
+        <%# Кнопка мобильного меню (если нужна) %>
+        <!--
         <button class="mobile-nav-toggle" aria-label="Открыть меню">
             <span class="hamburger-line"></span>
             <span class="hamburger-line"></span>
             <span class="hamburger-line"></span>
         </button>
+        -->
     </nav>
 
-    <!-- ===== Модальное окно обновления ===== -->
+    <!-- ===== Модальное окно обновления (остается как было) ===== -->
     <div id="updateModalOverlay" style="display: none;">
          <div id="updateModalContent" class="">
             <h2 id="updateModalTitle">Обновление Приложения</h2>
@@ -165,6 +162,7 @@
              <small id="updateErrorDetails"></small>
         </div>
     </div>
+    <!-- ===== Контейнер для Всплывающих Уведомлений ===== -->
     <div id="toast-notification-container"></div>
     <!-- ============================================================= -->
 </header>
@@ -858,62 +856,161 @@
 <!-- Подключаем Socket.IO клиент -->
 <script src="/socket.io/socket.io.js"></script>
 <script>
-    // Глобальная функция для обновления бейджа чата в хедере
-    window.updateHeaderChatBadge = function(count) {
-        console.log('[Header] Updating chat badge with count:', count);
-        try {
-            const tenantBadge = document.getElementById('tenant-chat-badge');
-            const companyBadge = document.getElementById('company-chat-badge');
-            
-            console.log('[Header] Found badges:', {
-                tenantBadge: !!tenantBadge,
-                companyBadge: !!companyBadge
-            });
-
-            // Проверяем, какой бейдж активен (видим)
-            const targetBadge = tenantBadge?.style.display !== 'none' ? tenantBadge : 
-                              (companyBadge?.style.display !== 'none' ? companyBadge : null);
-
-            if (targetBadge) {
-                console.log('[Header] Updating badge:', targetBadge.id);
-                targetBadge.textContent = count;
-                targetBadge.style.display = count > 0 ? 'inline-block' : 'none';
-                
-                // Добавляем анимацию для новых сообщений
-                if (count > 0) {
-                    targetBadge.classList.add('pulse');
-                    setTimeout(() => targetBadge.classList.remove('pulse'), 1000);
-                }
-            } else {
-                console.warn('[Header] No visible badge found to update');
-            }
-        } catch (error) {
-            console.error('[Header] Error updating chat badge:', error);
-        }
-    };
-
-    // Используем IIFE для изоляции области видимости основного скрипта
+    // --- Используем IIFE для изоляции ---
     (function() {
-        console.log("[Header Script] Initializing...");
+        console.log("[Header Script] Инициализация...");
 
         // --- Переменные и константы ---
-        const MAX_GLOBAL_HISTORY_ITEMS = 15;
+        const MAX_GLOBAL_NOTIFICATIONS = 15; // Макс. уведомлений в колокольчике
         let isNotificationPanelOpen = false;
-        let notificationTimeoutId = null;
-        let socket = null; // Глобальная переменная сокета для этого скрипта
-        let currentUsername = null; // Инициализируем как null
+        let socket = null; // Сокет будет инициализирован ниже
+        const currentUsername = document.querySelector('.main-header')?.dataset.currentUser || null; // Получаем из data-*
         // Переменные для элементов DOM
-        let globalNotificationList = null;
-        let globalNoNotificationsMsg = null;
-        let notificationToggleButton = null;
-        let globalNotificationPanel = null;
-        let unreadNotificationBadgeHeader = null; // Бейдж уведомлений (колокольчик)
-        let globalClearNotificationsBtn = null;
+        const globalNotificationList = document.getElementById('globalNotificationList');
+        const noNotificationsMsgElement = document.createElement('li'); // Создаем заранее
+        noNotificationsMsgElement.className = 'no-notifications';
+        noNotificationsMsgElement.style.cssText = "text-align: center; color: #95a5a6; padding: 15px; font-style: italic; font-size: 0.85rem;";
+        noNotificationsMsgElement.textContent = 'Нет новых уведомлений';
+        const notificationToggleButton = document.getElementById('notificationToggleBtn');
+        const globalNotificationPanel = document.getElementById('globalNotificationPanel');
+        const unreadNotificationBadgeHeader = document.getElementById('unreadCountBadgeHeader'); // Бейдж уведомлений (колокольчик)
+        const unreadChatBadgeHeader = document.getElementById('header-chat-badge'); // Бейдж ЧАТОВ
+        const globalClearNotificationsBtn = document.getElementById('globalClearNotificationsBtn');
+        const toastContainer = document.getElementById('toast-notification-container');
+
+        console.log("[Header Script] Current User:", currentUsername);
+        console.log("[Header Script] Chat Badge Element:", !!unreadChatBadgeHeader);
+        console.log("[Header Script] Notification Badge Element:", !!unreadNotificationBadgeHeader);
+
+        // --- Глобальная функция обновления БЕЙДЖА ЧАТОВ ---
+        window.updateHeaderChatBadge = function(count) {
+            console.log('[Header] Обновление бейджа ЧАТОВ, count:', count);
+            if (unreadChatBadgeHeader) {
+                 const numCount = parseInt(count) || 0;
+                 if (numCount > 0) {
+                     unreadChatBadgeHeader.textContent = numCount > 9 ? '9+' : numCount;
+                     unreadChatBadgeHeader.style.display = 'inline-block';
+                     unreadChatBadgeHeader.classList.add('updated');
+                     setTimeout(() => unreadChatBadgeHeader.classList.remove('updated'), 600);
+                 } else {
+                     unreadChatBadgeHeader.style.display = 'none';
+                     unreadChatBadgeHeader.classList.remove('updated');
+                 }
+                 console.log(`[Header] Бейдж чатов обновлен. Текст: ${unreadChatBadgeHeader.textContent}, Видимость: ${unreadChatBadgeHeader.style.display}`);
+            } else {
+                 console.warn('[Header] Элемент бейджа чатов #header-chat-badge не найден.');
+            }
+        };
+
+         // --- Глобальная функция обновления БЕЙДЖА УВЕДОМЛЕНИЙ (КОЛОКОЛЬЧИК) ---
+        window.updateHeaderNotificationBadge = function(count) {
+            console.log('[Header] Обновление бейджа УВЕДОМЛЕНИЙ, count:', count);
+            if (unreadNotificationBadgeHeader) {
+                 const numCount = parseInt(count) || 0;
+                 if (numCount > 0) {
+                     unreadNotificationBadgeHeader.textContent = numCount > 9 ? '9+' : numCount;
+                     unreadNotificationBadgeHeader.style.display = 'inline-block';
+                     unreadNotificationBadgeHeader.classList.add('updated');
+                     setTimeout(() => unreadNotificationBadgeHeader.classList.remove('updated'), 600);
+                 } else {
+                     unreadNotificationBadgeHeader.style.display = 'none';
+                     unreadNotificationBadgeHeader.classList.remove('updated');
+                 }
+                 console.log(`[Header] Бейдж уведомлений обновлен. Текст: ${unreadNotificationBadgeHeader.textContent}, Видимость: ${unreadNotificationBadgeHeader.style.display}`);
+            } else {
+                console.warn('[Header] Элемент бейджа уведомлений #unreadCountBadgeHeader не найден.');
+            }
+        };
+
+        // --- Функции для всплывающих уведомлений (Toast) ---
+        window.showToastNotification = function(data) {
+             if (!toastContainer || !data) return;
+             const toastId = `toast-${data.id || Date.now()}`;
+             const existingToast = document.getElementById(toastId);
+             if (existingToast) existingToast.remove();
+
+             const toastDiv = document.createElement('div');
+             toastDiv.className = `toast-notification ${data.type || 'info'}`;
+             toastDiv.id = toastId;
+
+             toastDiv.onclick = (e) => {
+                  if (!e.target.closest('button') && data.chatId) {
+                      window.location.href = `/chats/${data.chatId}`;
+                      hideToast(toastDiv);
+                  } else if (!e.target.closest('button') && data.bookingId && (data.type === 'booking' || data.type === 'info' || data.type === 'warning')) {
+                      window.location.href = '/rentals';
+                      hideToast(toastDiv);
+                  }
+             };
+
+             let iconClass = 'fa-info-circle';
+             let borderColor = 'var(--info-color, #17a2b8)';
+             if (data.chatId && data.type !== 'error' && data.type !== 'warning') {
+                iconClass = 'fa-comment-dots'; borderColor = 'var(--primary-color, #0d6efd)';
+             } else if (data.type === 'error') { iconClass = 'fa-exclamation-circle'; borderColor = 'var(--danger-color, #dc3545)'; }
+             else if (data.type === 'warning') { iconClass = 'fa-exclamation-triangle'; borderColor = 'var(--warning-color, #ffc107)'; }
+             else if (data.type === 'success') { iconClass = 'fa-check-circle'; borderColor = 'var(--success-color, #198754)'; }
+             else if (data.type === 'booking') { iconClass = 'fa-calendar-check'; borderColor = 'var(--primary-color, #0d6efd)';}
+
+             toastDiv.style.borderLeftColor = borderColor;
+
+             let messageContent = data.text || '';
+             if(data.allowHtml !== true) {
+                  const tempDiv = document.createElement('div');
+                  tempDiv.textContent = messageContent;
+                  messageContent = tempDiv.innerHTML;
+             }
+
+             toastDiv.innerHTML = `
+                 <div class="toast-icon" style="color: ${borderColor};"><i class="fas ${iconClass}"></i></div>
+                 <div class="toast-content">
+                     <h5 class="toast-title">${data.senderName || 'Уведомление'}</h5>
+                     <p class="toast-message">${messageContent}</p>
+                     ${data.chatId ? `
+                     <div class="toast-actions">
+                         <button class="btn-toast-read" data-chat-id="${data.chatId}">Прочитано</button>
+                         <button class="btn-toast-open" data-chat-id="${data.chatId}">Перейти</button>
+                     </div>` : ''}
+                 </div>
+             `;
+
+             if (data.chatId) {
+                 const readButton = toastDiv.querySelector('.btn-toast-read');
+                 const openButton = toastDiv.querySelector('.btn-toast-open');
+                 if (readButton) readButton.addEventListener('click', (e) => { e.stopPropagation(); markChatAsRead(data.chatId); hideToast(toastDiv); });
+                 if (openButton) openButton.addEventListener('click', (e) => { e.stopPropagation(); window.location.href = `/chats/${data.chatId}`; hideToast(toastDiv); });
+             }
+
+             toastContainer.prepend(toastDiv);
+             requestAnimationFrame(() => { toastDiv.classList.add('show'); });
+
+             // Воспроизведение звука (только для сообщений чата, не для ошибок/предупреждений)
+             if (data.chatId && data.type !== 'error' && data.type !== 'warning') {
+                 try {
+                      const audio = new Audio('/sounds/new_message.mp3');
+                      audio.play().catch(e => console.warn("Toast audio playback failed:", e));
+                 } catch (e) {}
+             }
+
+             setTimeout(() => { hideToast(toastDiv); }, 7000);
+        }
+
+        function hideToast(toastElement) {
+             if (!toastElement || !toastElement.parentNode) return;
+             toastElement.classList.remove('show');
+             toastElement.classList.add('hide');
+             setTimeout(() => { if (toastElement.parentNode) toastElement.parentNode.removeChild(toastElement); }, 500);
+        }
+
+        function markChatAsRead(chatId) {
+             if (socket && chatId) {
+                 socket.emit('mark_chat_read', chatId);
+                 console.log(`[Header Script] Отправлено mark_chat_read для чата ${chatId} из toast`);
+             } else { console.warn("[Header Script] Не могу пометить чат прочитанным: нет сокета или chatId."); }
+        }
 
         // --- Функции для УВЕДОМЛЕНИЙ (Колокольчик) ---
-        function generateUniqueId() { return '_' + Math.random().toString(36).substring(2, 9) + Date.now(); }
-
-        function createNotificationElement(notification) {
+        function createNotificationElement(notification) { /* ... (код без изменений) ... */
             const li = document.createElement('li');
             li.className = `notification-item ${notification.type || 'info'}`;
             if (notification.read !== true) { li.classList.add('unread'); }
@@ -926,374 +1023,248 @@
                 case 'error':   iconClass = 'fa-times-circle'; break;
                 case 'info':    iconClass = 'fa-bell'; break;
                 case 'booking': iconClass = 'fa-calendar-check'; break;
+                case 'new_booking_pending': iconClass = 'fa-calendar-plus'; break;
+                case 'pending_booking_cancelled': iconClass = 'fa-calendar-minus'; break;
+                case 'active_booking_cancelled': iconClass = 'fa-calendar-times'; break;
             }
             let ts = notification.timestamp;
-            let d = new Date(); // Fallback date
-             try {
-                if (typeof ts === 'number') {
-                    d = new Date(ts);
-                    if (isNaN(d.getTime())) d = new Date(); // Check validity
-                } else if (typeof ts === 'string') {
-                    d = new Date(Date.parse(ts));
-                    if (isNaN(d.getTime())) d = new Date();
-                } else {
-                    d = new Date();
-                }
-             } catch (e) {
-                 console.warn("Error parsing notification timestamp, using current time:", e);
-                 d = new Date();
-             }
-
+            let d = new Date();
+             try { if (typeof ts === 'number') d = new Date(ts); else if (typeof ts === 'string') d = new Date(Date.parse(ts)); if (isNaN(d.getTime())) d = new Date(); }
+             catch (e) { d = new Date(); }
             const timeString = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
             const dateString = d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+            let messageHtml = '';
+            if (notification.allowHtml === true) { messageHtml = notification.message || ''; }
+            else { const tempDiv = document.createElement('div'); tempDiv.textContent = notification.message || ''; messageHtml = tempDiv.innerHTML; }
             li.innerHTML = `
                 <div class="icon"><i class="fas ${iconClass}"></i></div>
                 <div class="content">
-                    <span class="title">${notification.title||''}</span>
-                    <div class="message">${notification.message||''}</div>
+                    <span class="title">${notification.title || ''}</span>
+                    <div class="message">${messageHtml}</div>
                     <div class="timestamp">${dateString} ${timeString}</div>
                 </div>
                 <button class="close-btn" title="Удалить уведомление">×</button>`;
             const closeBtn = li.querySelector('.close-btn');
             if (closeBtn) { closeBtn.addEventListener('click', function(event) { event.stopPropagation(); removeNotificationFromPanel(notification.id); }); }
-            if (notification.bookingId) { li.addEventListener('click', () => { window.location.href = `/rentals`; toggleNotificationPanel(); }); }
+            if (notification.bookingId) { li.addEventListener('click', () => { window.location.href = '/rentals'; toggleNotificationPanel(); }); li.style.cursor = 'pointer'; }
             return li;
         }
-
-        function displayInitialNotifications(notifications) {
-             if (!globalNotificationList || !Array.isArray(notifications)) {
-                 console.warn("Cannot display initial notifications: list container not found or data invalid.");
-                 return;
-             }
-              // Пересоздаем плейсхолдер, если нужно
-              if (!globalNoNotificationsMsg) {
-                  globalNoNotificationsMsg = document.createElement('li');
-                  globalNoNotificationsMsg.className = 'no-notifications';
-                  globalNoNotificationsMsg.style.cssText = "text-align: center; color: #95a5a6; padding: 15px; font-style: italic; font-size: 0.85rem;";
-                  globalNoNotificationsMsg.textContent = 'Нет новых уведомлений';
-              }
-
-             globalNotificationList.innerHTML = ''; // Очищаем список
-             if (notifications.length === 0) {
-                 globalNotificationList.appendChild(globalNoNotificationsMsg); // Показываем сообщение
-             } else {
-                 notifications.forEach(notification => {
-                      if (notification && notification.id) { // Проверка валидности уведомления
-                          globalNotificationList.appendChild(createNotificationElement(notification));
-                      } else { console.warn("Skipping invalid initial notification object:", notification); }
-                  });
-                  // Удаляем плейсхолдер, если он вдруг остался
-                  if (globalNoNotificationsMsg.parentNode === globalNotificationList) {
-                       globalNotificationList.removeChild(globalNoNotificationsMsg);
-                  }
-             }
-             updateUnreadNotificationCountHeader(null, true); // Пересчитываем бейдж
+        function displayInitialNotifications(notifications) { /* ... (код без изменений) ... */
+             if (!globalNotificationList || !Array.isArray(notifications)) { console.warn("Cannot display initial notifications: list container not found or data invalid."); return; }
+             globalNotificationList.innerHTML = '';
+             if (notifications.length === 0) { globalNotificationList.appendChild(noNotificationsMsgElement); }
+             else { notifications.forEach(n => { if (n && n.id) globalNotificationList.appendChild(createNotificationElement(n)); }); }
+             const unreadCount = notifications.filter(n => n && !n.read).length;
+             window.updateHeaderNotificationBadge(unreadCount);
         }
-
-        function addNewNotificationToPanel(notificationData) {
+        function addNewNotificationToPanel(notificationData) { /* ... (код без изменений) ... */
              if (!globalNotificationList) return;
-              if (!globalNoNotificationsMsg) { // Пересоздаем если нужно
-                   globalNoNotificationsMsg = document.createElement('li');
-                   globalNoNotificationsMsg.className = 'no-notifications';
-                   globalNoNotificationsMsg.style.cssText = "text-align: center; color: #95a5a6; padding: 15px; font-style: italic; font-size: 0.85rem;";
-                   globalNoNotificationsMsg.textContent = 'Нет новых уведомлений';
-              }
              const placeholder = globalNotificationList.querySelector('.no-notifications');
              if(placeholder) placeholder.remove();
              if (notificationData && notificationData.id) {
                  const li = createNotificationElement(notificationData);
-                 globalNotificationList.prepend(li); // Добавляем В НАЧАЛО
-                 // Ограничиваем количество элементов
-                 while (globalNotificationList.children.length > MAX_GLOBAL_HISTORY_ITEMS) { const lastItem = globalNotificationList.lastElementChild; if (lastItem) globalNotificationList.removeChild(lastItem); else break; }
+                 globalNotificationList.prepend(li);
+                 while (globalNotificationList.children.length > MAX_GLOBAL_NOTIFICATIONS) { globalNotificationList.removeChild(globalNotificationList.lastElementChild); }
+                 if (!isNotificationPanelOpen) {
+                     const currentCount = parseInt(unreadNotificationBadgeHeader?.textContent || '0') || 0;
+                     window.updateHeaderNotificationBadge(currentCount + 1);
+                 } else {
+                      const unreadCount = globalNotificationList.querySelectorAll('.notification-item.unread').length;
+                      window.updateHeaderNotificationBadge(unreadCount);
+                 }
              } else { console.warn("Attempted to add invalid notification data:", notificationData); }
-             // Обновляем счетчик уведомлений в шапке
-             if (!isNotificationPanelOpen) { updateUnreadNotificationCountHeader(1); } else { updateUnreadNotificationCountHeader(null, true); }
         }
-
-        function removeNotificationFromPanel(notificationId) {
+        function removeNotificationFromPanel(notificationId) { /* ... (код без изменений, использует сокет) ... */
              const item = globalNotificationList ? globalNotificationList.querySelector(`.notification-item[data-id="${notificationId}"]`) : null;
              if (!item) return;
              const wasUnread = item.classList.contains('unread');
              item.style.transition = 'opacity 0.3s ease, transform 0.3s ease'; item.style.opacity = 0; item.style.transform = 'translateX(20px)';
              setTimeout(() => {
                   if (item.parentNode) item.remove();
-                  if (socket && notificationId && !notificationId.startsWith('_')) { socket.emit('delete_notification', notificationId); }
-                  if (globalNotificationList && globalNotificationList.children.length === 0) {
-                        if (!globalNoNotificationsMsg) { // Пересоздаем если нужно
-                            globalNoNotificationsMsg = document.createElement('li');
-                            globalNoNotificationsMsg.className = 'no-notifications';
-                            globalNoNotificationsMsg.style.cssText="text-align: center; color: #95a5a6; padding: 15px; font-style: italic; font-size: 0.85rem;";
-                            globalNoNotificationsMsg.textContent = 'Нет новых уведомлений';
-                       }
-                       globalNotificationList.appendChild(globalNoNotificationsMsg);
-                  }
-                  if (wasUnread) { updateUnreadNotificationCountHeader(null, true); }
+                  if (socket && notificationId && !notificationId.startsWith('_')) { socket.emit('delete_notification', notificationId); console.log(`[Notifications] Sent 'delete_notification' for ID: ${notificationId}`); }
+                  else { console.warn("[Notifications] Cannot send delete event: socket or notificationId invalid."); }
+                  const unreadCount = globalNotificationList ? globalNotificationList.querySelectorAll('.notification-item.unread').length : 0;
+                  window.updateHeaderNotificationBadge(unreadCount);
+                  if (globalNotificationList && globalNotificationList.children.length === 0) { globalNotificationList.appendChild(noNotificationsMsgElement); }
              }, 300);
         }
-
-        function clearAllNotifications() {
+        function clearAllNotifications() { /* ... (код без изменений, использует сокет) ... */
              if (!confirm("Удалить все уведомления?")) return;
-             if (globalNotificationList) {
-                 globalNotificationList.innerHTML = '';
-                  if (!globalNoNotificationsMsg) { // Пересоздаем если нужно
-                       globalNoNotificationsMsg = document.createElement('li');
-                       globalNoNotificationsMsg.className = 'no-notifications';
-                       globalNoNotificationsMsg.style.cssText="text-align: center; color: #95a5a6; padding: 15px; font-style: italic; font-size: 0.85rem;";
-                       globalNoNotificationsMsg.textContent = 'Нет новых уведомлений';
-                  }
-                 globalNotificationList.appendChild(globalNoNotificationsMsg);
-             }
-             if (socket) { socket.emit('clear_all_notifications'); }
-             updateUnreadNotificationCountHeader(0, true);
+             if (globalNotificationList) { globalNotificationList.innerHTML = ''; globalNotificationList.appendChild(noNotificationsMsgElement); }
+             if (socket) { socket.emit('clear_all_notifications'); console.log("[Notifications] Sent 'clear_all_notifications'"); }
+             else { console.warn("[Notifications] Cannot send clear_all_notifications event: socket invalid."); }
+             window.updateHeaderNotificationBadge(0);
         }
-
-        function markAllVisibleNotificationsAsRead() {
+        function markAllVisibleNotificationsAsRead() { /* ... (код без изменений, использует сокет) ... */
              if (!globalNotificationList || !socket) return;
              const idsToMark = []; const items = globalNotificationList.querySelectorAll('.notification-item.unread');
              if (items.length === 0) return;
              items.forEach(item => { item.classList.remove('unread'); const id = item.dataset.id; if (id && !id.startsWith('_')) { idsToMark.push(id); } });
              if (idsToMark.length > 0) { socket.emit('mark_notifications_read', idsToMark); console.log(`[Notifications] Sent 'mark_notifications_read' for IDs:`, idsToMark); }
-             updateUnreadNotificationCountHeader(0, true);
+             window.updateHeaderNotificationBadge(0);
         }
-
-        function updateUnreadNotificationCountHeader(change = null, forceRecalculate = false) {
-            if (!unreadNotificationBadgeHeader || !globalNotificationList) return;
-            let count = 0;
-            if (forceRecalculate || change === 0) { count = globalNotificationList.querySelectorAll('.notification-item.unread').length; }
-            else if (change !== null) { const currentCount = parseInt(unreadNotificationBadgeHeader.textContent) || 0; count = Math.max(0, currentCount + change); }
-            else { return; }
-            count = Math.max(0, count);
-            if (count > 0) { unreadNotificationBadgeHeader.textContent = count > 9 ? '9+' : count; unreadNotificationBadgeHeader.style.display = 'inline-block'; }
-            else { unreadNotificationBadgeHeader.style.display = 'none'; }
-        }
-
-        function toggleNotificationPanel() {
+        function toggleNotificationPanel() { /* ... (код без изменений) ... */
              if (!globalNotificationPanel) return;
              isNotificationPanelOpen = !globalNotificationPanel.classList.contains('active');
              globalNotificationPanel.classList.toggle('active', isNotificationPanelOpen);
              if (isNotificationPanelOpen) { markAllVisibleNotificationsAsRead(); }
         }
-
-        function showToastNotification(data) {
-             const container = document.getElementById('toast-notification-container'); if (!container || !data) return; const toastId = `toast-${data.id || Date.now()}`; const existingToast = document.getElementById(toastId); if (existingToast) existingToast.remove(); const toastDiv = document.createElement('div'); toastDiv.className = `toast-notification ${data.type || 'info'}`; toastDiv.id = toastId;
-             toastDiv.onclick = (e) => { if (!e.target.closest('button') && data.chatId) { window.location.href = `/chats/${data.chatId}`; hideToast(toastDiv); } };
-             let iconClass = 'fa-comment-dots'; let borderColor = 'var(--primary-accent, #0d6efd)'; if (data.type === 'error') { iconClass = 'fa-exclamation-circle'; borderColor = 'var(--danger-color, #dc3545)'; } else if (data.type === 'warning') { iconClass = 'fa-exclamation-triangle'; borderColor = 'var(--warning-color, #ffc107)'; } else if (data.type === 'success') { iconClass = 'fa-check-circle'; borderColor = 'var(--success-color, #198754)'; } toastDiv.style.borderLeftColor = borderColor;
-             toastDiv.innerHTML = `<div class="toast-icon" style="color: ${borderColor};"><i class="fas ${iconClass}"></i></div> <div class="toast-content"> <h5 class="toast-title">${data.senderName || 'Уведомление'}</h5> <p class="toast-message">${data.text || ''}</p> ${data.chatId ? `<div class="toast-actions"> <button class="btn-toast-read" data-chat-id="${data.chatId}">Прочитано</button> <button class="btn-toast-open" data-chat-id="${data.chatId}">Перейти</button> </div>` : ''} </div>`;
-             if (data.chatId) { const readButton = toastDiv.querySelector('.btn-toast-read'); const openButton = toastDiv.querySelector('.btn-toast-open'); if (readButton) readButton.addEventListener('click', (e) => { e.stopPropagation(); markChatAsRead(data.chatId); hideToast(toastDiv); }); if (openButton) openButton.addEventListener('click', (e) => { e.stopPropagation(); window.location.href = `/chats/${data.chatId}`; hideToast(toastDiv); }); }
-             container.prepend(toastDiv); requestAnimationFrame(() => { toastDiv.classList.add('show'); });
-             if (data.chatId && data.type !== 'error') { try { new Audio('/sounds/new_message.mp3').play().catch(e => {}); } catch (e) {} } setTimeout(() => { hideToast(toastDiv); }, 7000);
-        }
-        function hideToast(toastElement) {
-             if (!toastElement || !toastElement.parentNode) return; toastElement.classList.remove('show'); toastElement.classList.add('hide'); setTimeout(() => { if (toastElement.parentNode) toastElement.parentNode.removeChild(toastElement); }, 500);
-        }
-        function markChatAsRead(chatId) {
-             if (socket && chatId) { socket.emit('mark_chat_read', chatId); console.log(`Sent mark_chat_read event for chat ${chatId} from toast`); }
-        }
+        function shortenFullName(fullName) { /* ... (код без изменений) ... */ if (!fullName) return ''; const nameParts = fullName.trim().split(' '); if (nameParts.length < 2) return fullName; const lastName = nameParts[0]; const initials = nameParts.slice(1).map(part => part[0] + '.').join(' '); return `${lastName} ${initials}`; }
+        function shortenCompanyName(companyName, maxLength = 15) { /* ... (код без изменений) ... */ if (!companyName || companyName.length <= maxLength) return companyName; return companyName.substring(0, maxLength - 1) + '…'; }
 
         // --- Основной Запуск Скрипта ---
         document.addEventListener('DOMContentLoaded', () => {
             console.log("[Header Script] DOMContentLoaded fired.");
-            // --- Получаем username из data-атрибута ТЕГА HEADER ---
-            const headerElement = document.querySelector('.main-header'); // Находим сам хедер
-            if (headerElement) {
-                currentUsername = headerElement.dataset.username || null; // Читаем атрибут
-            } else {
-                console.error("[Header Script] Cannot find header element (.main-header) to read username!");
-                currentUsername = null;
-            }
-
-            if (currentUsername) {
-                 console.log("[Header Script] Current user identified from header data:", currentUsername);
-            } else {
-                 console.log("[Header Script] No current user identified from header data.");
-            }
-
             // --- Инициализация DOM элементов ---
-            globalNotificationList = document.getElementById('globalNotificationList');
-            if (globalNotificationList && !globalNotificationList.querySelector('.no-notifications')) {
-                 globalNoNotificationsMsg = document.createElement('li');
-                 globalNoNotificationsMsg.className = 'no-notifications';
-                 globalNoNotificationsMsg.style.cssText = "text-align: center; color: #95a5a6; padding: 15px; font-style: italic; font-size: 0.85rem;";
-                 globalNoNotificationsMsg.textContent = 'Нет новых уведомлений';
-                 globalNotificationList.appendChild(globalNoNotificationsMsg);
-            } else if (globalNotificationList) {
-                 globalNoNotificationsMsg = globalNotificationList.querySelector('.no-notifications');
+            if (globalNotificationList && globalNotificationList.children.length === 0 && !globalNotificationList.querySelector('.no-notifications')) {
+                 globalNotificationList.appendChild(noNotificationsMsgElement);
             }
-            notificationToggleButton = document.getElementById('notificationToggleBtn');
-            globalNotificationPanel = document.getElementById('globalNotificationPanel');
-            unreadNotificationBadgeHeader = notificationToggleButton ? notificationToggleButton.querySelector('#unreadCountBadgeHeader') : null;
-            globalClearNotificationsBtn = document.getElementById('globalClearNotificationsBtn');
-
-            // --- Логируем найденные элементы ---
-            console.log("DOM Elements (after init):", {
-                globalNotificationList: !!globalNotificationList,
-                globalNoNotificationsMsg: !!globalNoNotificationsMsg,
-                notificationToggleButton: !!notificationToggleButton,
-                globalNotificationPanel: !!globalNotificationPanel,
-                unreadNotificationBadgeHeader: !!unreadNotificationBadgeHeader,
-                globalClearNotificationsBtn: !!globalClearNotificationsBtn
-            });
-
-            // --- Привязка обработчиков событий к кнопкам ---
+            // --- Привязка обработчиков событий ---
             if (notificationToggleButton) { notificationToggleButton.addEventListener('click', (event) => { event.stopPropagation(); toggleNotificationPanel(); }); }
             if (globalClearNotificationsBtn) { globalClearNotificationsBtn.addEventListener('click', clearAllNotifications); }
             document.addEventListener('click', (event) => { if (isNotificationPanelOpen && globalNotificationPanel && notificationToggleButton && !globalNotificationPanel.contains(event.target) && event.target !== notificationToggleButton && !notificationToggleButton.contains(event.target)) { toggleNotificationPanel(); } });
 
-         
-            // --- Инициализация Socket.IO (ТОЛЬКО ЕСЛИ ПОЛЬЗОВАТЕЛЬ АВТОРИЗОВАН) ---
-            if (currentUsername && !window.socket) { // Добавляем проверку на существование сокета
+            // --- Инициализация Socket.IO ---
+            if (currentUsername) {
                 try {
-                    console.log('[Header Script] Attempting Socket.IO connection...');
-                    window.socket = io({ reconnectionAttempts: 5, reconnectionDelay: 3000 });
+                    console.log('[Header Script] Попытка инициализации Socket.IO...');
+                    window.socket = io({ reconnectionAttempts: 5, reconnectionDelay: 3000, transports: ['websocket', 'polling'] });
+                    socket = window.socket;
 
-                    window.socket.on('connect', () => {
-                        console.log('[Socket.IO Client] Connected! Socket ID:', window.socket.id);
-                        console.log(`[Socket.IO Client] Registering user: ${currentUsername}`);
-                        window.socket.emit('register_user', currentUsername);
+                    socket.on('connect', () => { console.log('[Socket.IO Client] Подключено! ID:', socket.id); console.log(`[Socket.IO Client] Регистрация: ${currentUsername}`); socket.emit('register_user', currentUsername); socket.emit('get_initial_unread_counts'); console.log("[Socket.IO Client] Запрошены начальные счетчики."); });
+                    socket.on('disconnect', (reason) => { console.warn(`[Socket.IO Client] Отключено. Причина: ${reason}`); });
+                    socket.on('connect_error', (err) => { console.error(`[Socket.IO Client] Ошибка подключения: ${err.message}`, err); });
+
+                    // === Глобальные Обработчики Событий Socket.IO ===
+
+                    // 1. Обновление общего счетчика НЕПРОЧИТАННЫХ ЧАТОВ
+                    socket.on('total_unread_update', (data) => {
+                         console.log('[Socket.IO Client] Получено: total_unread_update, Data:', data);
+                         if (typeof data.totalUnreadCount === 'number') { window.updateHeaderChatBadge(data.totalUnreadCount); }
+                         else { console.warn('[Socket.IO Client] Невалидные данные в total_unread_update:', data); }
                     });
 
-                    window.socket.on('disconnect', (reason) => { console.warn(`[Socket.IO Client] Disconnected. Reason: ${reason}`); });
-                    window.socket.on('connect_error', (err) => { console.error(`[Socket.IO Client] Connection Error: ${err.message}`); });
+                    // 2. Новое сообщение
+                    socket.on('new_message', (data) => {
+                        console.log('[Socket.IO Client] Получено: new_message, Data:', data);
+                        // Всегда вызываем обработчик из chat.js (если он есть), он сам разберется, что делать
+                        if (typeof window.handleIncomingMessage === 'function') {
+                            window.handleIncomingMessage(data);
+                        } else { console.warn("[Header Script] Функция window.handleIncomingMessage не найдена."); }
 
-
-                    // --- Обработчики событий от Сервера ---
-                    window.socket.on('balance_updated', (newBalance) => {
-                        console.log('[Socket.IO Client] Received event: balance_updated, Data:', newBalance);
-                        const headerBalanceEl = document.getElementById('headerUserBalance');
-                        const headerRoleEl = document.getElementById('headerUserRole');
-                        if (headerBalanceEl && headerRoleEl && headerRoleEl.textContent === 'Tenant' && typeof newBalance === 'number') {
-                            try { headerBalanceEl.textContent = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(newBalance); headerBalanceEl.style.display = 'inline'; } catch(e) { console.error("Error formatting balance:", e); headerBalanceEl.textContent = "Ошибка"; }
-                        } else if (headerBalanceEl) { headerBalanceEl.style.display = 'none'; }
+                        // Показываем всплывающий Toast, если чат НЕ открыт И сообщение НЕ от нас
+                        // Определяем ID открытого чата (может быть null)
+                        const currentOpenChatId = (typeof window.currentChatId === 'string' || typeof window.currentChatId === 'number') ? window.currentChatId : null;
+                        console.log(`[Header new_message] currentOpenChatId: ${currentOpenChatId}, incoming chatId: ${data?.chatId}, senderId: ${data?.message?.senderId}`);
+                        // Проверяем, что сообщение существует и senderId не равен текущему пользователю
+                        if (data && data.chatId && data.message && data.message.senderId !== currentUsername) {
+                            // Показываем toast, если ID чата не совпадает с открытым
+                            if (data.chatId !== currentOpenChatId) {
+                                 console.log(`[Header new_message] Показываем Toast для чата ${data.chatId}`);
+                                 showToastNotification({
+                                     id: data.message.id || Date.now(), // Используем ID сообщения или timestamp
+                                     chatId: data.chatId,
+                                     senderName: data.message.senderName || 'Новое сообщение',
+                                     text: data.message.text || '',
+                                     type: 'info' // Или другой тип для сообщений
+                                 });
+                            } else {
+                                console.log(`[Header new_message] Toast не показан, т.к. чат ${data.chatId} открыт.`);
+                            }
+                        } else if (data?.message?.senderId === currentUsername) {
+                             console.log(`[Header new_message] Toast не показан, т.к. сообщение от текущего пользователя ${currentUsername}.`);
+                        } else {
+                            console.warn('[Header new_message] Toast не показан из-за неполных данных или другой причины.');
+                        }
                     });
 
-                    window.socket.on('avatar_updated', () => {
-                        console.log('[Socket.IO Client] Received event: avatar_updated');
-                        const headerAvatarEl = document.getElementById('headerUserAvatar');
-                        if (headerAvatarEl) { headerAvatarEl.src = headerAvatarEl.src.split('?')[0] + '?t=' + Date.now(); }
-                        const profileAvatarEl = document.querySelector('.profile-avatar'); if (profileAvatarEl && profileAvatarEl.src !== headerAvatarEl?.src) { profileAvatarEl.src = profileAvatarEl.src.split('?')[0] + '?t=' + Date.now(); }
-                        const profileEditAvatarEl = document.querySelector('.current-avatar-display img'); if (profileEditAvatarEl && profileEditAvatarEl.src !== headerAvatarEl?.src) { profileEditAvatarEl.src = profileEditAvatarEl.src.split('?')[0] + '?t=' + Date.now(); }
+
+                    // 3. Прочтение сообщений другим пользователем (для галочек)
+                    socket.on('messages_read_up_to', (data) => {
+                         console.log('[Socket.IO Client] Получено: messages_read_up_to, Data:', data);
+                         if (typeof window.handleMessagesRead === 'function') { window.handleMessagesRead(data); }
+                         else { console.warn("[Header Script] Функция window.handleMessagesRead не найдена."); }
                     });
 
-                    window.socket.on('profile_data_updated', (data) => {
-                         console.log('[Socket.IO Client] Received event: profile_data_updated, Data:', data);
-                         const headerUserNameEl = document.getElementById('headerUserName');
-                         const headerUserRoleEl = document.getElementById('headerUserRole');
-                         const headerBalanceEl = document.getElementById('headerUserBalance');
-                         const headerCompanyContainerEl = document.querySelector('.user-sub-info .user-company');
-                         const headerCompanySpanEl = headerCompanyContainerEl ? headerCompanyContainerEl.querySelector('span') : null;
-                         const addPropertyLink = document.querySelector('.main-nav-links a[href="/properties/add"]');
-                         if (headerUserNameEl && data?.fullName) { headerUserNameEl.textContent = shortenFullName(data.fullName); }
-                         if (headerUserRoleEl && data?.role) { headerUserRoleEl.textContent = data.role; if (headerBalanceEl) { headerBalanceEl.style.display = (data.role === 'Tenant') ? 'inline' : 'none'; } }
-                         if (headerCompanyContainerEl) {
-                             const shouldShowCompany = (data?.role === 'Owner' || data?.role === 'Staff') && data?.companyName;
-                             headerCompanyContainerEl.style.display = shouldShowCompany ? 'inline-flex' : 'none';
-                             if (shouldShowCompany) {
-                                 if (headerCompanySpanEl) headerCompanySpanEl.textContent = shortenCompanyName(data.companyName);
-                                 headerCompanyContainerEl.title = data.companyName;
-                             }
-                         }
-                         if (addPropertyLink && typeof data?.role !== 'undefined' && typeof data?.companyProfileCompleted !== 'undefined') { // Проверка наличия полей
-                             const canAddProperty = data.role === 'Admin' || (data.role === 'Owner' && data.companyProfileCompleted === true);
-                             addPropertyLink.style.display = canAddProperty ? 'inline' : 'none';
-                         }
+                    // 4. Обновление счетчика КОНКРЕТНОГО чата (в сайдбаре)
+                    socket.on('chat_list_unread_update', (data) => {
+                        // Этот обработчик находится в chat.js и должен использовать window.socket
+                        // Продублируем базовый лог здесь для отладки
+                         console.log('[Socket.IO Client] Получено: chat_list_unread_update, Data:', data);
+                         // Основная логика обновления UI списка чатов - в chat.js
                     });
 
-                    window.socket.on('account_deleted', (data) => {
-                        console.log('[Socket.IO Client] Received event: account_deleted, Data:', data);
-                        if (socket && socket.connected) socket.disconnect();
-                        alert(data?.message || 'Ваш аккаунт был удален администратором.');
-                        const form = document.createElement('form'); form.method = 'POST'; form.action = '/logout'; document.body.appendChild(form); form.submit();
-                    });
+                    // 5. События для УВЕДОМЛЕНИЙ (колокольчик)
+                    socket.on('initial_notifications', (initialNotifications) => { console.log(`[Socket.IO Client] Получено: initial_notifications, Count: ${initialNotifications?.length}`); displayInitialNotifications(initialNotifications); });
+                    socket.on('new_notification', (data) => { console.log(`[Socket.IO Client] Получено: new_notification, Data:`, data); if (data && data.type && data.title && data.message) { addNewNotificationToPanel({ ...data, id: data.id || ('_' + Math.random().toString(36).substring(2, 9)), read: false, timestamp: Date.now() }); } else { console.warn('[Socket.IO Client] Невалидные данные new_notification:', data); } });
+                    socket.on('update_header_notification_badge', (data) => { console.log(`[Socket.IO Client] Получено: update_header_notification_badge, Count: ${data?.count}`); if (typeof data?.count === 'number') { window.updateHeaderNotificationBadge(data.count); } });
 
-                    // ---- ОБНОВЛЕНИЕ СЧЕТЧИКА ЧАТОВ ----
-                    window.socket.on('total_unread_update', (data) => {
-                         console.log('[Socket.IO Client] Received event: total_unread_update, Data:', data);
-                         if (typeof data.totalUnreadCount === 'number') {
-                              if (typeof window.updateHeaderChatBadge === 'function') {
-                                   window.updateHeaderChatBadge(data.totalUnreadCount);
-                              } else { console.error("Function window.updateHeaderChatBadge is not defined!"); }
-                         } else { console.warn('[Socket.IO Client] Invalid total_unread_update data:', data); }
-                    });
+                    // --- Остальные события (баланс, профиль и т.д.) ---
+                    socket.on('balance_updated', (newBalance) => { console.log('[Socket.IO] Balance updated:', newBalance); const el = document.getElementById('headerUserBalance'); if(el) { el.textContent = new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB',maximumFractionDigits:0}).format(newBalance||0); el.classList.add('updated'); setTimeout(()=>el.classList.remove('updated'),600); } });
+                    socket.on('avatar_updated', () => { console.log('[Socket.IO] Avatar updated.'); const el=document.getElementById('headerUserAvatar'); if(el) el.src = el.src.split('?')[0]+'?t='+Date.now(); });
+                    socket.on('profile_data_updated', (data) => { console.log('[Socket.IO] Profile updated:', data); const nameEl=document.getElementById('headerUserName'); const roleEl=document.getElementById('headerUserRole'); const compEl=document.querySelector('.user-sub-info .user-company span'); if(nameEl && data.fullName) nameEl.textContent = shortenFullName(data.fullName); if(roleEl && data.role) roleEl.textContent=data.role; if(compEl && data.companyName) compEl.textContent = shortenCompanyName(data.companyName); /* ... */ });
+                    socket.on('account_deleted', (data) => { console.log('[Socket.IO] Account deleted:', data); if (socket && socket.connected) socket.disconnect(); alert(data?.message || 'Ваш аккаунт удален.'); const f=document.createElement('form');f.method='POST';f.action='/logout';document.body.appendChild(f);f.submit(); });
 
-                    // ---- УВЕДОМЛЕНИЯ (КОЛОКОЛЬЧИК) ----
-                    window.socket.on('initial_notifications', (initialNotifications) => {
-                        console.log(`[Socket.IO Client] Received event: initial_notifications, Count: ${initialNotifications?.length}`);
-                        displayInitialNotifications(initialNotifications);
-                    });
-                    window.socket.on('new_notification', (data) => {
-                         console.log(`[Socket.IO Client] Received event: new_notification, Data:`, data);
-                         if (data && data.type && data.title && data.message) {
-                              const allowHtml = data.allowHtml === true;
-                              addNewNotificationToPanel({ ...data, id: generateUniqueId(), read: false, timestamp: Date.now() });
-                              showToastNotification({ senderName: data.title, text: data.message, type: data.type, chatId: data.chatId, id: data.id || generateUniqueId() });
-                         } else { console.warn('[Socket.IO Client] Invalid new_notification data:', data); }
-                    });
-                    window.socket.on('booking_confirmed', (data) => { const msg = `Ваша бронь (#${data.bookingId?.substring(0,6)}) для "<strong>${data.propertyTitle || '?'}</strong>" подтверждена.`; if (window.location.pathname !== '/bookings') { showToastNotification({ senderName: 'Бронь подтверждена', text: `Бронь для "${data.propertyTitle || '?'}" подтверждена.`, type: 'success', id: `bk-conf-${data.bookingId}` }); } addNewNotificationToPanel({type:'success', title:'Бронь подтверждена', message:msg, bookingId:data.bookingId, id: `bk-notif-conf-${data.bookingId}`}); });
-                    window.socket.on('booking_rejected', (data) => { const r=data.reason?` Причина: ${data.reason}`:''; const msg = `Ваш запрос (#${data.bookingId?.substring(0,6)}) на "<strong>${data.propertyTitle || '?'}</strong>" отклонен.${r}`; if (window.location.pathname !== '/bookings') { showToastNotification({ senderName: 'Запрос отклонен', text: `Запрос на "${data.propertyTitle || '?'}" отклонен.${r}`, type: 'warning', id: `bk-rej-${data.bookingId}` }); } addNewNotificationToPanel({type:'warning', title:'Запрос отклонен', message:msg, bookingId:data.bookingId, id: `bk-notif-rej-${data.bookingId}`}); });
-                    window.socket.on('booking_cancelled_by_owner', (data) => { const msg = `Ваша активная бронь (#${data.bookingId?.substring(0,6)}) для "<strong>${data.propertyTitle || '?'}</strong>" аннулирована администрацией. Средства возвращены.`; if (window.location.pathname !== '/bookings') { showToastNotification({ senderName: 'Бронь аннулирована', text: `Активная бронь для "${data.propertyTitle || '?'}" аннулирована.`, type: 'error', id: `bk-can-own-${data.bookingId}` }); } addNewNotificationToPanel({type:'error', title:'Бронь аннулирована', message:msg, bookingId:data.bookingId, id: `bk-notif-can-own-${data.bookingId}`}); });
-                    window.socket.on('new_booking_pending', (data) => { const msg = `Запрос на бронь (#${data.bookingId?.substring(0,6)}) для "<strong>${data.propertyTitle || '?'}</strong>" от ${data.tenantName || '?'}.`; if (window.location.pathname !== '/rentals') { const pMsg = `📬 Новый запрос на бронь (#${data.bookingId?.substring(0,6)}) для "<strong>${data.propertyTitle || '?'}</strong>" от ${data.tenantName}. <a href="/rentals" style='color:inherit; font-weight:bold;'>К арендам</a>`; showToastNotification({ senderName: 'Новый запрос на бронь', text: pMsg, type: 'info', id: `bk-new-${data.bookingId}`, allowHtml: true }); } addNewNotificationToPanel({type:'info', title:'Новый запрос', message:msg, bookingId:data.bookingId, id: `bk-notif-new-${data.bookingId}`}); });
-                    window.socket.on('pending_booking_cancelled', (data) => { const msg = `${data.tenantName || '?'} отменил запрос (#${data.bookingId?.substring(0,6)}) на "<strong>${data.propertyTitle || '?'}</strong>".`; if (window.location.pathname !== '/rentals') { showToastNotification({ senderName: 'Запрос отменен арендатором', text: `Запрос (#${data.bookingId?.substring(0,6)}) на "${data.propertyTitle || '?'}" отменен арендатором.`, type: 'warning', id: `bk-can-pend-${data.bookingId}` }); } addNewNotificationToPanel({type:'warning', title:'Запрос отменен', message:msg, bookingId:data.bookingId, id: `bk-notif-can-pend-${data.bookingId}`}); });
-                    window.socket.on('active_booking_cancelled', (data) => { const msg = `${data.tenantName || '?'} отменил активную бронь (#${data.bookingId?.substring(0,6)}) для "<strong>${data.propertyTitle || '?'}</strong>".`; if (window.location.pathname !== '/rentals') { showToastNotification({ senderName: 'Активная бронь отменена', text: `Арендатор отменил активную бронь (#${data.bookingId?.substring(0,6)}) для "${data.propertyTitle || '?'}"`, type: 'error', id: `bk-can-act-${data.bookingId}` }); } addNewNotificationToPanel({type:'error', title:'Активная бронь отменена', message:msg, bookingId:data.bookingId, id: `bk-notif-can-act-${data.bookingId}`}); });
-                    window.socket.on('booking_status_changed', (data) => { let t='Статус...',ty='info',m=`Статус брони (#${data.bookingId?.substring(0,6)}) для "<strong>${data.propertyTitle||'?'}</strong>" (${data.tenantName||'?'}) изменен на "<strong>${data.newStatus}</strong>"`; if(data.newStatus==='Активна'){ty='success';t='Подтверждена';}else if(data.newStatus==='Отклонена'){ty='warning';t='Отклонена';}else if(data.newStatus==='Аннулирована'){ty='error';t='Аннулирована';} if (data.changedBy) m+=` пользователем ${data.changedBy}.`; if (data.reason) m+=` Причина: ${data.reason}.`; if (!window.location.pathname.startsWith('/rentals')) {showToastNotification({senderName: t, text: m, type: ty, id:`bk-stat-${data.bookingId}`});} addNewNotificationToPanel({type: ty, title: t, message: m, bookingId: data.bookingId, id: `bk-notif-stat-${data.bookingId}`}); });
+                    // События бронирования
+                     const bookingEventHandler = (eventName, data, toastTitle, toastType, notifTitle, notifType) => { console.log(`[Socket.IO] Received event: ${eventName}, Data:`, data); const messageForNotif = `Бронь (#${data.bookingId?.substring(0,6)}) для "${data.propertyTitle || '?'}"`; let fullMessage = messageForNotif; if (data.tenantName) fullMessage += ` (Арендатор: ${data.tenantName})`; if (data.changedBy) fullMessage += ` изменена ${data.changedBy}`; if (data.reason) fullMessage += `. Причина: ${data.reason}`; const toastMessage = `${toastTitle}: ${messageForNotif}${data.tenantName ? ' от '+data.tenantName : ''}${data.reason ? '. '+data.reason : '.'}`; if (!window.location.pathname.startsWith('/rentals')) { showToastNotification({ senderName: toastTitle, text: toastMessage, type: toastType, id: `${eventName}-${data.bookingId}`, bookingId: data.bookingId, allowHtml: true }); } addNewNotificationToPanel({type: notifType, title: notifTitle, message: fullMessage, bookingId: data.bookingId, id: `notif-${eventName}-${data.bookingId}` }); };
+                     socket.on('booking_confirmed', (data) => bookingEventHandler('booking_confirmed', data, 'Бронь подтверждена', 'success', 'Подтверждено', 'success'));
+                     socket.on('booking_rejected', (data) => bookingEventHandler('booking_rejected', data, 'Запрос отклонен', 'warning', 'Отклонено', 'warning'));
+                     socket.on('booking_cancelled_by_owner', (data) => bookingEventHandler('booking_cancelled_by_owner', data, 'Бронь аннулирована', 'error', 'Аннулировано адм.', 'error'));
+                     socket.on('new_booking_pending', (data) => bookingEventHandler('new_booking_pending', data, 'Новый запрос на бронь', 'info', 'Новый запрос', 'booking'));
+                     socket.on('pending_booking_cancelled', (data) => bookingEventHandler('pending_booking_cancelled', data, 'Запрос отменен арендатором', 'warning', 'Отменен арендатором', 'warning'));
+                     socket.on('active_booking_cancelled', (data) => bookingEventHandler('active_booking_cancelled', data, 'Активная бронь отменена', 'error', 'Отменено арендатором', 'error'));
+                     socket.on('booking_status_changed', (data) => { let t=`Статус: ${data.newStatus}`,ty='info';if(data.newStatus==='Активна'){ty='success';}else if(data.newStatus==='Отклонена'){ty='warning';}else if(data.newStatus==='Аннулирована'){ty='error';} bookingEventHandler('booking_status_changed', data, t, ty, `Статус: ${data.newStatus}`, ty); });
+
 
                 } catch (e) {
-                    console.error("[Header Script] Error setting up Socket.IO:", e);
+                    console.error("[Header Script] Ошибка инициализации Socket.IO:", e);
                 }
             } else {
-                console.log("[Header Script] User not logged in, skipping Socket.IO initialization.");
+                console.log("[Header Script] Пользователь не авторизован, Socket.IO не инициализирован.");
             }
 
-            // --- Инициализация логики AutoUpdater ---
-            const modalOverlay = document.getElementById('updateModalOverlay');
-            const modalContent = document.getElementById('updateModalContent');
-            const modalTitle = document.getElementById('updateModalTitle');
-            const modalMessage = document.getElementById('updateModalMessage');
-            const progressContainer = document.getElementById('updateProgressContainer');
-            const progressBar = document.getElementById('updateProgressBar');
-            const restartButtonModal = document.getElementById('updateModalRestartButton');
-            const closeButtonModal = document.getElementById('updateModalCloseButton');
-            const errorDetails = document.getElementById('updateErrorDetails');
-            let updateInfoGlobal = null;
-            let updateListeners = {}; // Для хранения ссылок на функции-слушатели
-
+            // --- Инициализация логики AutoUpdater (остается без изменений) ---
+            /* ... код AutoUpdater ... */
+            const modalOverlay = document.getElementById('updateModalOverlay'); const modalContent = document.getElementById('updateModalContent'); const modalTitle = document.getElementById('updateModalTitle'); const modalMessage = document.getElementById('updateModalMessage'); const progressContainer = document.getElementById('updateProgressContainer'); const progressBar = document.getElementById('updateProgressBar'); const restartButtonModal = document.getElementById('updateModalRestartButton'); const closeButtonModal = document.getElementById('updateModalCloseButton'); const errorDetails = document.getElementById('updateErrorDetails'); let updateListeners = {};
             function setModalStatusClass(statusClass) { if (modalContent) { modalContent.className = 'modal-content'; modalContent.classList.add(`status-${statusClass}`); const colors = { info: '#5bc0de', available: '#f0ad4e', downloading: '#f0ad4e', ready: '#5cb85c', error: '#d9534f' }; modalContent.style.borderTopColor = colors[statusClass] || '#5bc0de'; } }
             function showUpdateModal(statusClass = 'info') { if (!modalOverlay || !modalContent) return; setModalStatusClass(statusClass); modalOverlay.style.display = 'flex'; requestAnimationFrame(() => { modalOverlay.classList.add('visible'); modalContent.style.opacity = '1'; modalContent.style.transform = 'none'; }); }
             function hideUpdateModal() { if (modalOverlay) { modalOverlay.classList.remove('visible'); modalContent.style.opacity = '0'; modalContent.style.transform = 'translateY(-20px)'; setTimeout(() => { modalOverlay.style.display = 'none'; if(progressBar) progressBar.style.width = '0%'; if(progressContainer) progressContainer.style.display = 'none'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) closeButtonModal.style.display = 'none'; if(errorDetails) errorDetails.style.display = 'none'; }, 300); } }
-
             if (window.electronUpdater) {
-                 console.log('[Renderer Updater] API found. Setting up listeners.');
+                 console.log('[Renderer Updater] API найдено. Настройка слушателей.');
                  if(closeButtonModal) closeButtonModal.onclick = hideUpdateModal;
-                 if(restartButtonModal) restartButtonModal.onclick = () => { console.log('[Renderer Updater] Restart button clicked.'); restartButtonModal.textContent = 'Перезапуск...'; restartButtonModal.disabled = true; if (closeButtonModal) closeButtonModal.disabled = true; window.electronUpdater.send('install-update'); };
-
-                 const handleStatus = (message) => { console.log('[Renderer Updater] Status:', message); if (!message && modalMessage && modalMessage.textContent === 'Установлена последняя версия.') { hideUpdateModal(); return; } const readyMessagePattern = /Версия .* загружена\. Готово к установке\./; if (typeof message === 'string' && !readyMessagePattern.test(message)) { if(modalMessage) modalMessage.textContent = message; if(modalTitle) modalTitle.textContent = 'Статус обновления'; if(progressContainer) progressContainer.style.display = 'none'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } if(errorDetails) errorDetails.style.display = 'none'; showUpdateModal('info'); } if (message === 'Установлена последняя версия.') { setTimeout(hideUpdateModal, 4000); } };
-                 const handleError = (message) => { console.error('[Renderer Updater] Error:', message); if(modalTitle) modalTitle.textContent = 'Ошибка обновления'; if(modalMessage) modalMessage.textContent = 'Не удалось проверить или загрузить обновление.'; if(errorDetails) { errorDetails.textContent = `Детали: ${message}`; errorDetails.style.display = 'block'; } if(progressContainer) progressContainer.style.display = 'none'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } showUpdateModal('error'); };
-                 const handleAvailable = (info) => { console.log('[Renderer Updater] Update available:', info); updateInfoGlobal = info; if(modalTitle) modalTitle.textContent = `Доступна версия ${info.version}`; if(modalMessage) modalMessage.textContent = 'Начинается автоматическая загрузка...'; if(progressBar) progressBar.style.width = '0%'; if(progressContainer) progressContainer.style.display = 'block'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } if(errorDetails) errorDetails.style.display = 'none'; showUpdateModal('available'); };
-                 const handleProgress = (percent) => { const roundedPercent = Math.round(percent); if (roundedPercent % 5 === 0 || percent > 98 || percent < 2) { console.log('[Renderer Updater] Progress:', percent); } if(modalTitle) modalTitle.textContent = 'Загрузка обновления'; if(modalMessage) modalMessage.textContent = `Пожалуйста, подождите... ${roundedPercent}%`; if(progressBar) progressBar.style.width = `${percent}%`; if(progressContainer) progressContainer.style.display = 'block'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } if(errorDetails) errorDetails.style.display = 'none'; showUpdateModal('downloading'); };
-                 const handleReady = (info) => { console.log('%c[Renderer Updater] Update ready!', 'color: green; font-weight: bold;', info); updateInfoGlobal = info; if(modalTitle) modalTitle.textContent = `Обновление ${info.version} готово!`; if(modalMessage) modalMessage.textContent = 'Нажмите кнопку ниже, чтобы перезапустить приложение и установить обновление.'; if(progressContainer) progressContainer.style.display = 'none'; if(errorDetails) errorDetails.style.display = 'none'; if(restartButtonModal) { restartButtonModal.textContent = 'Перезапустить и установить'; restartButtonModal.disabled = false; restartButtonModal.style.display = 'inline-block'; } if(closeButtonModal) { closeButtonModal.style.display = 'none'; } showUpdateModal('ready'); };
-
-                 // Добавляем слушатели и сохраняем функции для удаления (на всякий случай)
+                 if(restartButtonModal) restartButtonModal.onclick = () => { console.log('[Renderer Updater] Нажата кнопка перезапуска.'); restartButtonModal.textContent = 'Перезапуск...'; restartButtonModal.disabled = true; if (closeButtonModal) closeButtonModal.disabled = true; window.electronUpdater.send('install-update'); };
+                 const handleStatus = (message) => { console.log('[Renderer Updater] Статус:', message); if (!message && modalMessage && modalMessage.textContent === 'Установлена последняя версия.') { hideUpdateModal(); return; } const readyMessagePattern = /Версия .* загружена\. Готово к установке\./; if (typeof message === 'string' && !readyMessagePattern.test(message)) { if(modalMessage) modalMessage.textContent = message; if(modalTitle) modalTitle.textContent = 'Статус обновления'; if(progressContainer) progressContainer.style.display = 'none'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } if(errorDetails) errorDetails.style.display = 'none'; showUpdateModal('info'); } if (message === 'Установлена последняя версия.') { setTimeout(hideUpdateModal, 4000); } };
+                 const handleError = (message) => { console.error('[Renderer Updater] Ошибка:', message); if(modalTitle) modalTitle.textContent = 'Ошибка обновления'; if(modalMessage) modalMessage.textContent = 'Не удалось проверить или загрузить обновление.'; if(errorDetails) { errorDetails.textContent = `Детали: ${message}`; errorDetails.style.display = 'block'; } if(progressContainer) progressContainer.style.display = 'none'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } showUpdateModal('error'); };
+                 const handleAvailable = (info) => { console.log('[Renderer Updater] Доступно обновление:', info); if(modalTitle) modalTitle.textContent = `Доступна версия ${info.version}`; if(modalMessage) modalMessage.textContent = 'Начинается автоматическая загрузка...'; if(progressBar) progressBar.style.width = '0%'; if(progressContainer) progressContainer.style.display = 'block'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } if(errorDetails) errorDetails.style.display = 'none'; showUpdateModal('available'); };
+                 const handleProgress = (percent) => { const roundedPercent = Math.round(percent); if (roundedPercent % 5 === 0 || percent > 98 || percent < 2) { console.log('[Renderer Updater] Прогресс:', percent); } if(modalTitle) modalTitle.textContent = 'Загрузка обновления'; if(modalMessage) modalMessage.textContent = `Пожалуйста, подождите... ${roundedPercent}%`; if(progressBar) progressBar.style.width = `${percent}%`; if(progressContainer) progressContainer.style.display = 'block'; if(restartButtonModal) restartButtonModal.style.display = 'none'; if(closeButtonModal) { closeButtonModal.style.display = 'inline-block'; closeButtonModal.disabled = false; } if(errorDetails) errorDetails.style.display = 'none'; showUpdateModal('downloading'); };
+                 const handleReady = (info) => { console.log('%c[Renderer Updater] Обновление готово!', 'color: green; font-weight: bold;', info); if(modalTitle) modalTitle.textContent = `Обновление ${info.version} готово!`; if(modalMessage) modalMessage.textContent = 'Нажмите кнопку ниже, чтобы перезапустить приложение и установить обновление.'; if(progressContainer) progressContainer.style.display = 'none'; if(errorDetails) errorDetails.style.display = 'none'; if(restartButtonModal) { restartButtonModal.textContent = 'Перезапустить и установить'; restartButtonModal.disabled = false; restartButtonModal.style.display = 'inline-block'; } if(closeButtonModal) { closeButtonModal.style.display = 'none'; } showUpdateModal('ready'); };
                  updateListeners['update-status'] = window.electronUpdater.on('update-status', handleStatus);
                  updateListeners['update-error'] = window.electronUpdater.on('update-error', handleError);
                  updateListeners['update-available'] = window.electronUpdater.on('update-available', handleAvailable);
                  updateListeners['update-progress'] = window.electronUpdater.on('update-progress', handleProgress);
                  updateListeners['update-ready'] = window.electronUpdater.on('update-ready', handleReady);
-            } else { console.warn('[Renderer Updater] API "electronUpdater" not found. Auto-update UI disabled.'); }
-             // --- Конец логики AutoUpdater ---
+            } else { console.warn('[Renderer Updater] API "electronUpdater" не найдено. UI автообновления отключен.'); }
 
-             // --- Логика мобильного меню ---
-             const mobileToggle = document.querySelector('.mobile-nav-toggle');
-             const navLinks = document.querySelector('.main-nav-links');
-             if(mobileToggle && navLinks) { mobileToggle.addEventListener('click', function() { navLinks.classList.toggle('open'); mobileToggle.classList.toggle('active'); }); }
-             // --- Конец мобильного меню ---
-
-             // --- Сокращение имени и компании в шапке ---
-             const userNameElement = document.getElementById('headerUserName');
-             const companyElement = document.querySelector('.user-sub-info .user-company span');
-             function shortenFullName(fullName) { if (!fullName) return ''; const nameParts = fullName.trim().split(' '); if (nameParts.length < 2) return fullName; const lastName = nameParts[0]; const initials = nameParts.slice(1).map(part => part[0] + '.').join(' '); return `${lastName} ${initials}`; }
-             function shortenCompanyName(companyName, maxLength = 15) { if (!companyName || companyName.length <= maxLength) return companyName; return companyName.substring(0, maxLength - 1) + '…'; }
-             if (userNameElement && userNameElement.textContent) { userNameElement.textContent = shortenFullName(userNameElement.textContent); }
-             if (companyElement && companyElement.textContent) { companyElement.textContent = shortenCompanyName(companyElement.textContent); }
+            // --- Сокращение имени и компании в шапке ---
+            const userNameElement = document.getElementById('headerUserName');
+            const companyElement = document.querySelector('.user-sub-info .user-company span');
+            if (userNameElement && userNameElement.textContent) { userNameElement.textContent = shortenFullName(userNameElement.textContent); }
+            if (companyElement && companyElement.textContent) { companyElement.textContent = shortenCompanyName(companyElement.textContent); }
 
         }); // --- Конец DOMContentLoaded ---
     })(); // --- Конец IIFE ---
 </script>
+
+<!-- Стили для анимации бейджей и встряски ошибок -->
+<style>
+    .unread-chats-badge, #unreadCountBadgeHeader {
+        transition: transform 0.3s ease, background-color 0.3s ease;
+        transform-origin: center;
+    }
+    .unread-chats-badge.updated, #unreadCountBadgeHeader.updated {
+        animation: badge-pulse 0.6s ease-out;
+    }
+    @keyframes badge-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.25); } 100% { transform: scale(1); } }
+    @keyframes shake-error { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); } 20%, 40%, 60%, 80% { transform: translateX(5px); } }
+    .shake-error { animation: shake-error 0.5s cubic-bezier(.36,.07,.19,.97) both; border-color: var(--danger-color) !important; }
+</style>

@@ -1,6 +1,6 @@
 {
   "name": "node-real-estate-manager",
-  "version": "1.2.1",
+  "version": "1.2.3",
   "description": "Приложение для управления недвижимостью",
   "main": "main.js",
   "author": "SlasheR1",

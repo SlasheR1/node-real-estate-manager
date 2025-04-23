@@ -1,61 +1,48 @@
-// public/js/chat.js (Полная обновленная версия)
+// public/js/chat.js (Финальная версия с глобальным сокетом и разделением логики)
 
-// --- Глобальные переменные для состояния чата ---
-let currentChatId = null; // ID текущего открытого чата
+// --- Глобальные переменные состояния чата ---
+window.currentChatId = null; // ID текущего открытого чата (теперь в window)
 let isLoadingMessages = false; // Флаг, идет ли загрузка старых сообщений
-let hasMoreMessages = true; // Флаг, есть ли еще сообщения для загрузки
-let oldestMessageTimestamp = null; // Timestamp самого старого загруженного сообщения
-let socket = null; // Глобальная переменная для объекта Socket.IO
+let hasMoreMessages = true; // Флаг, есть ли еще сообщения для загрузки в текущем чате
+let oldestMessageTimestamp = null; // Timestamp самого старого загруженного сообщения в текущем чате
+const currentUsername = document.querySelector('.main-header')?.dataset.currentUser || null; // Получаем username текущего пользователя
 
-// --- Функции для установки переменных извне (вызываются из EJS при загрузке chat-view) ---
-/**
- * Устанавливает timestamp самого старого сообщения (для пагинации).
- * @param {number} timestamp - Timestamp сообщения.
- */
-window.setOldestMessageTimestamp = (timestamp) => {
-    if (typeof timestamp === 'number' && timestamp > 0) {
-        oldestMessageTimestamp = timestamp;
-        console.log('[Chat View Init] Initial oldestMessageTimestamp set to:', oldestMessageTimestamp);
-    } else {
-        console.warn('[Chat View Init] Attempted to set invalid oldestMessageTimestamp:', timestamp);
-        oldestMessageTimestamp = null; // Сбрасываем, если некорректно
-    }
-};
+// --- Инициализация глобального сокета (используем из header.ejs) ---
+const socket = window.socket || null;
+if (socket) {
+    console.log('[Chat.js] Используется существующий глобальный сокет:', socket.id);
+} else {
+    console.warn('[Chat.js] Глобальный сокет (window.socket) не найден. Функциональность чата будет ограничена.');
+}
+
+// --- Вспомогательные функции ---
 
 /**
- * Устанавливает флаг наличия более старых сообщений и обновляет видимость кнопки.
- * @param {boolean} hasMore - true, если есть еще сообщения, иначе false.
- */
-window.updateHasMoreMessages = (hasMore) => {
-    hasMoreMessages = hasMore === true; // Приводим к boolean
-    console.log('[Chat View Init] Initial hasMoreMessages set to:', hasMoreMessages);
-    const messageList = document.getElementById('messageList');
-    const loadMoreBtn = messageList?.querySelector('#loadMoreMessagesBtnInstance');
-    if (loadMoreBtn) {
-        loadMoreBtn.classList.toggle('hidden', !hasMoreMessages);
-    }
-};
-
-/**
- * Добавляет элемент сообщения в контейнер чата.
- * Корректно обрабатывает классы 'own'/'other' и 'read', а также галочки.
- * @param {object} message - Объект сообщения (должен содержать id, text, timestamp, isOwnMessage, isReadByRecipient, timestampFormatted).
+ * Создает и добавляет DOM-элемент сообщения в указанный контейнер.
+ * @param {object} message - Объект сообщения (id, text, timestamp, senderId, isReadByRecipient, timestampFormatted).
  * @param {HTMLElement} container - DOM-элемент контейнера сообщений (#messageList).
  * @param {boolean} [prepend=false] - Добавить в начало (true) или в конец (false).
  */
 const appendMessage = (message, container, prepend = false) => {
     if (!message || !container || typeof message.text === 'undefined') {
-        console.warn("appendMessage: Invalid message or container.", { message, container });
+        console.warn("appendMessage: Невалидные данные сообщения или контейнер.", { message, container });
         return;
     }
-    const bubble = document.createElement('div');
-    const isOwn = message.isOwnMessage === true;
-    // Определяем прочитано ли оно ПОЛУЧАТЕЛЕМ (для галочек)
+    if (message.id && container.querySelector(`.message-bubble[data-message-id="${message.id}"]`)) {
+        console.log(`[appendMessage] Сообщение с ID ${message.id} уже существует, пропускаем.`);
+        return;
+    }
+
+    // Определяем, наше ли это сообщение, СРАВНИВАЯ С ГЛОБАЛЬНЫМ username
+    const isOwn = message.senderId === currentUsername;
+    // Проверяем, прочитано ли ОНО получателем (актуально только для isOwn = true)
+    // Флаг isReadByRecipient приходит от сервера (из getChatMessages или готовится на лету при emit)
     const isReadByRecipient = isOwn && message.isReadByRecipient === true;
 
+    const bubble = document.createElement('div');
     bubble.className = `message-bubble ${isOwn ? 'own' : 'other'} ${isReadByRecipient ? 'read' : ''}`;
     bubble.dataset.timestamp = message.timestamp || Date.now();
-    bubble.dataset.messageId = message.id || '';
+    if (message.id) { bubble.dataset.messageId = message.id; }
 
     const textEl = document.createElement('div');
     textEl.className = 'message-text';
@@ -66,31 +53,13 @@ const appendMessage = (message, container, prepend = false) => {
 
     const timeSpan = document.createElement('span');
     timeSpan.className = 'message-time';
-    
-    // Проверяем валидность timestamp и форматируем время
-    let timeText = '--:--';
-    if (message.timestamp) {
-        const date = new Date(message.timestamp);
-        if (!isNaN(date.getTime())) {
-            try {
-                timeText = date.toLocaleTimeString('ru-RU', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-            } catch (e) {
-                console.warn('Error formatting time:', e);
-            }
-        }
-    }
-    timeSpan.textContent = timeText;
-    
+    timeSpan.textContent = message.timestampFormatted || '--:--';
     metaEl.appendChild(timeSpan);
 
-    // Добавляем галочки только для СВОИХ сообщений
     if (isOwn) {
         const ticksSpan = document.createElement('span');
         ticksSpan.className = 'message-status-ticks';
-        // Ставим двойную галочку, если isReadByRecipient=true
+        // Используем isReadByRecipient для определения иконки
         ticksSpan.innerHTML = `<i class="fas ${isReadByRecipient ? 'fa-check-double' : 'fa-check'}"></i>`;
         metaEl.appendChild(ticksSpan);
     }
@@ -99,7 +68,7 @@ const appendMessage = (message, container, prepend = false) => {
     bubble.appendChild(metaEl);
 
     if (prepend) {
-        const loadMoreBtn = container.querySelector('.load-more-btn');
+        const loadMoreBtn = container.querySelector('#loadMoreMessagesBtn');
         if (loadMoreBtn) {
             container.insertBefore(bubble, loadMoreBtn.nextSibling);
         } else {
@@ -107,13 +76,12 @@ const appendMessage = (message, container, prepend = false) => {
         }
         if (message.timestamp && typeof message.timestamp === 'number' && (!oldestMessageTimestamp || message.timestamp < oldestMessageTimestamp)) {
             oldestMessageTimestamp = message.timestamp;
-            console.log("Updated oldestMessageTimestamp (prepend):", oldestMessageTimestamp);
+            console.log("[appendMessage Prepend] Обновлен oldestMessageTimestamp:", oldestMessageTimestamp);
         }
     } else {
         container.appendChild(bubble);
     }
 };
-
 
 /**
  * Прокручивает контейнер сообщений вниз.
@@ -125,15 +93,51 @@ const scrollToBottom = (element, smooth = false) => {
     if (smooth) {
         element.scrollTo({ top: element.scrollHeight, behavior: 'smooth' });
     } else {
-        requestAnimationFrame(() => {
-            element.scrollTop = element.scrollHeight;
-        });
+        requestAnimationFrame(() => { element.scrollTop = element.scrollHeight; });
     }
 };
 
 /**
+ * Обновляет состояние кнопки "Загрузить еще".
+ * @param {boolean} show - Показать (true) или скрыть (false).
+ * @param {boolean} [loading=false] - Показать спиннер (true) или текст (false).
+ * @param {string} [text='Загрузить еще'] - Текст кнопки.
+ */
+const updateLoadMoreButton = (show, loading = false, text = 'Загрузить еще') => {
+    const loadMoreBtn = document.getElementById('loadMoreMessagesBtn');
+    if (!loadMoreBtn) return;
+    loadMoreBtn.classList.toggle('hidden', !show);
+    loadMoreBtn.disabled = loading;
+    const buttonTextEl = loadMoreBtn.querySelector('.button-text');
+    const spinnerEl = loadMoreBtn.querySelector('.button-spinner');
+    if (buttonTextEl) buttonTextEl.textContent = loading ? '' : text;
+    if (spinnerEl) spinnerEl.style.display = loading ? 'inline-block' : 'none';
+};
+
+// --- Функции для управления состоянием чата ---
+window.setOldestMessageTimestamp = (timestamp) => {
+    if (typeof timestamp === 'number' && timestamp > 0) {
+        oldestMessageTimestamp = timestamp;
+        console.log('[Chat State] Установлен oldestMessageTimestamp:', oldestMessageTimestamp);
+    } else {
+        console.warn('[Chat State] Попытка установить невалидный oldestMessageTimestamp:', timestamp);
+        oldestMessageTimestamp = null;
+    }
+};
+window.updateHasMoreMessages = (hasMore) => {
+    hasMoreMessages = hasMore === true;
+    console.log('[Chat State] Установлен hasMoreMessages:', hasMoreMessages);
+    // Обновляем кнопку ТОЛЬКО если она есть на странице (вдруг вызовется не со страницы чата)
+    const loadMoreBtn = document.getElementById('loadMoreMessagesBtn');
+    if(loadMoreBtn) {
+        updateLoadMoreButton(hasMoreMessages, false);
+    }
+};
+
+// --- Основная логика чата ---
+
+/**
  * Функция открытия чата. Загружает данные чата и сообщения через API.
- * Доступна глобально как window.openChat.
  * @param {string} chatId - ID чата для открытия.
  */
 window.openChat = async (chatId) => {
@@ -144,773 +148,286 @@ window.openChat = async (chatId) => {
     const chatViewSubjectLink = document.getElementById('chatViewSubjectLink');
     const messageInputForm = document.getElementById('messageInputForm');
     const sendMessageBtn = document.getElementById('sendMessageBtn');
-    const loadMoreBtnTemplate = document.getElementById('loadMoreMessagesBtn');
+    const chatListElement = document.getElementById('chatList');
 
-    if (!messageList || !chatPlaceholder || !chatView || !chatViewHeaderName || !messageInputForm || !sendMessageBtn || !loadMoreBtnTemplate) {
-        console.error("Ключевые элементы UI чата не найдены!");
+    if (!messageList || !chatPlaceholder || !chatView || !chatViewHeaderName || !messageInputForm || !sendMessageBtn || !chatListElement) {
+        console.error("[openChat] Ключевые элементы UI чата не найдены!");
         return;
     }
+    if (isLoadingMessages) { console.log(`[openChat] Загрузка уже идет.`); return; }
+    if (window.currentChatId === chatId && !chatView.classList.contains('hidden')) { console.log(`[openChat] Чат ${chatId} уже открыт.`); return; }
 
-    if (isLoadingMessages || currentChatId === chatId) {
-        console.log(`Chat ${chatId} is already open or loading.`);
-        return;
-    }
-    console.log(`[openChat] Opening chat: ${chatId}`);
-    currentChatId = chatId;
+    console.log(`[openChat] Открытие чата: ${chatId}`);
+    window.currentChatId = chatId; // Обновляем глобальную переменную
     hasMoreMessages = true;
     oldestMessageTimestamp = null;
+    isLoadingMessages = true;
 
     // Обновление UI списка чатов
-    document.querySelectorAll('.chat-list-item.active').forEach(el => el.classList.remove('active'));
-    const chatListItem = document.querySelector(`.chat-list-item[data-chat-id="${chatId}"]`);
+    chatListElement.querySelectorAll('.chat-list-item.active').forEach(el => el.classList.remove('active'));
+    const chatListItem = chatListElement.querySelector(`.chat-list-item[data-chat-id="${chatId}"]`);
     if (chatListItem) {
         chatListItem.classList.add('active');
-        // Сбрасываем стиль 'unread' и скрываем бейдж при открытии
-        chatListItem.classList.remove('unread');
+        chatListItem.classList.remove('unread'); // Убираем стиль непрочитанного
         const badge = chatListItem.querySelector('.unread-badge');
-        if (badge) {
-            badge.textContent = '0';
-            badge.style.display = 'none';
-            badge.classList.remove('animate-pulse');
-        }
+        if (badge) badge.style.display = 'none'; // Скрываем бейдж
+        // Прокрутка к активному элементу (опционально)
+        // chatListItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     // Подготовка основной области чата
     chatPlaceholder.style.display = 'none';
     chatView.classList.remove('hidden');
-    messageList.innerHTML = '';
+    messageList.innerHTML = ''; // Очищаем
+    const loadMoreBtnHTML = `<button id="loadMoreMessagesBtn" class="btn btn-secondary btn-small load-more-btn hidden"> <i class="fas fa-spinner fa-spin button-spinner" style="display: none;"></i> <span class="button-text">Загрузить еще</span> </button>`;
+    messageList.insertAdjacentHTML('afterbegin', loadMoreBtnHTML);
+    updateLoadMoreButton(false);
+    messageInputForm.dataset.chatId = chatId;
 
-    isLoadingMessages = true;
     try {
-        // Отправляем событие о прочтении на сервер ПЕРЕД загрузкой деталей чата
+        // Отправка события о прочтении на сервер
         if (socket) {
             socket.emit('mark_chat_read', chatId);
-            console.log(`[openChat] Sent mark_chat_read event for chat ${chatId}`);
-        }
+            console.log(`[openChat] Отправлено событие mark_chat_read для чата ${chatId}`);
+        } else { console.warn("[openChat] Сокет не инициализирован."); }
 
-        // Сразу обновляем UI для лучшего UX
-        const chatListItem = document.querySelector(`.chat-list-item[data-chat-id="${chatId}"]`);
-        if (chatListItem) {
-            chatListItem.classList.remove('unread');
-            const badge = chatListItem.querySelector('.unread-badge');
-            if (badge) {
-                badge.style.display = 'none';
-                badge.classList.remove('pulse');
-            }
-        }
-
-        // Загрузка данных чата через API
-        console.log(`[openChat] Fetching details from /api/chats/${chatId}/details`);
+        // Загрузка данных чата
         const response = await fetch(`/api/chats/${chatId}/details`);
-        if (!response.ok) { throw new Error(`Ошибка загрузки данных чата: ${response.statusText}`); }
+        if (!response.ok) { throw new Error(`Ошибка загрузки: ${response.status} ${response.statusText}`); }
         const chatDetails = await response.json();
-        if (!chatDetails.success) { throw new Error(chatDetails.error || 'Ошибка в данных чата.'); }
-        console.log("[openChat] Received chat details via API:", chatDetails);
+        if (!chatDetails.success) { throw new Error(chatDetails.error || 'Ошибка данных чата.'); }
+        console.log("[openChat] Получены детали чата:", chatDetails);
 
-        // Обновляем заголовок и тему чата
+        // Обновляем UI
         if (chatViewHeaderName) chatViewHeaderName.textContent = chatDetails.otherParticipantName || 'Чат';
-        if (chatViewSubjectLink) {
-            if (chatDetails.subjectLink && chatDetails.chatSubject) {
-                chatViewSubjectLink.href = chatDetails.subjectLink;
-                chatViewSubjectLink.textContent = chatDetails.chatSubject;
-                chatViewSubjectLink.style.display = 'inline';
-            } else {
-                chatViewSubjectLink.style.display = 'none';
-            }
+        if (chatViewSubjectLink) { /* ... логика subjectLink ... */
+            if (chatDetails.subjectLink && chatDetails.chatSubject) { chatViewSubjectLink.href = chatDetails.subjectLink; chatViewSubjectLink.textContent = chatDetails.chatSubject; chatViewSubjectLink.style.display = 'inline'; }
+            else { chatViewSubjectLink.style.display = 'none'; }
         }
 
-        // Отображаем сообщения из JSON
+        // Отображаем сообщения
         const messages = chatDetails.messages || [];
-        const actualLoadMoreBtnInstance = messageList.querySelector('#loadMoreMessagesBtnInstance');
-
         if (messages.length === 0) {
-            hasMoreMessages = false;
-            if (actualLoadMoreBtnInstance) actualLoadMoreBtnInstance.classList.add('hidden');
-            const noMsgP = document.createElement('p');
-            noMsgP.textContent = "Нет сообщений в этом чате.";
-            noMsgP.style.cssText = 'text-align: center; color: var(--text-secondary); padding: 20px;';
-            messageList.appendChild(noMsgP);
+            window.updateHasMoreMessages(false);
+            const noMsgP = document.createElement('p'); noMsgP.textContent = "Нет сообщений."; noMsgP.style.cssText = 'text-align: center; color: var(--text-secondary); padding: 20px;';
+            const loadBtn = messageList.querySelector('#loadMoreMessagesBtn'); if (loadBtn) messageList.insertBefore(noMsgP, loadBtn.nextSibling); else messageList.appendChild(noMsgP);
         } else {
-            // Устанавливаем oldest timestamp для пагинации
-            // Сообщения приходят [старые, ..., новые], берем timestamp первого
-            oldestMessageTimestamp = messages[0]?.timestamp || null;
-            console.log("[openChat] Initial oldestMessageTimestamp from API:", oldestMessageTimestamp);
-            messages.forEach(msg => appendMessage(msg, messageList)); // Добавляем в конец
-
-            // Определяем, есть ли еще сообщения для загрузки
-            const initialLoadLimit = chatDetails.limit || 50; // Лимит, с которым пришли сообщения
-            if (messages.length < initialLoadLimit) {
-                hasMoreMessages = false;
-                if (actualLoadMoreBtnInstance) actualLoadMoreBtnInstance.classList.add('hidden');
-                console.log("[openChat] No more messages initially.");
-            } else {
-                hasMoreMessages = true;
-                if (actualLoadMoreBtnInstance) actualLoadMoreBtnInstance.classList.remove('hidden');
-                 console.log("[openChat] Potentially more messages available.");
-            }
+            window.setOldestMessageTimestamp(messages[0]?.timestamp || null);
+            messages.forEach(msg => appendMessage(msg, messageList, false));
+            const initialLoadLimit = chatDetails.limit || 50;
+            window.updateHasMoreMessages(messages.length >= initialLoadLimit);
         }
-        scrollToBottom(messageList, false); // Прокрутка в самый низ
-
-        // Отправляем событие о прочтении на сервер (он сам обновит счетчики и уведомит других)
-        if (socket) {
-            socket.emit('mark_chat_read', chatId);
-            console.log(`Sent mark_chat_read event for chat ${chatId} upon opening.`);
-        }
-
-        // Помечаем чат как прочитанный
-        markChatAsRead(chatId);
+        scrollToBottom(messageList, false);
+        const textarea = document.getElementById('messageTextarea'); if(textarea) textarea.focus();
 
     } catch (error) {
-        console.error('Error opening chat:', error);
-        if (chatPlaceholder) chatPlaceholder.style.display = 'flex'; // Показываем плейсхолдер
-        if (chatView) chatView.classList.add('hidden'); // Скрываем вид чата
-        // Можно показать сообщение об ошибке пользователю
-        showToastNotification({ text: `Не удалось загрузить чат: ${error.message}`, senderName: 'Ошибка', type: 'error' });
+        console.error('[openChat] Ошибка:', error);
+        window.currentChatId = null; // Сбрасываем ID
+        if (chatPlaceholder) chatPlaceholder.style.display = 'flex';
+        if (chatView) chatView.classList.add('hidden');
+        if (typeof window.showToastNotification === 'function') {
+             window.showToastNotification({ text: `Не удалось загрузить чат: ${error.message}`, senderName: 'Ошибка', type: 'error' });
+        } else { alert(`Не удалось загрузить чат: ${error.message}`); }
     } finally {
         isLoadingMessages = false;
     }
 };
-
-/**
- * Обрабатывает входящее сообщение от Socket.IO.
- * @param {string} chatId - ID чата.
- * @param {object} message - Объект сообщения.
- */
-const handleIncomingMessage = (chatId, message) => {
-    const chatListElement = document.getElementById('chatList');
-    const messageList = document.getElementById('messageList'); // Контейнер сообщений активного чата
-
-    // 1. Обновление списка чатов (Sidebar)
-    const chatListItem = document.querySelector(`.chat-list-item[data-chat-id="${chatId}"]`);
-    if (chatListItem) {
-        const lastMessageEl = chatListItem.querySelector('.chat-last-message');
-        const timestampEl = chatListItem.querySelector('.chat-timestamp');
-
-        // Обновляем последнее сообщение и время
-        if (lastMessageEl && message.text) {
-            const snippet = message.text.length > 35 ? message.text.substring(0, 32) + '...' : message.text;
-            lastMessageEl.innerHTML = ''; // Очищаем
-            if(message.isOwnMessage) {
-                const selfPrefix = document.createElement('span'); 
-                selfPrefix.className = 'self-prefix'; 
-                selfPrefix.textContent = 'Вы: ';
-                lastMessageEl.appendChild(selfPrefix);
-            }
-            lastMessageEl.appendChild(document.createTextNode(snippet));
-        }
-        if (timestampEl && message.timestamp) {
-            const date = new Date(message.timestamp);
-            if (!isNaN(date.getTime())) {
-                timestampEl.textContent = date.toLocaleTimeString('ru-RU', { 
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-            } else {
-                timestampEl.textContent = '--:--';
-            }
-        }
-
-        // Перемещаем элемент чата наверх списка
-        if (chatListElement && chatListItem.parentNode === chatListElement) {
-            const noChatsMsg = chatListElement.querySelector('.no-chats-message');
-            if (noChatsMsg) noChatsMsg.remove();
-            chatListElement.prepend(chatListItem);
-        }
-
-        // Обновление бейджа непрочитанных для НЕАКТИВНОГО чата
-        if (chatId !== currentChatId && !message.isOwnMessage) {
-            chatListItem.classList.add('unread'); // Добавляем класс для подсветки
-            let badge = chatListItem.querySelector('.unread-badge');
-            const metaContainer = chatListItem.querySelector('.chat-meta');
-
-            if (!badge && metaContainer) {
-                badge = document.createElement('span');
-                badge.className = 'unread-badge';
-                badge.id = `unread-badge-${chatId}`;
-                metaContainer.appendChild(badge);
-            }
-
-            if (badge) {
-                const currentCount = parseInt(badge.textContent) || 0;
-                const newCount = currentCount + 1;
-                badge.textContent = newCount > 9 ? '9+' : newCount;
-                badge.style.display = 'inline-block';
-                badge.classList.add('animate-pulse');
-                setTimeout(() => badge.classList.remove('animate-pulse'), 1500);
-            }
-        }
-    }
-
-    // 2. Добавление сообщения в ОТКРЫТЫЙ чат
-    if (chatId === currentChatId && messageList) {
-        const isNearBottom = messageList.scrollHeight - messageList.scrollTop - messageList.clientHeight < 150;
-        appendMessage(message, messageList, false);
-
-        if (isNearBottom || message.isOwnMessage) {
-            scrollToBottom(messageList, true);
-        }
-
-        // Отправка события о прочтении, если это ВХОДЯЩЕЕ сообщение в АКТИВНОМ чате
-        if (socket && !message.isOwnMessage) {
-            socket.emit('mark_chat_read', chatId);
-            console.log(`Sent mark_chat_read for incoming message in active chat ${chatId}`);
-        }
-    } else if (!message.isOwnMessage) {
-        // 3. Показ всплывающего уведомления для НЕАКТИВНОГО чата
-        showToastNotification({
-            id: message.id,
-            chatId: chatId,
-            senderName: message.senderName || 'Новое сообщение',
-            text: message.text || ''
-        });
-    }
-};
-
 
 /**
  * Загружает предыдущую порцию сообщений для текущего чата.
  */
 const loadMoreMessages = async () => {
     const messageList = document.getElementById('messageList');
-    const loadMoreMessagesBtn = messageList?.querySelector('#loadMoreMessagesBtnInstance');
-    if (!loadMoreMessagesBtn) return; // Кнопки нет - выходим
-
-    const buttonText = loadMoreMessagesBtn.querySelector('.button-text');
-    const spinner = loadMoreMessagesBtn.querySelector('.button-spinner');
-
-    if (!currentChatId || isLoadingMessages || !hasMoreMessages || !messageList) {
-        console.log("Conditions not met for loading more messages.");
-        if (loadMoreMessagesBtn) loadMoreMessagesBtn.classList.add('hidden'); // Скрываем кнопку на всякий случай
-        return;
+    if (!window.currentChatId || isLoadingMessages || !hasMoreMessages || !messageList) {
+        console.log("[loadMoreMessages] Условия не выполнены.");
+        updateLoadMoreButton(false); return;
     }
-
-    isLoadingMessages = true;
-    loadMoreMessagesBtn.disabled = true;
-    if (buttonText) buttonText.textContent = ''; // Очищаем текст кнопки
-    if (spinner) spinner.style.display = 'inline-block'; // Показываем спиннер
-
+    isLoadingMessages = true; updateLoadMoreButton(true, true);
     try {
-        console.log(`Loading older messages for chat ${currentChatId}, before timestamp: ${oldestMessageTimestamp}`);
-        const url = `/api/chats/${currentChatId}/messages/history?limit=30&beforeTimestamp=${oldestMessageTimestamp || ''}`; // Увеличил лимит до 30
-        const response = await fetch(url);
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-            throw new Error(result.error || 'Не удалось загрузить историю сообщений.');
-        }
-
+        const beforeTsParam = (typeof oldestMessageTimestamp === 'number' && oldestMessageTimestamp > 0) ? oldestMessageTimestamp : '';
+        const limit = 30; const url = `/chats/${window.currentChatId}/messages/history?limit=${limit}&beforeTimestamp=${beforeTsParam}`;
+        console.log(`[loadMoreMessages] Запрос: ${url}`);
+        const response = await fetch(url); const result = await response.json();
+        if (!response.ok || !result.success) { throw new Error(result.error || 'Не удалось загрузить историю.'); }
         if (result.messages && result.messages.length > 0) {
-            const scrollHeightBefore = messageList.scrollHeight;
-            const scrollTopBefore = messageList.scrollTop;
-
-            // Сообщения приходят [старые, ..., новые], добавляем их в НАЧАЛО списка
+            const scrollHeightBefore = messageList.scrollHeight; const scrollTopBefore = messageList.scrollTop;
             result.messages.forEach(msg => appendMessage(msg, messageList, true));
-
-            // Восстанавливаем позицию прокрутки ОТНОСИТЕЛЬНО СТАРЫХ СООБЩЕНИЙ
-            requestAnimationFrame(() => {
-                messageList.scrollTop = scrollTopBefore + (messageList.scrollHeight - scrollHeightBefore);
-            });
-
-            // Обновляем oldestMessageTimestamp на основе самого старого из ПОЛУЧЕННЫХ
-            // (они уже отсортированы старые->новые в ответе API, если getChatMessages работает правильно)
-             oldestMessageTimestamp = result.messages[0]?.timestamp || oldestMessageTimestamp; // Берем timestamp первого (самого старого)
-             console.log("Updated oldestMessageTimestamp after loading more:", oldestMessageTimestamp);
-
-
-            hasMoreMessages = result.hasMore !== false; // hasMore приходит от API
-            console.log("Messages loaded. Has more:", hasMoreMessages);
-            if (!hasMoreMessages) { loadMoreMessagesBtn.classList.add('hidden'); }
-
-        } else {
-            hasMoreMessages = false;
-            loadMoreMessagesBtn.classList.add('hidden');
-            console.log("No more messages to load for this chat.");
-        }
-
+            requestAnimationFrame(() => { messageList.scrollTop = scrollTopBefore + (messageList.scrollHeight - scrollHeightBefore); });
+            window.setOldestMessageTimestamp(result.messages[0]?.timestamp || oldestMessageTimestamp);
+            window.updateHasMoreMessages(result.hasMore === true); // Обновляем флаг и кнопку
+            console.log("[loadMoreMessages] Загружено. Есть еще:", hasMoreMessages);
+        } else { window.updateHasMoreMessages(false); console.log("[loadMoreMessages] Больше нет сообщений."); }
     } catch (error) {
-        console.error("Error loading more messages:", error);
-        if (buttonText) buttonText.textContent = 'Ошибка';
-        if (spinner) spinner.style.display = 'none';
-        // Оставляем кнопку видимой с ошибкой, чтобы пользователь мог попробовать еще раз
-        loadMoreMessagesBtn.disabled = false; // Разблокируем кнопку при ошибке
-    } finally {
-        isLoadingMessages = false;
-        // Обновляем состояние кнопки, только если загрузка не завершена
-        if (hasMoreMessages && loadMoreMessagesBtn && buttonText && spinner) {
-            loadMoreMessagesBtn.disabled = false;
-            buttonText.textContent = 'Загрузить еще';
-            spinner.style.display = 'none';
-        }
-    }
+        console.error("[loadMoreMessages] Ошибка:", error);
+        updateLoadMoreButton(true, false, 'Ошибка загрузки');
+        setTimeout(() => { if (hasMoreMessages) updateLoadMoreButton(true, false); else updateLoadMoreButton(false); }, 3000);
+    } finally { isLoadingMessages = false; if (hasMoreMessages && !isLoadingMessages) updateLoadMoreButton(true, false); }
 };
 
-// --- Функции всплывающих уведомлений ---
-
 /**
- * Создает и показывает всплывающее уведомление о новом сообщении.
- * @param {object} messageData - Данные сообщения (id, chatId, senderName, text, type?).
+ * Обрабатывает входящее сообщение от Socket.IO. (Вызывается из header.ejs)
+ * Обновляет сайдбар и добавляет сообщение в открытый чат.
+ * @param {object} data - Данные события { chatId, message: {...} }.
  */
-function showToastNotification(messageData) {
-    const container = document.getElementById('toast-notification-container');
-    if (!container || !messageData) return;
+window.handleIncomingMessage = (data) => {
+    if (!data || !data.chatId || !data.message) { console.warn('[handleIncomingMessage] Невалидные данные:', data); return; }
+    const { chatId, message } = data;
+    console.log(`[handleIncomingMessage] Обработка сообщения для чата ${chatId}`);
+    const chatListElement = document.getElementById('chatList');
+    const messageList = document.getElementById('messageList'); // Контейнер сообщений
 
-    const toastId = `toast-${messageData.id || Date.now()}`;
-    const existingToast = document.getElementById(toastId);
-    if (existingToast) existingToast.remove(); // Убираем дубликат, если есть
-
-    const toastDiv = document.createElement('div');
-    toastDiv.className = `toast-notification ${messageData.type || 'info'}`; // Добавляем тип для стилизации
-    toastDiv.id = toastId;
-
-    // Переход в чат по клику на сам тост (кроме кнопок)
-    toastDiv.onclick = (e) => {
-         if (!e.target.closest('button') && messageData.chatId) {
-             window.location.href = `/chats/${messageData.chatId}`;
-             hideToast(toastDiv);
-         }
-    };
-
-    let iconClass = 'fa-comment-dots'; // Иконка по умолчанию
-    let borderColor = 'var(--primary-accent, #0d6efd)'; // Цвет полоски
-    if (messageData.type === 'error') { iconClass = 'fa-exclamation-circle'; borderColor = 'var(--danger-color, #dc3545)'; }
-    else if (messageData.type === 'warning') { iconClass = 'fa-exclamation-triangle'; borderColor = 'var(--warning-color, #ffc107)'; }
-    else if (messageData.type === 'success') { iconClass = 'fa-check-circle'; borderColor = 'var(--success-color, #198754)'; }
-
-    toastDiv.style.borderLeftColor = borderColor; // Устанавливаем цвет полоски
-
-    toastDiv.innerHTML = `
-        <div class="toast-icon" style="color: ${borderColor};"><i class="fas ${iconClass}"></i></div>
-        <div class="toast-content">
-            <h5 class="toast-title">${messageData.senderName || 'Уведомление'}</h5>
-            <p class="toast-message">${messageData.text || ''}</p>
-            ${messageData.chatId ? `
-            <div class="toast-actions">
-                <button class="btn-toast-read" data-chat-id="${messageData.chatId}">Прочитано</button>
-                <button class="btn-toast-open" data-chat-id="${messageData.chatId}">Перейти</button>
-            </div>` : ''}
-        </div>
-    `;
-
-    // Обработчики кнопок (только если они есть)
-    if (messageData.chatId) {
-        const readButton = toastDiv.querySelector('.btn-toast-read');
-        const openButton = toastDiv.querySelector('.btn-toast-open');
-        if (readButton) { readButton.addEventListener('click', (e) => { e.stopPropagation(); markChatAsRead(messageData.chatId); hideToast(toastDiv); }); }
-        if (openButton) { openButton.addEventListener('click', (e) => { e.stopPropagation(); window.location.href = `/chats/${messageData.chatId}`; hideToast(toastDiv); }); }
+    // 1. Обновление списка чатов (Sidebar)
+    const chatListItem = chatListElement ? chatListElement.querySelector(`.chat-list-item[data-chat-id="${chatId}"]`) : null;
+    if (chatListItem) {
+        const lastMessageEl = chatListItem.querySelector('.chat-last-message');
+        const timestampEl = chatListItem.querySelector('.chat-timestamp');
+        if (lastMessageEl && message.text) {
+            const snippet = message.text.length > 35 ? message.text.substring(0, 32) + '...' : message.text;
+            lastMessageEl.innerHTML = '';
+             // Используем currentUsername для определения префикса "Вы:"
+             if (message.senderId === currentUsername) {
+                 const selfPrefix = document.createElement('span'); selfPrefix.className = 'self-prefix'; selfPrefix.textContent = 'Вы: ';
+                 lastMessageEl.appendChild(selfPrefix);
+             }
+            lastMessageEl.appendChild(document.createTextNode(snippet));
+        }
+        if (timestampEl && message.timestamp) { timestampEl.textContent = message.timestampFormatted || '--:--'; }
+        if (chatListElement && chatListItem.parentNode === chatListElement) {
+            const noChatsMsg = chatListElement.querySelector('.no-chats-message');
+            if (noChatsMsg) noChatsMsg.remove();
+            chatListElement.prepend(chatListItem);
+        }
+        // Бейдж обновляется через 'chat_list_unread_update'
+    } else if (chatListElement) {
+         // TODO: Добавить логику создания нового элемента чата в списке, если его нет
+         console.warn(`[handleIncomingMessage] Чат ${chatId} не найден в списке. Требуется динамическое добавление.`);
     }
 
-    container.prepend(toastDiv); // Новые уведомления сверху
-    requestAnimationFrame(() => { toastDiv.classList.add('show'); });
+    // 2. Добавление сообщения в ОТКРЫТЫЙ чат
+    if (chatId === window.currentChatId && messageList) {
+        console.log(`[handleIncomingMessage] Добавление сообщения в открытый чат ${chatId}`);
+        const isNearBottom = messageList.scrollHeight - messageList.scrollTop - messageList.clientHeight < 150;
+        // В appendMessage isOwnMessage определится сравнением message.senderId с currentUsername
+        appendMessage(message, messageList, false);
+        if (isNearBottom || message.senderId === currentUsername) { scrollToBottom(messageList, true); }
 
-    // Воспроизведение звука (только для сообщений чата, не для ошибок)
-    if (messageData.chatId && messageData.type !== 'error') {
-        try { new Audio('/sounds/new_message.mp3').play().catch(e => console.warn("Toast audio playback failed:", e)); } catch (e) {}
-    }
-
-    // Автоскрытие через 7 секунд
-    setTimeout(() => { hideToast(toastDiv); }, 7000);
-}
-
-/**
- * Прячет и удаляет всплывающее уведомление.
- * @param {HTMLElement} toastElement - DOM-элемент уведомления.
- */
-function hideToast(toastElement) {
-    if (!toastElement || !toastElement.parentNode) return;
-    toastElement.classList.remove('show');
-    toastElement.classList.add('hide');
-    // Удаляем из DOM после завершения анимации
-    setTimeout(() => {
-        if (toastElement.parentNode) {
-            toastElement.parentNode.removeChild(toastElement);
+        // Отправка события о прочтении (если сообщение не наше)
+        if (socket && message.senderId !== currentUsername) {
+            socket.emit('mark_chat_read', chatId);
+            console.log(`[handleIncomingMessage] Отправлено mark_chat_read для входящего сообщения в активном чате ${chatId}`);
         }
-    }, 500); // Должно совпадать с transition duration в CSS
-}
-
-/**
- * Отправляет событие на сервер для пометки чата прочитанным.
- * @param {string} chatId - ID чата.
- */
-function markChatAsRead(chatId) {
-    if (socket && chatId) {
-        socket.emit('mark_chat_read', chatId);
-        console.log(`Sent mark_chat_read event for chat ${chatId} from toast`);
-        // Обновление UI списка чатов (скрытие бейджа) произойдет через событие от сервера
-    }
-}
-
-
-// --- Глобальная функция обновления счетчика в хедере ---
-window.updateHeaderChatBadge = (totalUnreadCount) => {
-    const tenantBadge = document.getElementById('tenantChatsBadge');
-    const companyBadge = document.getElementById('companyChatsBadge');
-
-    // Определяем, какой бейдж сейчас видим (или должен быть видим)
-    // Предполагаем, что EJS рендерит только один из них
-    const targetBadge = tenantBadge || companyBadge; // Находим первый существующий
-
-    console.log(`[updateHeaderChatBadge] Called with count: ${totalUnreadCount}. Target badge: ${targetBadge ? targetBadge.id : 'Not Found'}`);
-
-    if (targetBadge) {
-        const count = parseInt(totalUnreadCount);
-        if (isNaN(count) || count < 0) {
-            console.warn("[updateHeaderChatBadge] Invalid count received:", totalUnreadCount);
-            targetBadge.style.display = 'none';
-            targetBadge.classList.remove('updated');
-            return;
-        }
-        if (count > 0) {
-            targetBadge.textContent = count > 9 ? '9+' : count;
-            targetBadge.style.display = 'inline-block'; // Показываем бейдж
-            // Анимация обновления
-            targetBadge.classList.remove('updated'); // Сначала убираем класс
-            void targetBadge.offsetWidth; // Форсируем reflow
-            targetBadge.classList.add('updated'); // Добавляем класс для анимации
-        } else {
-            targetBadge.style.display = 'none'; // Скрываем, если счетчик 0
-            targetBadge.classList.remove('updated');
-        }
-        console.log(`[updateHeaderChatBadge] Badge ${targetBadge.id} updated. Text: ${targetBadge.textContent}, Display: ${targetBadge.style.display}`);
     } else {
-        console.warn("[updateHeaderChatBadge] Target header badge element not found.");
+         console.log(`[handleIncomingMessage] Сообщение для чата ${chatId}, но открыт чат ${window.currentChatId}. В DOM не добавляем.`);
     }
 };
 
+/**
+ * Обрабатывает событие прочтения сообщений от другого пользователя. (Вызывается из header.ejs)
+ * Обновляет галочки у отправленных сообщений в ОТКРЫТОМ чате.
+ * @param {object} data - Данные события { chatId, readerId, readUpToTimestamp }.
+ */
+window.handleMessagesRead = (data) => {
+     const { chatId, readerId, readUpToTimestamp } = data;
+     if (chatId === window.currentChatId && readUpToTimestamp && typeof readUpToTimestamp === 'number') {
+         const messageList = document.getElementById('messageList');
+         if (!messageList) return;
+         console.log(`[handleMessagesRead] Обновление галочек в чате ${chatId} до ${readUpToTimestamp}`);
+         const outgoingMessages = messageList.querySelectorAll('.message-bubble.own:not(.read)');
+         outgoingMessages.forEach(bubble => {
+             const messageTimestamp = parseInt(bubble.dataset.timestamp || '0');
+             if (messageTimestamp <= readUpToTimestamp) {
+                 const ticksIcon = bubble.querySelector('.message-status-ticks i');
+                 if (ticksIcon && !ticksIcon.classList.contains('fa-check-double')) {
+                      ticksIcon.classList.remove('fa-check'); ticksIcon.classList.add('fa-check-double'); bubble.classList.add('read');
+                 }
+             }
+         });
+     } else {
+         // console.debug(`[handleMessagesRead] Событие прочтения для неактивного чата ${chatId} проигнорировано.`);
+     }
+};
 
-// --- Инициализация при загрузке DOM ---
-document.addEventListener('DOMContentLoaded', () => {
+/**
+ * Отправляет сообщение на сервер.
+ */
+const sendMessage = async () => {
     const messageInputForm = document.getElementById('messageInputForm');
     const messageTextarea = document.getElementById('messageTextarea');
     const sendMessageBtn = document.getElementById('sendMessageBtn');
-    const messageList = document.getElementById('messageList'); // Для view страницы
-    const chatList = document.getElementById('chatList'); // Для списка чатов
+    if (!messageInputForm || !messageTextarea || !sendMessageBtn) { console.error("[sendMessage] Элементы формы не найдены."); return; }
+    const chatId = messageInputForm.dataset.chatId; // Используем data-атрибут
+    const text = messageTextarea.value.trim();
+    if (!chatId || !text || sendMessageBtn.disabled) { console.log("[sendMessage] Условия отправки не выполнены."); return; }
 
-    // --- Инициализация Socket.IO ---
-    if (typeof io !== 'undefined') {
-        // Используем глобальный сокет, если он уже существует
-        if (window.socket) {
-            socket = window.socket;
-            console.log('[Chat Socket.IO] Using existing socket connection');
-        } else {
-            socket = io({ reconnectionAttempts: 5, reconnectionDelay: 3000 });
-            window.socket = socket; // Сохраняем в глобальной области
-            console.log('[Chat Socket.IO] Created new socket connection');
-        }
+    const sendButtonSpinner = sendMessageBtn.querySelector('.button-spinner');
+    const sendButtonIcon = sendMessageBtn.querySelector('i:not(.button-spinner)');
+    sendMessageBtn.disabled = true; if (sendButtonIcon) sendButtonIcon.style.display = 'none'; if (sendButtonSpinner) sendButtonSpinner.style.display = 'inline-block';
 
-        socket.on('connect', () => {
-            console.log('[Chat Socket.IO] Connected, ID:', socket.id);
-            // Регистрируем пользователя после подключения (если пользователь есть в сессии)
-            const currentUsername = document.body.dataset.currentUser;
-            if (currentUsername) {
-                socket.emit('register_user', currentUsername);
-            }
-        });
-        socket.on('disconnect', (reason) => console.warn('[Chat Socket.IO] Disconnected:', reason));
-        socket.on('connect_error', (err) => console.error('[Chat Socket.IO] Connection Error:', err.message));
-
-        // Обработчик нового сообщения
-        socket.on('new_message', (data) => {
-            console.log('[Socket.IO] Received new_message:', data);
-            if (data && data.chatId) {
-                // Если чат открыт, добавляем сообщение
-                if (currentChatId === data.chatId) {
-                    appendMessage(data.message, messageList);
-                    scrollToBottom(messageList, true);
-                } else {
-                    // Обновляем счетчик непрочитанных в списке чатов
-                    const chatItem = document.querySelector(`.chat-item[data-chat-id="${data.chatId}"]`);
-                    if (chatItem) {
-                        const unreadBadge = chatItem.querySelector('.unread-badge');
-                        if (unreadBadge) {
-                            const currentCount = parseInt(unreadBadge.textContent) || 0;
-                            unreadBadge.textContent = currentCount + 1;
-                            unreadBadge.style.display = 'inline-block';
-                        }
-                    }
-                }
-            }
-        });
-
-        // Обработчик статуса прочтения (ГАЛОЧКИ)
-        socket.on('messages_read_up_to', (data) => {
-            console.log('[Socket.IO] Received messages_read_up_to:', data);
-            const { chatId, readerId, readUpToTimestamp } = data;
-            // Обновляем галочки только если этот чат ОТКРЫТ
-            if (chatId === currentChatId && readUpToTimestamp && messageList) {
-                console.log(`Updating ticks in chat ${chatId} up to ${readUpToTimestamp}`);
-                const outgoingMessages = messageList.querySelectorAll('.message-bubble.own:not(.read)'); // Ищем только свои НЕПРОЧИТАННЫЕ
-                outgoingMessages.forEach(bubble => {
-                    const messageTimestamp = parseInt(bubble.dataset.timestamp || '0');
-                    // Обновляем, если сообщение было отправлено ДО или В МОМЕНТ времени прочтения
-                    if (messageTimestamp <= readUpToTimestamp) {
-                        const ticksIcon = bubble.querySelector('.message-status-ticks i');
-                        // Меняем иконку на двойную галочку и добавляем класс 'read'
-                        if (ticksIcon && !ticksIcon.classList.contains('fa-check-double')) {
-                            ticksIcon.classList.remove('fa-check');
-                            ticksIcon.classList.add('fa-check-double');
-                            bubble.classList.add('read'); // Добавляем класс к bubble для стилизации
-                            console.debug(`Tick updated for message timestamp ${messageTimestamp}`);
-                        }
-                    }
-                });
-            }
-        });
-
-        // Обработчики событий Socket.IO для непрочитанных сообщений
-        socket.on('chat_list_unread_update', ({ chatId, unreadCount, timestamp }) => {
-            console.log(`[Chat] Received chat_list_unread_update for chat ${chatId}: ${unreadCount}`);
-            
-            // Обновляем бейдж в списке чатов
-            const chatListItem = document.querySelector(`[data-chat-id="${chatId}"]`);
-            if (chatListItem) {
-                const badge = chatListItem.querySelector('.unread-badge');
-                if (badge) {
-                    if (unreadCount > 0) {
-                        badge.textContent = unreadCount;
-                        badge.classList.remove('hidden');
-                        // Добавляем анимацию для нового сообщения
-                        badge.classList.add('pulse');
-                        setTimeout(() => badge.classList.remove('pulse'), 1000);
-                    } else {
-                        badge.classList.add('hidden');
-                    }
-                }
-            }
-        });
-
-        socket.on('header_unread_update', ({ totalUnreadCount, timestamp }) => {
-            console.log(`[Chat] Received header_unread_update: ${totalUnreadCount}`);
-            
-            // Обновляем бейдж в хедере
-            const headerBadge = document.getElementById('header-chat-badge');
-            if (headerBadge) {
-                if (totalUnreadCount > 0) {
-                    headerBadge.textContent = totalUnreadCount;
-                    headerBadge.classList.remove('hidden');
-                    // Добавляем анимацию
-                    headerBadge.classList.add('pulse');
-                    setTimeout(() => headerBadge.classList.remove('pulse'), 1000);
-                } else {
-                    headerBadge.classList.add('hidden');
-                }
-            }
-        });
-
-    } else {
-        console.error('Socket.IO library (socket.io.js) not loaded!');
+    try {
+        console.log(`[sendMessage] Отправка сообщения в чат ${chatId}`);
+        const response = await fetch(`/chats/${chatId}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ text }) });
+        const result = await response.json();
+        if (!response.ok || !result.success) { throw new Error(result.error || `Ошибка сервера: ${response.status}`); }
+        console.log('[sendMessage] Сообщение успешно отправлено API:', result);
+        messageTextarea.value = ''; messageTextarea.style.height = 'auto'; messageTextarea.style.height = `${messageTextarea.scrollHeight}px`;
+    } catch (error) {
+        console.error('[sendMessage] Ошибка отправки:', error);
+        if (typeof window.showToastNotification === 'function') { window.showToastNotification({ text: `Не удалось отправить: ${error.message}`, type: 'error' }); }
+        else { alert(`Не удалось отправить: ${error.message}`); }
+    } finally {
+        // Разблокируем кнопку, ТОЛЬКО если поле ввода пустое
+        if (messageTextarea.value.trim() === '') { sendMessageBtn.disabled = true; }
+        else { sendMessageBtn.disabled = false; }
+        if (sendButtonIcon) sendButtonIcon.style.display = 'inline-block'; if (sendButtonSpinner) sendButtonSpinner.style.display = 'none';
     }
+};
 
-    // --- Обработчики формы отправки сообщения ---
+// --- Инициализация при загрузке DOM ---
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("[Chat.js] DOMContentLoaded. Инициализация обработчиков.");
+    const messageInputForm = document.getElementById('messageInputForm');
+    const messageTextarea = document.getElementById('messageTextarea');
+    const sendMessageBtn = document.getElementById('sendMessageBtn');
+    const messageList = document.getElementById('messageList');
+    // --- Обработчики формы отправки ---
     if (messageInputForm && messageTextarea && sendMessageBtn) {
-        const sendMessage = async () => {
-            const chatId = currentChatId || messageInputForm.dataset.chatId;
-            const text = messageTextarea.value.trim();
-            
-            console.log('[SendMessage] Attempting to send message:', { chatId, text });
-            
-            if (!chatId) {
-                console.error('[SendMessage] No chat ID available');
-                showToastNotification({ text: 'Ошибка: ID чата не найден', type: 'error' });
-                return;
-            }
-            
-            if (!text) {
-                console.log('[SendMessage] Empty message, ignoring');
-                return;
-            }
-            
-            if (sendMessageBtn.disabled) {
-                console.log('[SendMessage] Button is disabled, ignoring');
-                return;
-            }
-
-            const sendButtonSpinner = sendMessageBtn.querySelector('.button-spinner');
-            const sendButtonIcon = sendMessageBtn.querySelector('i:not(.button-spinner)');
-
-            // Блокируем кнопку и показываем спиннер
-            sendMessageBtn.disabled = true;
-            if (sendButtonIcon) sendButtonIcon.style.display = 'none';
-            if (sendButtonSpinner) sendButtonSpinner.style.display = 'inline-block';
-
-            try {
-                console.log(`[SendMessage] Sending message to chat ${chatId}`);
-                const response = await fetch(`/chats/${chatId}/messages`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({ text: text })
-                });
-
-                const result = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(result.error || `HTTP error! status: ${response.status}`);
-                }
-                
-                if (!result.success) {
-                    throw new Error(result.error || 'Неизвестная ошибка при отправке');
-                }
-
-                console.log('[SendMessage] Message sent successfully:', result);
-
-                // Очищаем поле ввода
-                messageTextarea.value = '';
-                
-                // Сбрасываем высоту textarea
-                const baseHeight = 42;
-                messageTextarea.style.height = `${baseHeight}px`;
-                
-                // Возвращаем фокус
-                messageTextarea.focus();
-
-                // Автоматическое обновление чата после отправки
-                if (result.message) {
-                    const messageList = document.getElementById('messageList');
-                    if (messageList) {
-                        appendMessage(result.message, messageList);
-                        scrollToBottom(messageList, true);
-                    }
-                }
-
-                // Обновляем список чатов
-                updateChatList();
-
-            } catch (error) {
-                console.error('[SendMessage] Error:', error);
-                showToastNotification({
-                    text: `Не удалось отправить сообщение: ${error.message}`,
-                    type: 'error'
-                });
-            } finally {
-                // Разблокируем кнопку и скрываем спиннер
-                sendMessageBtn.disabled = false;
-                if (sendButtonIcon) sendButtonIcon.style.display = 'inline-block';
-                if (sendButtonSpinner) sendButtonSpinner.style.display = 'none';
-            }
-        };
-
-        // Привязываем обработчики событий
-        messageInputForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            console.log('[SendMessage] Form submitted');
-            sendMessage();
-        });
-
-        messageTextarea.addEventListener('input', () => {
-            const hasText = messageTextarea.value.trim().length > 0;
-            sendMessageBtn.disabled = !hasText;
-            console.log('[SendMessage] Button state updated:', { disabled: !hasText });
-        });
-
-        messageTextarea.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                console.log('[SendMessage] Enter pressed');
-                sendMessage();
-            }
-        });
-
-        // Изначально кнопка отправки выключена
-        sendMessageBtn.disabled = true;
+        messageInputForm.addEventListener('submit', (e) => { e.preventDefault(); sendMessage(); });
+        messageTextarea.addEventListener('input', () => { const hasText = messageTextarea.value.trim().length > 0; sendMessageBtn.disabled = !hasText; const maxHeight=120; messageTextarea.style.height='auto'; messageTextarea.style.height=`${Math.min(messageTextarea.scrollHeight,maxHeight)}px`; });
+        messageTextarea.addEventListener('keydown', (e) => { if (e.key==='Enter' && !e.shiftKey && !sendMessageBtn.disabled) { e.preventDefault(); sendMessage(); } });
+        sendMessageBtn.disabled = true; // Кнопка выключена изначально
     }
+    // --- Обработчик кнопки "Загрузить еще" ---
+    if (messageList) { messageList.addEventListener('click', (event) => { const loadButton = event.target.closest('#loadMoreMessagesBtn'); if (loadButton && !loadButton.disabled) { loadMoreMessages(); } }); }
+    // --- Инициализация открытия чата по URL (только на /chats) ---
+    if (window.location.pathname === '/chats') { const hash = window.location.hash; if (hash && hash.startsWith('#chat-')) { const chatIdToOpen = hash.substring(6); if (chatIdToOpen) { console.log(`[Chat.js Init] Найден хеш: ${chatIdToOpen}. Открытие...`); setTimeout(() => { if (typeof window.openChat === 'function') window.openChat(chatIdToOpen); else console.error("[Chat.js Init] window.openChat не найдена!"); }, 150); } } }
+    // --- Инициализация для страницы /chats/:chatId ---
+    const pathParts = window.location.pathname.split('/'); const isChatViewPage = pathParts.length >= 3 && pathParts[1] === 'chats' && pathParts[2];
+    if (isChatViewPage) { const loadedChatId = pathParts[2]; console.log(`[Chat.js Init] На странице чата: ${loadedChatId}`); window.currentChatId = loadedChatId; if (messageList) { scrollToBottom(messageList, false); const loadMoreBtn = document.getElementById('loadMoreMessagesBtn'); hasMoreMessages = loadMoreBtn && !loadMoreBtn.classList.contains('hidden'); console.log(`[Chat.js Init] Initial hasMoreMessages on chat-view: ${hasMoreMessages}`); } const textarea = document.getElementById('messageTextarea'); if(textarea) textarea.focus(); }
+}); // --- Конец DOMContentLoaded ---
 
-    // --- Обработчик кнопки "Загрузить еще" (для страницы /chats) ---
-     if (chatList && messageList) { // Убедимся, что мы на странице /chats
-         messageList.addEventListener('click', (event) => {
-             const loadButton = event.target.closest('#loadMoreMessagesBtnInstance');
-             if (loadButton) {
-                 loadMoreMessages(); // Вызываем функцию загрузки
-             }
-         });
-     }
+// --- Подписка на события Socket.IO (только если сокет существует) ---
+if (socket) {
+    // 'new_message' и 'messages_read_up_to' обрабатываются в header.ejs -> window.handle...
+    // 'total_unread_update' обрабатывается в header.ejs -> window.updateHeaderChatBadge
 
-    // --- Инициализация открытия чата по URL (если мы на /chats/:chatId) ---
-    const pathParts = window.location.pathname.split('/');
-    const isChatViewPage = pathParts.length >= 3 && pathParts[1] === 'chats' && pathParts[2];
-
-    if (isChatViewPage) {
-        // Мы на странице отдельного чата (/chats/:chatId)
-        // Скрипт инициализации пагинации и прокрутки для этой страницы
-        currentChatId = pathParts[2]; // Устанавливаем текущий ID чата
-        const messageListElement = document.getElementById('messageList');
-        if (messageListElement) {
-            messageListElement.scrollTop = messageListElement.scrollHeight; // Скролл вниз
-            const firstMessageBubble = messageListElement.querySelector('.message-bubble:first-child');
-             if (firstMessageBubble && typeof window.setOldestMessageTimestamp === 'function') {
-                 window.setOldestMessageTimestamp(parseInt(firstMessageBubble.dataset.timestamp || '0'));
-             } else {
-                 // Если сообщений нет или timestamp не найден, отключаем пагинацию
-                  if (typeof window.updateHasMoreMessages === 'function') window.updateHasMoreMessages(false);
-             }
-             // Проверяем, нужно ли изначально скрыть кнопку "Загрузить еще"
-             const initialMessagesCount = messageListElement.querySelectorAll('.message-bubble').length;
-             const loadLimit = 50; // Должно совпадать с лимитом в API
-             if (initialMessagesCount < loadLimit && typeof window.updateHasMoreMessages === 'function') {
-                  window.updateHasMoreMessages(false);
-             } else if (typeof window.updateHasMoreMessages === 'function') {
-                  window.updateHasMoreMessages(true); // Предполагаем, что есть еще
-             }
-        }
-        // Отправляем mark_chat_read при загрузке страницы чата
-        if (socket && currentChatId) {
-            socket.emit('mark_chat_read', currentChatId);
-            console.log(`Sent mark_chat_read for chat ${currentChatId} on page load.`);
-        }
-
-    } else if (window.location.pathname === '/chats') {
-        // Мы на странице списка чатов (/chats)
-        // Инициализация открытия чата по URL-хешу (если есть)
-        const hashChatId = window.location.hash.substring(1); // Получаем ID из #chat-123
-        if (hashChatId && hashChatId.startsWith('chat-')) {
-            const chatIdToOpen = hashChatId.substring(5);
-            setTimeout(() => {
-                if (typeof window.openChat === 'function') {
-                    window.openChat(chatIdToOpen);
-                }
-            }, 150); // Небольшая задержка для рендеринга
-        }
-    }
-
-    // Функция обновления списка чатов
-    async function updateChatList() {
-        try {
-            const response = await fetch('/chats');
-            if (response.ok) {
-                const chats = await response.json();
-                const chatList = document.querySelector('.chat-list');
-                if (chatList) {
-                    chatList.innerHTML = chats.map(chat => `
-                        <div class="chat-item ${chat.id === currentChatId ? 'active' : ''}" data-chat-id="${chat.id}">
-                            <div class="chat-avatar">
-                                <img src="${chat.avatar || '/images/default-avatar.png'}" alt="${chat.name}">
-                                ${chat.unreadCount > 0 ? `<span class="unread-badge">${chat.unreadCount > 9 ? '9+' : chat.unreadCount}</span>` : ''}
-                            </div>
-                            <div class="chat-info">
-                                <div class="chat-name">${chat.name}</div>
-                                <div class="chat-last-message">${chat.lastMessageText || ''}</div>
-                            </div>
-                            <div class="chat-time">${formatTime(chat.lastMessageTimestamp)}</div>
-                        </div>
-                    `).join('');
-                }
+    // Обработка обновления счетчика для КОНКРЕТНОГО чата в списке
+    socket.on('chat_list_unread_update', ({ chatId, unreadCount }) => {
+        console.log(`[Socket.IO Chat.js] Получено chat_list_unread_update для ${chatId}: ${unreadCount}`);
+        const chatListItem = document.querySelector(`.chat-list-item[data-chat-id="${chatId}"]`);
+        if (chatListItem) {
+            const badge = chatListItem.querySelector('.unread-badge');
+            const metaContainer = chatListItem.querySelector('.chat-meta');
+            if (unreadCount > 0) {
+                 chatListItem.classList.add('unread');
+                 let targetBadge = badge;
+                 if (!targetBadge && metaContainer) { const newB = document.createElement('span'); newB.className = 'unread-badge'; newB.id = `unread-badge-${chatId}`; metaContainer.appendChild(newB); targetBadge = newB; }
+                 if (targetBadge) { targetBadge.textContent = unreadCount > 9 ? '9+' : unreadCount; targetBadge.style.display = 'inline-block'; targetBadge.classList.add('pulse'); setTimeout(() => targetBadge.classList.remove('pulse'), 1500); }
+            } else {
+                 chatListItem.classList.remove('unread');
+                 if (badge) { badge.style.display = 'none'; }
             }
-        } catch (error) {
-            console.error('Error updating chat list:', error);
         }
-    }
-
-    // Обновляем список чатов при загрузке и после каждого сообщения
-    document.addEventListener('DOMContentLoaded', updateChatList);
-    socket.on('new_message', updateChatList);
-
-    console.log("[Chat.js] DOM Loaded. Event listeners and Socket.IO initialized.");
-
-    // Запрашиваем начальные значения при загрузке
-    if (socket && socket.connected) {
-        console.log('[Socket.IO] Requesting initial unread counts');
-        socket.emit('get_initial_unread_counts');
-    }
-
-}); // End DOMContentLoaded
+    });
+} else {
+    console.warn("[Chat.js] Socket.IO не инициализирован. Подписка на 'chat_list_unread_update' не выполнена.");
+}
