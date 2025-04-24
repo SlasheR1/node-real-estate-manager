@@ -158,7 +158,15 @@ router.get('/chats', isLoggedIn, async (req, res, next) => {
              return (b.lastMessageTimestamp || 0) - (a.lastMessageTimestamp || 0);
         });
 
+        // Добавляем логирование перед рендерингом
+        log.info(`[GET /chats] Data prepared for rendering. User: ${currentUser.username}, ReaderId: ${currentReaderId}`);
+        validEnrichedChats.forEach(chat => {
+            log.debug(`[GET /chats] Chat ID: ${chat.id}, OtherParticipant: ${chat.otherParticipantName}, Unread: ${chat.unreadCountForCurrentUser}, LastMsgTS: ${chat.lastMessageTimestamp}`);
+        });
+
         // Общий счетчик передается из middleware (res.locals.totalUnreadChatCount)
+        // Добавим логирование и его значения
+        log.info(`[GET /chats] Rendering 'chats' view. TotalUnreadChatCount from locals: ${res.locals.totalUnreadChatCount}`);
 
         res.render('chats', {
             title: 'Мои чаты',
@@ -304,13 +312,28 @@ router.post('/chats/:chatId/messages', isLoggedIn, isChatParticipant, async (req
 
         log.debug(`[POST /chats/:chatId/messages] Sender ID: ${senderId}, Sender Participant ID: ${senderParticipantId}, Recipients to increment: ${recipientsToIncrement.join(', ')}`);
 
-        await firebaseService.updateChatMetadata(chatId, {
+        // Обновляем метаданные чата АТОМАРНО
+        const updateMetadataSuccess = await firebaseService.updateChatMetadata(chatId, {
              lastMessageText: savedMessage.text, lastMessageTimestamp: messageTimestamp,
              lastMessageSenderId: senderId, recipientsToIncrementUnread: recipientsToIncrement
         });
-        const updateLinksPromises = allParticipantIds.map(pId => { if (!participants[pId]) return Promise.resolve(); const isCompany = !(pId.includes('@') || pId.length < 10); const refPath = isCompany ? `company_chats/${pId}/${chatId}` : `user_chats/${pId}/${chatId}`; return db.ref(refPath).set(messageTimestamp); });
-        await Promise.all(updateLinksPromises);
-        log.info(`[POST /chats/:chatId/messages] Updated chat link timestamps for ${allParticipantIds.length} participants.`);
+
+        if (!updateMetadataSuccess) {
+             log.error(`[POST /chats/:chatId/messages] Failed to update chat metadata transactionally for chat ${chatId}. Aborting further updates.`);
+             // Возможно, стоит вернуть ошибку клиенту?
+             // return res.status(500).json({ success: false, error: 'Ошибка обновления данных чата.' });
+        } else {
+             log.info(`[POST /chats/:chatId/messages] Successfully updated chat metadata for ${chatId}`);
+             // Обновляем timestamp'ы в индексах user_chats/company_chats (для сортировки списков)
+             const updateLinksPromises = allParticipantIds.map(pId => {
+                  if (!participants[pId]) return Promise.resolve();
+                  const isCompany = !(pId.includes('@') || pId.length < 10); // Простой способ определить ID компании
+                  const refPath = isCompany ? `company_chats/${pId}/${chatId}` : `user_chats/${pId}/${chatId}`;
+                  return db.ref(refPath).set(messageTimestamp);
+             });
+             await Promise.all(updateLinksPromises);
+             log.info(`[POST /chats/:chatId/messages] Updated chat link timestamps for ${allParticipantIds.length} participants.`);
+        }
 
         const senderInfo = { senderName: currentUser.fullName || senderId };
         const baseMessageForEmit = { id: savedMessage.id, chatId: savedMessage.chatId, senderId: savedMessage.senderId, senderRole: savedMessage.senderRole, text: savedMessage.text, timestamp: messageTimestamp, ...senderInfo, timestampFormatted: new Date(messageTimestamp).toLocaleString('ru-RU', { hour: '2-digit', minute: '2-digit' }) };
@@ -330,7 +353,8 @@ router.post('/chats/:chatId/messages', isLoggedIn, isChatParticipant, async (req
              io.to(userRoom).emit('new_message', { chatId: chatId, message: messageToSend });
              log.info(`[Socket.IO] Emitted 'new_message' to room ${userRoom} for chat ${chatId} (isOwn: ${messageToSend.isOwnMessage})`);
 
-             // Пересчет и отправка счетчика СООБЩЕНИЙ
+             // Пересчет и отправка общего счетчика СООБЩЕНИЙ
+             let targetTotalUnread = 0; // Инициализация
              try {
                   const targetUser = await firebaseService.getUserByUsername(targetUsername);
                   if (targetUser) {
@@ -338,8 +362,18 @@ router.post('/chats/:chatId/messages', isLoggedIn, isChatParticipant, async (req
                        const targetTotalUnread = await firebaseService.calculateTotalUnreadChats(targetUsername, targetUser.companyId, targetReaderId);
                        io.to(userRoom).emit('total_unread_update', { totalUnreadCount: targetTotalUnread, timestamp: Date.now() });
                        log.info(`[Socket.IO] Emitted 'total_unread_update' (${targetTotalUnread}) to room ${userRoom} after new message`);
+
+                       // <<<--- ДОБАВЛЕНО: Отправка обновления для КОНКРЕТНОГО чата в списке --- >>>
+                       // Отправляем только если этот пользователь - один из получателей, чей счетчик увеличился
+                       if (targetReaderId && recipientsToIncrement.includes(targetReaderId)) {
+                           const newUnreadCountForThisChat = (await firebaseService.getChatById(chatId))?.unreadCounts?.[targetReaderId] || 0;
+                           io.to(userRoom).emit('chat_list_unread_update', { chatId: chatId, unreadCount: newUnreadCountForThisChat });
+                           log.info(`[Socket.IO] Emitted 'chat_list_unread_update' (${newUnreadCountForThisChat}) to room ${userRoom} for chat ${chatId}`);
+                       }
+                       // <<<--- КОНЕЦ ДОБАВЛЕНИЯ --- >>>
+
                   } else { log.warn(`[Socket.IO] Target user ${targetUsername} not found for total unread update.`); }
-             } catch(e) { log.error(`Failed to send total unread update to ${targetUsername}:`, e); }
+             } catch(e) { log.error(`Failed to send total unread/chat list update to ${targetUsername}:`, e); }
          }
         res.status(201).json({ success: true, message: 'Сообщение отправлено.', sentMessage: { ...baseMessageForEmit, isOwnMessage: true } });
     } catch (error) { log.error(`[POST /chats/:chatId/messages] Error:`, error); next(error); }
@@ -366,8 +400,26 @@ router.post('/chats', isLoggedIn, async (req, res, next) => {
         else { log.info(`[POST /chats] Found existing chat ${chatId}.`); }
         const newMessageData = { chatId, senderId: tenantId, senderRole: currentUser.role, text: initialMessage.trim(), timestamp: messageTimestamp };
         const savedMessage = await firebaseService.createMessage(newMessageData);
-        if (chatId) { await firebaseService.updateChatMetadata(chatId, { lastMessageText: savedMessage.text, lastMessageTimestamp: messageTimestamp, lastMessageSenderId: tenantId, recipientsToIncrementUnread: [companyId] }); await db.ref(`user_chats/${tenantId}/${chatId}`).set(messageTimestamp); await db.ref(`company_chats/${companyId}/${chatId}`).set(messageTimestamp); }
-        else { throw new Error("Failed to obtain chatId."); }
+        if (chatId) {
+             // Убедимся, что обновляем и timestamp'ы ссылок user_chats/company_chats
+             const updateMetadataSuccess = await firebaseService.updateChatMetadata(chatId, {
+                  lastMessageText: savedMessage.text,
+                  lastMessageTimestamp: messageTimestamp,
+                  lastMessageSenderId: tenantId,
+                  recipientsToIncrementUnread: [companyId] // Только компания-получатель
+             });
+
+             if (!updateMetadataSuccess) {
+                  log.error(`[POST /chats] Failed to update chat metadata transactionally for chat ${chatId}.`);
+             } else {
+                 log.info(`[POST /chats] Successfully updated chat metadata for ${chatId}`);
+                 // Обновляем timestamp'ы в индексах
+                 await db.ref(`user_chats/${tenantId}/${chatId}`).set(messageTimestamp);
+                 await db.ref(`company_chats/${companyId}/${chatId}`).set(messageTimestamp);
+                 log.info(`[POST /chats] Updated chat link timestamps for ${chatId}`);
+             }
+        }
+        else { throw new Error("Failed to obtain chatId after creating/finding chat."); }
 
         // --- Отправка Socket.IO ---
         const senderInfo = { senderName: currentUser.fullName || tenantId }; const baseMessageForEmit = { id: savedMessage.id, chatId: savedMessage.chatId, senderId: savedMessage.senderId, senderRole: savedMessage.senderRole, text: savedMessage.text, timestamp: messageTimestamp, ...senderInfo, timestampFormatted: new Date(messageTimestamp).toLocaleString('ru-RU', { hour: '2-digit', minute: '2-digit' }) };
@@ -378,7 +430,25 @@ router.post('/chats', isLoggedIn, async (req, res, next) => {
              io.to(userRoom).emit('new_message', { chatId, message: messageToSend });
              log.info(`[Socket.IO] Emitted 'new_message' to room ${userRoom} for chat ${chatId} (isOwn: ${messageToSend.isOwnMessage})`);
              // Пересчет и отправка счетчика СООБЩЕНИЙ
-             try { const targetUser = await firebaseService.getUserByUsername(targetUsername); if (targetUser) { const targetReaderId = (targetUser.Role === 'Owner' || targetUser.Role === 'Staff') ? targetUser.companyId : targetUsername; const targetTotalUnread = await firebaseService.calculateTotalUnreadChats(targetUsername, targetUser.companyId, targetReaderId); io.to(userRoom).emit('total_unread_update', { totalUnreadCount: targetTotalUnread, timestamp: Date.now() }); log.info(`[Socket.IO] Emitted 'total_unread_update' (${targetTotalUnread}) to room ${userRoom} after new chat`); } } catch(e) { log.error(`Failed to send total unread update to ${targetUsername}:`, e); }
+             let targetTotalUnread = 0; // Инициализация
+             try {
+                  const targetUser = await firebaseService.getUserByUsername(targetUsername);
+                  if (targetUser) {
+                       const targetReaderId = (targetUser.Role === 'Owner' || targetUser.Role === 'Staff') ? targetUser.companyId : targetUsername;
+                       const targetTotalUnread = await firebaseService.calculateTotalUnreadChats(targetUsername, targetUser.companyId, targetReaderId);
+                       io.to(userRoom).emit('total_unread_update', { totalUnreadCount: targetTotalUnread, timestamp: Date.now() });
+                       log.info(`[Socket.IO] Emitted 'total_unread_update' (${targetTotalUnread}) to room ${userRoom} after new chat`);
+
+                       // <<<--- ДОБАВЛЕНО: Отправка обновления для КОНКРЕТНОГО чата в списке --- >>>
+                       // Отправляем только если этот пользователь - компания-получатель
+                       if (targetReaderId && targetReaderId === companyId) {
+                           const newUnreadCountForThisChat = (await firebaseService.getChatById(chatId))?.unreadCounts?.[targetReaderId] || 0;
+                           io.to(userRoom).emit('chat_list_unread_update', { chatId: chatId, unreadCount: newUnreadCountForThisChat });
+                           log.info(`[Socket.IO] Emitted 'chat_list_unread_update' (${newUnreadCountForThisChat}) to room ${userRoom} for chat ${chatId}`);
+                       }
+                       // <<<--- КОНЕЦ ДОБАВЛЕНИЯ --- >>>
+
+                  } } catch(e) { log.error(`Failed to send total unread/chat list update to ${targetUsername}:`, e); }
          }
         // --- Конец Socket.IO ---
         res.status(201).json({ success: true, message: 'Сообщение отправлено.', chatId: chatId });

@@ -155,13 +155,14 @@ app.use(async (req, res, next) => {
 
                     if (readerId) {
                         // Вызываем ОБНОВЛЕННУЮ функцию ИЗ firebaseService
+                        log.debug(`[Session MW] Calling calculateTotalUnreadChats for User: ${updatedSessionUser.username}, Company: ${updatedSessionUser.companyId}, Reader: ${readerId}`);
                         const totalUnreadMessagesCount = await firebaseService.calculateTotalUnreadChats(
                             updatedSessionUser.username,
                             updatedSessionUser.companyId,
                             readerId // Передаем ID того, для кого считаем
                         );
                         res.locals.totalUnreadChatCount = totalUnreadMessagesCount; // Устанавливаем в locals
-                        log.debug(`[Session MW] Initial total unread MESSAGE count for ${username} (reader: ${readerId}): ${totalUnreadMessagesCount}`);
+                        log.info(`[Session MW] Initial total unread MESSAGE count for ${username} (reader: ${readerId}): ${totalUnreadMessagesCount}. Set in res.locals.`);
                     } else {
                         log.warn(`[Session MW] Could not determine readerId for initial unread message count for ${username}`);
                         res.locals.totalUnreadChatCount = 0;
@@ -185,10 +186,12 @@ app.use(async (req, res, next) => {
             log.error(`[Session MW] Error fetching/processing session data for ${username}:`, error);
             res.locals.currentUser = req.session.user; // Используем старые данные
             res.locals.totalUnreadChatCount = 0; // Считаем 0 при ошибке
+            log.info(`[Session MW] Error occurred. Setting totalUnreadChatCount to 0 for ${username}`);
         }
     } else { // Пользователя нет в сессии
          res.locals.currentUser = null;
          res.locals.totalUnreadChatCount = 0;
+         log.debug(`[Session MW] No user in session. Setting totalUnreadChatCount to 0.`);
     }
     next();
 });

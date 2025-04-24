@@ -31,6 +31,7 @@ async function getUserByUsername(username) {
 }
 async function calculateTotalUnreadChats(userId, companyId, readerId) {
     let totalUnreadMessages = 0; // Считаем сообщения, а не чаты
+    log.info(`[calculateTotalUnreadChats] Calculating for User: ${userId}, Company: ${companyId}, Reader: ${readerId}`);
     try {
         if (!userId || !readerId) {
              log.warn(`[calculateTotalUnreadChats] Cannot calculate count: userId or readerId is missing.`);
@@ -40,11 +41,15 @@ async function calculateTotalUnreadChats(userId, companyId, readerId) {
         const userChats = await getUserChats(userId, companyId); // Используем существующую функцию
         userChats.forEach(chat => {
             // Суммируем счетчик для конкретного readerId из каждого чата
-            if (chat && chat.unreadCounts && chat.unreadCounts[readerId] && typeof chat.unreadCounts[readerId] === 'number' && chat.unreadCounts[readerId] > 0) {
-                totalUnreadMessages += chat.unreadCounts[readerId]; // Суммируем КОЛИЧЕСТВО СООБЩЕНИЙ
+            const countForReader = chat?.unreadCounts?.[readerId];
+            if (typeof countForReader === 'number' && countForReader > 0) {
+                totalUnreadMessages += countForReader; // Суммируем КОЛИЧЕСТВО СООБЩЕНИЙ
+                log.debug(`[calculateTotalUnreadChats] Chat ${chat.id}: Found ${countForReader} unread for ${readerId}. Current total: ${totalUnreadMessages}`);
+            } else if (chat && chat.id) {
+                 log.debug(`[calculateTotalUnreadChats] Chat ${chat.id}: No unread count found for ${readerId} (Value: ${countForReader})`);
             }
         });
-        log.debug(`[calculateTotalUnreadChats] User: ${userId}, Reader: ${readerId}, Total unread MESSAGES: ${totalUnreadMessages}`);
+        log.info(`[calculateTotalUnreadChats] Final calculated total unread MESSAGES for Reader ${readerId}: ${totalUnreadMessages}`);
     } catch (error) {
         log.error(`[calculateTotalUnreadChats] Error for user ${userId}, reader ${readerId}:`, error);
     }
@@ -946,8 +951,9 @@ async function createChat(chatData) {
              }
         });
 
+        log.info(`[createChat] Attempting to set chat data for new chat ID ${newChatId}:`, chatData);
         await newChatRef.set(chatData);
-        log.info(`[FirebaseService] Chat ${newChatId} created.`);
+        log.info(`[FirebaseService] Chat ${newChatId} created successfully.`);
         return newChatId;
     } catch (error) {
         log.error('[FirebaseService] Error creating chat:', error);
@@ -1015,39 +1021,36 @@ async function updateChatMetadata(chatId, data) {
         log.warn('[updateChatMetadata] Invalid parameters:', { chatId, data });
         return false;
     }
-    const chatRef = db.ref(`chats/${chatId}`);
+    log.info(`[updateChatMetadata] Starting NON-TRANSACTIONAL update for chat ${chatId} with data:`, data);
     try {
-        const transactionResult = await chatRef.transaction(currentData => {
-            if (currentData === null) {
-                log.warn(`[updateChatMetadata TX] Chat ${chatId} not found.`);
-                return undefined; // Отменяем транзакцию
-            }
-            // Обновляем основные метаданные
-            if (data.lastMessageText !== undefined) currentData.lastMessageText = data.lastMessageText;
-            if (data.lastMessageTimestamp !== undefined) currentData.lastMessageTimestamp = data.lastMessageTimestamp;
-            if (data.lastMessageSenderId !== undefined) currentData.lastMessageSenderId = data.lastMessageSenderId;
+        const updates = {};
+        // Обновляем основные метаданные
+        if (data.lastMessageText !== undefined) updates[`/chats/${chatId}/lastMessageText`] = data.lastMessageText;
+        if (data.lastMessageTimestamp !== undefined) updates[`/chats/${chatId}/lastMessageTimestamp`] = data.lastMessageTimestamp;
+        if (data.lastMessageSenderId !== undefined) updates[`/chats/${chatId}/lastMessageSenderId`] = data.lastMessageSenderId;
 
-            // Атомарно обновляем счетчики непрочитанных
-            if (data.recipientsToIncrementUnread && Array.isArray(data.recipientsToIncrementUnread)) {
-                if (!currentData.unreadCounts) { currentData.unreadCounts = {}; }
-                data.recipientsToIncrementUnread.forEach(recipientId => {
-                    if (recipientId) { // Пропускаем пустые ID
-                        currentData.unreadCounts[recipientId] = (currentData.unreadCounts[recipientId] || 0) + 1;
-                    }
-                });
-                log.debug(`[updateChatMetadata TX] Incremented unread counts for recipients in chat ${chatId}. New counts:`, currentData.unreadCounts);
-            }
-            return currentData;
-        });
-
-        if (!transactionResult.committed || !transactionResult.snapshot.exists()) {
-            log.error(`[updateChatMetadata] Transaction failed for chat ${chatId}.`);
-            return false;
+        // Атомарно обновляем счетчики непрочитанных с помощью ServerValue.increment
+        if (data.recipientsToIncrementUnread && Array.isArray(data.recipientsToIncrementUnread)) {
+            log.debug(`[updateChatMetadata] Preparing increments for recipients:`, data.recipientsToIncrementUnread);
+            data.recipientsToIncrementUnread.forEach(recipientId => {
+                if (recipientId) { // Пропускаем пустые ID
+                    updates[`/chats/${chatId}/unreadCounts/${recipientId}`] = admin.database.ServerValue.increment(1);
+                    log.debug(`[updateChatMetadata] Added increment operation for ${recipientId} in chat ${chatId}.`);
+                }
+            });
         }
-        log.info(`[updateChatMetadata] Successfully updated metadata for chat ${chatId}.`);
+
+        if (Object.keys(updates).length === 0) {
+             log.warn(`[updateChatMetadata] No valid fields to update for chat ${chatId}.`);
+             return true; // Нечего обновлять
+        }
+
+        log.debug(`[updateChatMetadata] Performing multi-path update for chat ${chatId}:`, updates);
+        await db.ref().update(updates);
+        log.info(`[updateChatMetadata] Non-transactional update for chat ${chatId} completed successfully.`);
         return true;
     } catch (error) {
-        log.error(`[FirebaseService] Error updating chat metadata for ${chatId}:`, error);
+        log.error(`[updateChatMetadata] Non-transactional update error for chat ${chatId}:`, error);
         return false;
     }
 }
@@ -1136,22 +1139,24 @@ async function updateLastReadTimestamp(chatId, readerId, timestamp) {
  * @returns {Promise<boolean>} Успешность операции.
  */
 async function resetUnreadCountAndTimestamp(chatId, readerId, readTimestamp) {
-     if (!chatId || !readerId || typeof readTimestamp !== 'number') {
-         log.warn(`[resetUnreadCountAndTimestamp] Invalid input. Chat: ${chatId}, Reader: ${readerId}, Timestamp: ${readTimestamp}`);
-         return false;
-     }
-     log.debug(`[resetUnreadCountAndTimestamp] Resetting count and timestamp for ${readerId} in chat ${chatId}`);
-     try {
-         const updates = {};
-         updates[`/chats/${chatId}/unreadCounts/${readerId}`] = 0; // Сброс счетчика
-         updates[`/chats/${chatId}/lastReadTimestamp/${readerId}`] = readTimestamp; // Обновление времени
-         await db.ref().update(updates); // Используем multi-path update
-         log.info(`[resetUnreadCountAndTimestamp] Count reset and timestamp updated for ${readerId} in chat ${chatId}.`);
-         return true;
-     } catch (error) {
-         log.error(`[FirebaseService] Error in resetUnreadCountAndTimestamp for ${readerId} in chat ${chatId}:`, error);
-         return false;
-     }
+    if (!chatId || !readerId) {
+        log.warn('[resetUnreadCountAndTimestamp] Invalid parameters:', { chatId, readerId });
+        return false;
+    }
+    log.info(`[resetUnreadCountAndTimestamp] Starting NON-TRANSACTIONAL reset for Chat: ${chatId}, Reader: ${readerId}, Timestamp: ${readTimestamp}`);
+    try {
+        const updates = {};
+        updates[`/chats/${chatId}/unreadCounts/${readerId}`] = 0; // Сброс счетчика
+        updates[`/chats/${chatId}/lastReadTimestamp/${readerId}`] = readTimestamp; // Обновление времени
+
+        log.debug(`[resetUnreadCountAndTimestamp] Performing multi-path update for chat ${chatId}, reader ${readerId}:`, updates);
+        await db.ref().update(updates);
+        log.info(`[resetUnreadCountAndTimestamp] Non-transactional reset for chat ${chatId}, reader ${readerId} completed successfully.`);
+        return true;
+    } catch (error) {
+        log.error(`[resetUnreadCountAndTimestamp] Non-transactional reset error for chat ${chatId}, reader ${readerId}:`, error);
+        return false;
+    }
 }
 
 /**
@@ -1396,12 +1401,12 @@ module.exports = {
     getUserChats,
     createChat,
     findExistingChat,
-    updateChatMetadata, // Для атомарного обновления счетчиков и метаданных
-    updateChat,         // Для простого обновления (не счетчиков)
-    resetUnreadCount,   // Для сброса счетчика отдельно (можно удалить, если не используется)
-    updateLastReadTimestamp, // Для обновления времени прочтения отдельно (можно удалить, если не используется)
-    resetUnreadCountAndTimestamp, // НОВАЯ ФУНКЦИЯ для атомарного сброса/установки
-    updateChatAtomic,   // Общий метод для атомарных обновлений
+    updateChatMetadata,
+    updateChat,
+    resetUnreadCount,
+    updateLastReadTimestamp,
+    resetUnreadCountAndTimestamp,
+    updateChatAtomic,
     // Messages
     createMessage,
     getChatMessages,
