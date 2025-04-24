@@ -984,12 +984,25 @@
              toastContainer.prepend(toastDiv);
              requestAnimationFrame(() => { toastDiv.classList.add('show'); });
 
-             // Воспроизведение звука (только для сообщений чата, не для ошибок/предупреждений)
-             if (data.chatId && data.type !== 'error' && data.type !== 'warning') {
-                 try {
-                      const audio = new Audio('/sounds/new_message.mp3');
-                      audio.play().catch(e => console.warn("Toast audio playback failed:", e));
-                 } catch (e) {}
+             // Воспроизведение звука уведомлений
+             try {
+                 let soundPath = null;
+                 if (data.chatId && data.type !== 'error' && data.type !== 'warning') {
+                     // Для сообщений чата
+                     soundPath = '/sounds/new_message.mp3';
+                     console.log('[Toast] Playing chat message sound.');
+                 } else if (data.type !== 'error' && data.type !== 'warning' && !data.chatId) {
+                     // Для остальных уведомлений (не чат, не ошибка, не предупреждение)
+                     soundPath = '/sounds/notification.mp3';
+                     console.log('[Toast] Playing general notification sound.');
+                 }
+
+                 if (soundPath) {
+                     const audio = new Audio(soundPath);
+                     audio.play().catch(e => console.warn(`Toast audio playback failed for ${soundPath}:`, e));
+                 }
+             } catch (e) {
+                 console.error('[Toast] Error during sound playback attempt:', e);
              }
 
              setTimeout(() => { hideToast(toastDiv); }, 7000);
