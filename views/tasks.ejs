@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Панель управления</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css"> <!-- Общие стили -->
+    <link rel="stylesheet" href="/css/dashboard.css"> <!-- Стили dashboard, т.к. страница похожа -->
+    <style>
+        /* Дополнительные стили специфичные для tasks.ejs */
+        .tasks-page .task-item {
+            padding: 0.75rem 0.5rem; /* Немного больше отступы */
+            align-items: flex-start; /* Выравнивание по верху для возможно многострочного текста */
+        }
+        .tasks-page .task-details {
+            white-space: normal; /* Разрешаем перенос текста */
+            font-size: 0.9rem;
+            overflow: visible;
+            text-overflow: clip;
+        }
+        .tasks-page .task-date {
+            font-size: 0.8rem;
+            color: #6c757d; /* Bootstrap secondary color */
+            white-space: nowrap;
+        }
+        .task-type-badge {
+            font-size: 0.75rem;
+            padding: 0.2em 0.5em;
+            margin-right: 0.75rem;
+            min-width: 80px; /* Чтобы ширина была примерно одинаковой */
+            text-align: center;
+        }
+         .no-tasks-message {
+             text-align: center;
+             margin-top: 3rem;
+             color: #6c757d;
+         }
+    </style>
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <div class="container mt-4 tasks-page">
+        <h1 class="mb-4"><%= title %></h1>
+
+        <% if (tasks && tasks.length > 0) { %>
+            <div class="list-group shadow-sm">
+                <% tasks.forEach(task => { %>
+                    <a href="<%= task.link %>" class="list-group-item list-group-item-action task-item" data-task-id="<%= task.id %>" data-task-type="<%= task.type %>">
+                        <div class="d-flex w-100 justify-content-start align-items-center">
+                             <!-- Иконка и Тип задачи -->
+                             <div class="me-3 text-center">
+                                <% let iconClass = 'fa-question-circle'; let badgeClass = 'bg-secondary'; let typeText = 'Неизвестно'; %>
+                                <% if (task.type === 'new-message') { iconClass = 'fa-envelope'; badgeClass = 'bg-primary'; typeText = 'Сообщение'; } %>
+                                <% if (task.type === 'pending-booking') { iconClass = 'fa-file-signature'; badgeClass = 'bg-warning text-dark'; typeText = 'Заявка'; } %>
+                                <% if (task.type === 'check-in') { iconClass = 'fa-arrow-right-to-bracket'; badgeClass = 'bg-success'; typeText = 'Заезд'; } %>
+                                <% if (task.type === 'check-out') { iconClass = 'fa-arrow-right-from-bracket'; badgeClass = 'bg-danger'; typeText = 'Выезд'; } %>
+                                <i class="fas <%= iconClass %> fa-fw fa-lg mb-1"></i><br>
+                                <span class="badge rounded-pill <%= badgeClass %> task-type-badge"><%= typeText %></span>
+                             </div>
+
+                            <!-- Детали и Дата -->
+                            <div class="flex-grow-1">
+                                <p class="mb-1 task-details"><%= task.details %></p>
+                                <% if (task.date) { %>
+                                    <small class="task-date">
+                                        <% const dateObj = new Date(task.date); %>
+                                        <%= dateObj.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) %>
+                                        <% if (task.type !== 'pending-booking') { %> <!-- Показываем время для всех, кроме заявок -->
+                                             в <%= dateObj.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) %>
+                                        <% } %>
+                                    </small>
+                                <% } %>
+                            </div>
+                        </div>
+                    </a>
+                <% }); %>
+            </div>
+        <% } else { %>
+            <p class="no-tasks-message fs-5">У вас пока нет активных задач.</p>
+        <% } %>
+
+    </div>
+
+    <%- include('partials/footer') %>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/main.js"></script> <!-- Общий JS, если есть -->
+    <!-- Специфичный JS для tasks.ejs, если потребуется -->
+
+</body>
+</html> 

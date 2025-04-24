@@ -219,6 +219,13 @@ router.get('/chats/:chatId', isLoggedIn, isChatParticipant, async (req, res, nex
                  for (const pId of otherParticipantIds) { if (participants[pId]) { const isCompany = !(pId.includes('@') || pId.length < 10); if (isCompany) { try { const company = await firebaseService.getCompanyById(pId); if (company) { if (company.ownerUsername) otherUsernamesToNotify.add(company.ownerUsername); if (company.staff) Object.keys(company.staff).forEach(uname => otherUsernamesToNotify.add(uname)); } } catch(e){} } else { otherUsernamesToNotify.add(pId); } } }
                  const finalUsernames = Array.from(otherUsernamesToNotify).filter(Boolean);
                  finalUsernames.forEach(username => { if (username !== currentUser.username) { const targetRoom = `user:${username}`; io.to(targetRoom).emit('messages_read_up_to', { chatId: chatId, readerId: readerId, readUpToTimestamp: readTimestamp }); log.info(`[Socket.IO Mark Read] Emitted 'messages_read_up_to' to room ${targetRoom}`); } });
+
+                  // --->>> ДОБАВЛЕНО: Удаление задачи Dashboard <<<---
+                  const taskIdToRemove = `msg-${chatId}`;
+                  io.to(userRoom).emit('dashboard:remove_task', taskIdToRemove);
+                  log.info(`[Socket.IO] Emitted 'dashboard:remove_task' (${taskIdToRemove}) to room ${userRoom}`);
+                  // --->>> КОНЕЦ ДОБАВЛЕНИЯ <<<---
+
              } else { log.error(`[GET /chats/:chatId] Failed to mark chat ${chatId} as read for ${readerId}.`); }
         } else { log.warn(`[GET /chats/:chatId] Could not determine readerId for user ${currentUser.username}.`); }
         // --- КОНЕЦ ПОМЕТКИ О ПРОЧТЕНИИ ---
@@ -279,6 +286,13 @@ router.get('/api/chats/:chatId/details', isLoggedIn, isChatParticipant, async (r
                  for (const pId of otherParticipantIds) { if (participants[pId]) { const isCompany = !(pId.includes('@') || pId.length < 10); if (isCompany) { try { const company = await firebaseService.getCompanyById(pId); if (company) { if (company.ownerUsername) otherUsernamesToNotify.add(company.ownerUsername); if (company.staff) Object.keys(company.staff).forEach(uname => otherUsernamesToNotify.add(uname)); } } catch(e){} } else { otherUsernamesToNotify.add(pId); } } }
                  const finalUsernames = Array.from(otherUsernamesToNotify).filter(Boolean);
                  finalUsernames.forEach(username => { if (username !== currentUser.username) { const targetRoom = `user:${username}`; io.to(targetRoom).emit('messages_read_up_to', { chatId: chatId, readerId: readerId, readUpToTimestamp: readTimestamp }); log.info(`[Socket.IO API] Emitted 'messages_read_up_to' to room ${targetRoom}`); } });
+
+                 // --->>> ДОБАВЛЕНО: Удаление задачи Dashboard <<<---
+                 const taskIdToRemove = `msg-${chatId}`;
+                 io.to(userRoom).emit('dashboard:remove_task', taskIdToRemove);
+                 log.info(`[Socket.IO API] Emitted 'dashboard:remove_task' (${taskIdToRemove}) to room ${userRoom}`);
+                 // --->>> КОНЕЦ ДОБАВЛЕНИЯ <<<---
+
              } else { log.error(`[API GET /chats/:chatId/details] Failed to mark chat ${chatId} as read for ${readerId}.`); }
         } else { log.warn(`[API GET /chats/:chatId/details] Could not determine readerId`); }
         // --- КОНЕЦ ПОМЕТКИ О ПРОЧТЕНИИ ---
@@ -350,7 +364,7 @@ router.post('/chats/:chatId/messages', isLoggedIn, isChatParticipant, async (req
                  isOwnMessage: targetUsername === senderId, // Определяем для каждого получателя
                  isReadByRecipient: false
              };
-             io.to(userRoom).emit('new_message', { chatId: chatId, message: messageToSend });
+             io.to(userRoom).emit('new_message', { chatId, message: messageToSend });
              log.info(`[Socket.IO] Emitted 'new_message' to room ${userRoom} for chat ${chatId} (isOwn: ${messageToSend.isOwnMessage})`);
 
              // Пересчет и отправка общего счетчика СООБЩЕНИЙ
@@ -374,7 +388,27 @@ router.post('/chats/:chatId/messages', isLoggedIn, isChatParticipant, async (req
 
                   } else { log.warn(`[Socket.IO] Target user ${targetUsername} not found for total unread update.`); }
              } catch(e) { log.error(`Failed to send total unread/chat list update to ${targetUsername}:`, e); }
-         }
+
+             // --->>> ДОБАВЛЕНО: Отправка задачи на Dashboard <<<---
+             if (targetUsername !== senderId) { // Отправляем задачу только получателям
+                  try {
+                      const targetUser = await firebaseService.getUserByUsername(targetUsername);
+                      if (targetUser) {
+                           const taskData = {
+                               id: `msg-${chatId}`, // Используем ID чата, т.к. задача одна на чат
+                               type: 'new-message',
+                               details: `Новое сообщение от ${currentUser.fullName || currentUser.username}`,
+                               link: `/chats?chatId=${chatId}`,
+                               time: new Date(messageTimestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute:'2-digit' })
+                           };
+                           io.to(userRoom).emit('dashboard:new_task', taskData);
+                           log.info(`[Socket.IO] Emitted 'dashboard:new_task' (new message) to room ${userRoom}`);
+                       }
+                   } catch (taskError) {
+                       log.error(`[Socket.IO] Error preparing/sending dashboard task for ${targetUsername}:`, taskError);
+                   }
+             }
+        }
         res.status(201).json({ success: true, message: 'Сообщение отправлено.', sentMessage: { ...baseMessageForEmit, isOwnMessage: true } });
     } catch (error) { log.error(`[POST /chats/:chatId/messages] Error:`, error); next(error); }
 });
@@ -430,7 +464,6 @@ router.post('/chats', isLoggedIn, async (req, res, next) => {
              io.to(userRoom).emit('new_message', { chatId, message: messageToSend });
              log.info(`[Socket.IO] Emitted 'new_message' to room ${userRoom} for chat ${chatId} (isOwn: ${messageToSend.isOwnMessage})`);
              // Пересчет и отправка счетчика СООБЩЕНИЙ
-             let targetTotalUnread = 0; // Инициализация
              try {
                   const targetUser = await firebaseService.getUserByUsername(targetUsername);
                   if (targetUser) {
@@ -440,16 +473,35 @@ router.post('/chats', isLoggedIn, async (req, res, next) => {
                        log.info(`[Socket.IO] Emitted 'total_unread_update' (${targetTotalUnread}) to room ${userRoom} after new chat`);
 
                        // <<<--- ДОБАВЛЕНО: Отправка обновления для КОНКРЕТНОГО чата в списке --- >>>
-                       // Отправляем только если этот пользователь - компания-получатель
                        if (targetReaderId && targetReaderId === companyId) {
                            const newUnreadCountForThisChat = (await firebaseService.getChatById(chatId))?.unreadCounts?.[targetReaderId] || 0;
                            io.to(userRoom).emit('chat_list_unread_update', { chatId: chatId, unreadCount: newUnreadCountForThisChat });
                            log.info(`[Socket.IO] Emitted 'chat_list_unread_update' (${newUnreadCountForThisChat}) to room ${userRoom} for chat ${chatId}`);
                        }
                        // <<<--- КОНЕЦ ДОБАВЛЕНИЯ --- >>>
+                  }
+             } catch(e) { log.error(`Failed to send total unread/chat list update to ${targetUsername}:`, e); }
 
-                  } } catch(e) { log.error(`Failed to send total unread/chat list update to ${targetUsername}:`, e); }
-         }
+             // --->>> ДОБАВЛЕНО: Отправка задачи на Dashboard <<<---
+             if (targetUsername !== tenantId) {
+                  try {
+                       const targetUser = await firebaseService.getUserByUsername(targetUsername);
+                       if (targetUser) {
+                           const taskData = {
+                                id: `msg-${chatId}`,
+                                type: 'new-message',
+                                details: `Новое сообщение от ${currentUser.fullName || currentUser.username}`,
+                                link: `/chats?chatId=${chatId}`,
+                                time: new Date(messageTimestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute:'2-digit' })
+                           };
+                           io.to(userRoom).emit('dashboard:new_task', taskData);
+                           log.info(`[Socket.IO] Emitted 'dashboard:new_task' (new chat) to room ${userRoom}`);
+                       }
+                   } catch (taskError) {
+                      log.error(`[Socket.IO] Error preparing/sending dashboard task (new chat) for ${targetUsername}:`, taskError);
+                   }
+             }
+        }
         // --- Конец Socket.IO ---
         res.status(201).json({ success: true, message: 'Сообщение отправлено.', chatId: chatId });
     } catch (error) { log.error('[POST /chats] Error:', error); next(error); }

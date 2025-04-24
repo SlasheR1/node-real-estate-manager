@@ -209,6 +209,122 @@ app.use('/rentals', rentalRoutes); // Используем префикс
 app.use('/company', companyRoutes); // Используем префикс
 app.use(chatRoutes); // Без префикса '/chats', т.к. они уже там
 
+// === НОВЫЙ МАРШРУТ: Страница всех задач ===
+app.get('/tasks', async (req, res, next) => {
+    if (!res.locals.currentUser) {
+        req.session.message = { type: 'error', text: 'Требуется авторизация.' };
+        return req.session.save(() => res.redirect('/login'));
+    }
+    const currentUser = res.locals.currentUser;
+    let allTasks = [];
+    let pageTitle = 'Мои задачи';
+
+    try {
+        log.info(`[GET /tasks] Loading all tasks for ${currentUser.username} (${currentUser.role})`);
+
+        if (currentUser.role === 'Tenant') {
+             pageTitle = 'Задачи по бронированиям';
+             // Для Tenant задачи - это предстоящие заезды/выезды
+             const bookings = await firebaseService.getBookingsByUserId(currentUser.username);
+             const activeBookings = bookings.filter(b => b.Status === 'Активна');
+             const today = new Date(); today.setHours(0,0,0,0);
+             const futureLimit = new Date(today); futureLimit.setDate(today.getDate() + 30); // Смотрим на 30 дней вперед
+
+             const taskPromises = activeBookings.map(async b => {
+                 const property = await firebaseService.getPropertyById(b.PropertyId).catch(() => null);
+                 const checkInTask = {
+                     id: `checkin-${b.Id}`,
+                     type: 'check-in',
+                     details: `Заезд в "${property?.Title || 'Неизв. объект'}"`,
+                     link: `/bookings#booking-${b.Id}`,
+                     date: b.StartDate
+                 };
+                 const checkOutTask = {
+                    id: `checkout-${b.Id}`,
+                    type: 'check-out',
+                    details: `Выезд из "${property?.Title || 'Неизв. объект'}"`,
+                    link: `/bookings#booking-${b.Id}`,
+                    date: b.EndDate
+                 };
+                 return [checkInTask, checkOutTask];
+             });
+             const taskPairs = await Promise.all(taskPromises);
+             allTasks = taskPairs.flat().filter(task => {
+                 const taskDate = task.date ? new Date(task.date) : null;
+                 return taskDate && taskDate >= today && taskDate <= futureLimit;
+             });
+             allTasks.sort((a, b) => new Date(a.date) - new Date(b.date)); // Сортируем по дате
+
+        } else if ((currentUser.role === 'Owner' || currentUser.role === 'Staff') && currentUser.companyId) {
+             pageTitle = 'Задачи компании';
+             const companyId = currentUser.companyId;
+             const ownerUserId = currentUser.username;
+
+             // 1. Непрочитанные сообщения (без лимита)
+             try {
+                 const userChats = await firebaseService.getUserChats(ownerUserId, companyId);
+                 const unreadTasks = await Promise.all(userChats
+                    .filter(chat => chat?.unreadCounts?.[companyId] > 0)
+                    .map(async chat => {
+                        let senderName = 'пользователя';
+                        if (chat?.lastMessageSenderId) {
+                            const sender = await firebaseService.getUserByUsername(chat.lastMessageSenderId).catch(()=>null);
+                            senderName = sender?.FullName || chat.lastMessageSenderId;
+                        }
+                         let detailsText = `Сообщение от ${senderName}`;
+                         if (chat.propertyId) { /* ... добавить детали объекта ... */ }
+                         return { id: `msg-${chat.id}`, type: 'new-message', details: detailsText, link: `/chats/${chat.id}`, date: chat.lastMessageTimestamp ? new Date(chat.lastMessageTimestamp) : new Date(0) };
+                    })
+                 );
+                 allTasks.push(...unreadTasks.filter(Boolean));
+             } catch(e){ log.error('[GET /tasks] Error fetching messages', e); }
+
+             // 2. Ожидающие брони (все)
+             try {
+                 const pendingBookings = await firebaseService.getBookingsByStatus('Ожидает подтверждения', companyId);
+                 const pendingTasks = await Promise.all(pendingBookings.map(async b => {
+                     const property = await firebaseService.getPropertyById(b.PropertyId).catch(()=>null);
+                     const tenant = await firebaseService.getUserByUsername(b.UserId).catch(()=>null);
+                     return { id: `book-${b.Id}`, type: 'pending-booking', details: `Заявка: "${property?.Title || '?'}" от ${tenant?.FullName || b.UserId}`, link: `/rentals#booking-${b.Id}`, date: b.CreatedAt ? new Date(b.CreatedAt) : new Date(0) };
+                 }));
+                 allTasks.push(...pendingTasks.filter(Boolean));
+             } catch(e){ log.error('[GET /tasks] Error fetching pending bookings', e); }
+
+             // 3. Заезды/выезды (на 30 дней вперед)
+              try {
+                 const upcomingData = await firebaseService.getUpcomingCheckInsOuts(companyId, 30);
+                 const checkInOutTasks = await Promise.all([
+                     ...upcomingData.checkIns.map(async b => {
+                         const property = await firebaseService.getPropertyById(b.PropertyId).catch(()=>null);
+                         const tenant = await firebaseService.getUserByUsername(b.UserId).catch(()=>null);
+                         return { id: `checkin-${b.Id}`, type: 'check-in', details: `Заезд: ${tenant?.FullName || b.UserId} в "${property?.Title || '?'}"`, link: `/rentals#booking-${b.Id}`, date: b.StartDate ? new Date(b.StartDate) : null };
+                     }),
+                     ...upcomingData.checkOuts.map(async b => {
+                         const property = await firebaseService.getPropertyById(b.PropertyId).catch(()=>null);
+                         const tenant = await firebaseService.getUserByUsername(b.UserId).catch(()=>null);
+                         return { id: `checkout-${b.Id}`, type: 'check-out', details: `Выезд: ${tenant?.FullName || b.UserId} из "${property?.Title || '?'}"`, link: `/rentals#booking-${b.Id}`, date: b.EndDate ? new Date(b.EndDate) : null };
+                     })
+                 ]);
+                 allTasks.push(...checkInOutTasks.filter(task => task && task.date)); // Добавляем только валидные
+             } catch(e){ log.error('[GET /tasks] Error fetching checkins/outs', e); }
+
+             // Сортируем все задачи по дате (самые новые/ближайшие сверху)
+             allTasks.sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
+
+        } else {
+            // Для админа или других ролей пока задач нет
+             pageTitle = 'Задачи';
+        }
+
+        res.render('tasks', { title: pageTitle, tasks: allTasks });
+
+    } catch (error) {
+        log.error(`[GET /tasks] Error loading tasks page for ${currentUser.username}:`, error);
+        next(error);
+    }
+});
+// === КОНЕЦ НОВОГО МАРШРУТА ===
+
 // --- Базовый маршрут (Dashboard) ---
 app.get('/', async (req, res, next) => {
     if (!res.locals.currentUser) {
@@ -216,7 +332,8 @@ app.get('/', async (req, res, next) => {
         catch (renderError) { log.error("Error rendering index.ejs:", renderError); return next(renderError); }
     }
     const currentUser = res.locals.currentUser;
-    const dashboardData = { role: currentUser.role };
+    let dashboardData = { role: currentUser.role, actionableItems: [], tasks: [] }; // <--- Добавляем tasks: []
+
     try {
         log.info(`[Dashboard GET] Loading data for ${currentUser.username} (${currentUser.role})`);
         // --- Переменные для актуальных задач ---
@@ -231,27 +348,41 @@ app.get('/', async (req, res, next) => {
                 firebaseService.getBookingsByUserId(currentUser.username)
             ]);
             dashboardData.balance = balance;
+            dashboardData.totalBookingsCount = bookings.length;
             const activeBookings = bookings.filter(b => b.Status === 'Активна');
             dashboardData.activeBookingsCount = activeBookings.length;
-             // Добавим детали последних активных броней
-             const activeBookingsWithDetails = await Promise.all(activeBookings.slice(0, 5).map(async b => { // Берем 5 последних
-                 const prop = await firebaseService.getPropertyById(b.PropertyId);
-                 return { ...b, PropertyTitle: prop?.Title || 'Объект удален', StartDateFormatted: b.StartDate ? new Date(b.StartDate).toLocaleDateString('ru-RU') : '?', EndDateFormatted: b.EndDate ? new Date(b.EndDate).toLocaleDateString('ru-RU') : '?'};
+
+            // Находим ближайшее событие (заезд или выезд)
+            let nextEventDate = null;
+            const today = new Date(); today.setHours(0,0,0,0);
+            activeBookings.forEach(b => {
+                const startDate = b.StartDate ? new Date(b.StartDate) : null;
+                const endDate = b.EndDate ? new Date(b.EndDate) : null;
+                if (startDate && startDate >= today) {
+                    if (!nextEventDate || startDate < nextEventDate) {
+                        nextEventDate = startDate;
+                    }
+                }
+                 if (endDate && endDate >= today) {
+                    // Выезд учитываем только если он ПОСЛЕ ближайшего заезда (или если заездов нет)
+                    if (!nextEventDate || endDate < nextEventDate) {
+                         nextEventDate = endDate;
+                    }
+                }
+            });
+            dashboardData.nextEventDateFormatted = nextEventDate
+                 ? nextEventDate.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' })
+                 : null;
+
+             // Оставляем недавние активные брони для таблицы
+             const activeBookingsWithDetails = await Promise.all(activeBookings
+                .sort((a, b) => new Date(b.StartDate || 0) - new Date(a.StartDate || 0)) // Сортируем по дате заезда (новые сверху)
+                .slice(0, 3) // Берем 3 последних активных
+                .map(async b => {
+                    const prop = await firebaseService.getPropertyById(b.PropertyId).catch(()=>null);
+                    return { ...b, PropertyTitle: prop?.Title || 'Объект удален', StartDateFormatted: b.StartDate ? new Date(b.StartDate).toLocaleDateString('ru-RU') : '-', EndDateFormatted: b.EndDate ? new Date(b.EndDate).toLocaleDateString('ru-RU') : '-'};
              }));
              dashboardData.recentActiveBookings = activeBookingsWithDetails;
-
-             // ---> ДОБАВЛЕНО: Поиск актуальных задач для Tenant <--- 
-             activeBookings.forEach(b => {
-                 const startDate = b.StartDate ? new Date(b.StartDate) : null;
-                 const endDate = b.EndDate ? new Date(b.EndDate) : null;
-                 if (startDate && startDate >= todayStart && startDate <= todayEnd) {
-                     dashboardData.actionableItems.push({ type: 'check-in', text: `Заезд сегодня по бронированию объекта "${activeBookingsWithDetails.find(d => d.Id === b.Id)?.PropertyTitle || 'Неизвестный объект'}"`, link: `/bookings#booking-${b.Id}` });
-                 }
-                 if (endDate && endDate >= todayStart && endDate <= todayEnd) {
-                      dashboardData.actionableItems.push({ type: 'check-out', text: `Выезд сегодня по бронированию объекта "${activeBookingsWithDetails.find(d => d.Id === b.Id)?.PropertyTitle || 'Неизвестный объект'}"`, link: `/bookings#booking-${b.Id}` });
-                 }
-             });
-             // ---> КОНЕЦ ДОБАВЛЕНИЯ <--- 
 
         } else if ((currentUser.role === 'Owner' || currentUser.role === 'Staff') && currentUser.companyId) {
             const companyId = currentUser.companyId;
@@ -279,7 +410,8 @@ app.get('/', async (req, res, next) => {
                      ...b,
                      PropertyTitle: propertiesMap.get(b.PropertyId) || 'Объект удален',
                      TenantName: usersMap.get(b.UserId) || 'Неизвестный',
-                     StartDateFormatted: b.StartDate ? new Date(b.StartDate).toLocaleDateString('ru-RU') : '?'
+                     StartDateFormatted: b.StartDate ? new Date(b.StartDate).toLocaleDateString('ru-RU') : '-',
+                     EndDateFormatted: b.EndDate ? new Date(b.EndDate).toLocaleDateString('ru-RU') : '-',
                  }));
              dashboardData.recentBookings = recentBookings;
 
@@ -305,6 +437,185 @@ app.get('/', async (req, res, next) => {
                  }
              });
              // ---> КОНЕЦ ДОБАВЛЕНИЯ <--- 
+
+             // === СБОР ЗАДАЧ для Owner/Staff ===
+             dashboardData.tasks = []; // Инициализируем массив задач
+             const ownerUserId = currentUser.username;
+
+             // 1. Непрочитанные сообщения
+             try {
+                 const userChats = await firebaseService.getUserChats(ownerUserId, companyId);
+                 const unreadMessagesTasks = await Promise.all(userChats
+                    .filter(chat => chat?.unreadCounts?.[companyId] > 0)
+                    .map(async (chat) => {
+                        let senderName = 'пользователя'; // Дефолтное значение
+                        if (chat?.lastMessageSenderId) {
+                            const sender = await firebaseService.getUserByUsername(chat.lastMessageSenderId).catch(() => null);
+                            senderName = sender?.FullName || chat.lastMessageSenderId;
+                        }
+                        // ИСПРАВЛЕНО: Текст задачи для сообщения
+                        let detailsText = `Новое сообщение от ${senderName}`;
+                        if (chat.propertyId) {
+                            const prop = await firebaseService.getPropertyById(chat.propertyId).catch(()=>null);
+                            if(prop?.Title) detailsText += ` (Объект: ${prop.Title.substring(0,15)}...)`;
+                        } else if (chat.bookingId) {
+                             detailsText += ` (Бронь #${chat.bookingId.substring(0,4)}...)`;
+                        }
+
+                        return {
+                            id: `msg-${chat.id}`,
+                            type: 'new-message',
+                            details: detailsText.length > 50 ? detailsText.substring(0, 47) + '...' : detailsText, // Обрезаем длинный текст
+                            link: `/chats/${chat.id}`, // Прямая ссылка на чат
+                            time: chat.lastMessageTimestamp ? new Date(chat.lastMessageTimestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute:'2-digit' }) : ''
+                        };
+                    })
+                 );
+                 // Фильтруем null значения (если возникли ошибки при получении sender/prop)
+                 const validUnreadTasks = unreadMessagesTasks.filter(Boolean);
+                 // Сортируем по времени
+                 validUnreadTasks.sort((a, b) => (b.time && a.time) ? new Date(`1970-01-01T${b.time}:00Z`).getTime() - new Date(`1970-01-01T${a.time}:00Z`).getTime() : 0);
+                 dashboardData.tasks.push(...validUnreadTasks);
+             } catch(err) {
+                log.error('[Dashboard Tasks] Error fetching unread messages:', err);
+             }
+
+            // 2. Ожидающие подтверждения бронирования
+            try {
+                const pendingBookings = await firebaseService.getBookingsByStatus('Ожидает подтверждения', companyId);
+                const populatedPendingBookings = await Promise.all(pendingBookings.map(async (booking) => {
+                    const property = await firebaseService.getPropertyById(booking.PropertyId).catch(() => null);
+                    const tenant = await firebaseService.getUserByUsername(booking.UserId).catch(() => null);
+                    return {
+                        ...booking,
+                        PropertyTitle: property?.Title || 'Неизв. объект',
+                        TenantName: tenant?.FullName || booking.UserId
+                    };
+                }));
+
+                const pendingBookingTasks = populatedPendingBookings.map(booking => {
+                    // ИСПРАВЛЕНО: Текст задачи для бронирования
+                    let detailsText = `Заявка: "${booking.PropertyTitle}" от ${booking.TenantName}`;
+                     return {
+                         id: `book-${booking.Id}`,
+                         type: 'pending-booking',
+                         details: detailsText.length > 50 ? detailsText.substring(0, 47) + '...' : detailsText, // Обрезаем
+                         link: `/rentals#booking-${booking.Id}`,
+                         time: booking.CreatedAt ? new Date(booking.CreatedAt).toLocaleDateString('ru-RU') : ''
+                     };
+                 }).sort((a, b) => {
+                    // Сортировка по дате (YYYY-MM-DD -> Date)
+                    const dateA = a.time ? new Date(a.time.split('.').reverse().join('-')) : 0;
+                    const dateB = b.time ? new Date(b.time.split('.').reverse().join('-')) : 0;
+                    return (dateB || 0) - (dateA || 0);
+                 });
+                 dashboardData.tasks.push(...pendingBookingTasks);
+            } catch(err) {
+                log.error('[Dashboard Tasks] Error fetching pending bookings:', err);
+            }
+
+            // 3. Предстоящие/Сегодняшние Заезды и Выезды
+             try {
+                const upcomingData = await firebaseService.getUpcomingCheckInsOuts(companyId, 2);
+                const { checkIns = [], checkOuts = [] } = upcomingData || {};
+
+                const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+                const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
+                const tomorrowStart = new Date(todayStart); tomorrowStart.setDate(todayStart.getDate() + 1);
+                const tomorrowEnd = new Date(todayEnd); tomorrowEnd.setDate(todayEnd.getDate() + 1);
+
+                // Обработка заездов
+                const checkInTasks = await Promise.all(checkIns.map(async b => {
+                    const startDate = b.StartDate ? new Date(b.StartDate) : null;
+                    if (!startDate) return null;
+
+                    let timeText = '';
+                    if (startDate >= todayStart && startDate <= todayEnd) timeText = 'Сегодня';
+                    else if (startDate >= tomorrowStart && startDate <= tomorrowEnd) timeText = 'Завтра';
+                    if (!timeText) return null;
+
+                    // Дополняем информацией
+                    const property = await firebaseService.getPropertyById(b.PropertyId).catch(() => null);
+                    const tenant = await firebaseService.getUserByUsername(b.UserId).catch(() => null);
+                    const tenantName = tenant?.FullName || b.UserId;
+                    const propertyTitle = property?.Title || 'Неизв. объект';
+
+                    // ИСПРАВЛЕНО: Текст задачи для заезда
+                    let detailsText = `Заезд: ${tenantName} в "${propertyTitle}"`;
+                    return {
+                        id: `checkin-${b.Id}`,
+                        type: 'check-in',
+                        details: detailsText.length > 50 ? detailsText.substring(0, 47) + '...' : detailsText, // Обрезаем
+                        link: `/rentals#booking-${b.Id}`,
+                        time: timeText
+                    };
+                }));
+                dashboardData.tasks.push(...checkInTasks.filter(Boolean));
+
+                // Обработка выездов
+                const checkOutTasks = await Promise.all(checkOuts.map(async b => {
+                    const endDate = b.EndDate ? new Date(b.EndDate) : null;
+                    if (!endDate) return null;
+
+                    let timeText = '';
+                    if (endDate >= todayStart && endDate <= todayEnd) timeText = 'Сегодня';
+                    else if (endDate >= tomorrowStart && endDate <= tomorrowEnd) timeText = 'Завтра';
+                    if (!timeText) return null;
+
+                     // Дополняем информацией
+                    const property = await firebaseService.getPropertyById(b.PropertyId).catch(() => null);
+                    const tenant = await firebaseService.getUserByUsername(b.UserId).catch(() => null);
+                    const tenantName = tenant?.FullName || b.UserId;
+                    const propertyTitle = property?.Title || 'Неизв. объект';
+
+                    // ИСПРАВЛЕНО: Текст задачи для выезда
+                    let detailsText = `Выезд: ${tenantName} из "${propertyTitle}"`;
+                    return {
+                        id: `checkout-${b.Id}`,
+                        type: 'check-out',
+                        details: detailsText.length > 50 ? detailsText.substring(0, 47) + '...' : detailsText, // Обрезаем
+                        link: `/rentals#booking-${b.Id}`,
+                        time: timeText
+                    };
+                }));
+                dashboardData.tasks.push(...checkOutTasks.filter(Boolean));
+
+                 // ОБЩАЯ СОРТИРОВКА ЗАДАЧ (Сначала Заезды/Выезды Сегодня/Завтра, потом Сообщения, потом Заявки)
+                 dashboardData.tasks.sort((a, b) => {
+                     const typeOrder = { 'check-in': 1, 'check-out': 1, 'new-message': 2, 'pending-booking': 3 };
+                     const timeOrder = { 'Сегодня': 1, 'Завтра': 2 };
+
+                     const orderA = typeOrder[a.type] || 4;
+                     const orderB = typeOrder[b.type] || 4;
+
+                     if (orderA !== orderB) return orderA - orderB; // Сортируем по типу
+
+                     // Если тип check-in/out, сортируем по Сегодня/Завтра
+                     if (orderA === 1) {
+                         const timeA = timeOrder[a.time] || 3;
+                         const timeB = timeOrder[b.time] || 3;
+                         if (timeA !== timeB) return timeA - timeB;
+                     }
+
+                     // Если тип Сообщение, сортируем по времени (Date object)
+                     if (orderA === 2) {
+                         return (b.date?.getTime() || 0) - (a.date?.getTime() || 0);
+                     }
+
+                     // Если тип Заявка, сортируем по времени (Date object)
+                     if (orderA === 3) {
+                         return (b.date?.getTime() || 0) - (a.date?.getTime() || 0);
+                     }
+
+                     return 0; // Для одинаковых типов без доп. сортировки
+                 });
+
+            } catch (err) {
+                 log.error('[Dashboard Tasks] Error fetching check-ins/outs:', err);
+            }
+
+            // ИСПРАВЛЕНО: Ограничиваем количество задач до 3
+            dashboardData.tasks = dashboardData.tasks.slice(0, 3);
 
         } else if (currentUser.role === 'Admin') {
             const [users, properties, bookings] = await Promise.all([

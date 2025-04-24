@@ -213,8 +213,8 @@ router.post('/new', isLoggedIn, isTenant, async (req, res, next) => {
              for (const recipient of recipients) {
                   await firebaseService.addNotification(recipient, notificationData);
                   // Дополнительно: Пытаемся отправить мгновенное уведомление, если пользователь онлайн
-                  const targetRoom = `user:${recipient}`; // Используем комнату
-                  io.to(targetRoom).emit('new_booking_pending', { // Отправляем старому событию для обратной совместимости или рефакторинга клиента
+                  const targetRoom = `user:${recipient}`;
+                  io.to(targetRoom).emit('new_booking_pending', {
                         bookingId: newBookingId,
                         propertyTitle: property.Title || '?',
                         tenantName: user.FullName || currentUsername,
@@ -224,6 +224,21 @@ router.post('/new', isLoggedIn, isTenant, async (req, res, next) => {
                   });
                   log.info(`[Booking POST v6] Emitted 'new_booking_pending' to room ${targetRoom}`);
 
+                   // --->>> ДОБАВЛЕНО: Отправка задачи на Dashboard <<<---
+                   try {
+                       const taskData = {
+                            id: `book-${newBookingId}`, // Уникальный ID задачи
+                            type: 'pending-booking',
+                            details: `Заявка на "${property.Title || '?'}" от ${user.FullName || currentUsername}`,
+                            link: `/rentals#booking-${newBookingId}`, // Ссылка на управление арендами
+                            time: new Date(timestamp).toLocaleDateString('ru-RU') // Дата создания
+                       };
+                       io.to(targetRoom).emit('dashboard:new_task', taskData);
+                       log.info(`[Booking POST v6] Emitted 'dashboard:new_task' (new booking) to room ${targetRoom}`);
+                   } catch (taskError) {
+                       log.error(`[Booking POST v6] Error preparing/sending dashboard task for ${recipient}:`, taskError);
+                   }
+                   // --->>> КОНЕЦ ДОБАВЛЕНИЯ <<<---
              }
          } else { log.warn(`[Booking POST v6] Company ${companyId} not found for notification.`); }
 

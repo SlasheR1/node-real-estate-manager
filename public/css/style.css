@@ -3,6 +3,12 @@
 /* ======================== */
 /* ==== ОСНОВНЫЕ СТИЛИ ==== */
 /* ======================== */
+
+/* Добавляем стиль для HTML */
+html {
+    height: 100%;
+}
+
 body, h1, h2, p, ul, li, form, button, a, div, span, header, nav, main, footer, fieldset, legend, label, input, select, textarea, img {
     margin: 0;
     padding: 0;
@@ -17,6 +23,9 @@ body {
     color: #343a40;
     line-height: 1.6;
     font-size: 16px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
 /* ================================ */
@@ -29,6 +38,14 @@ body {
     margin-right: auto;
     padding-left: 25px;
     padding-right: 25px;
+}
+
+/* Добавляем стиль для основного контента, чтобы он растягивался */
+main.container, .dashboard-container-new /* Применяем и к dashboard */ {
+    flex-grow: 1; /* Растягиваем main */
+    padding-top: 30px;
+    padding-bottom: 30px;
+    width: 100%; /* Чтобы занимал всю ширину внутри flex-контейнера */
 }
 
 /* ======================== */
@@ -226,20 +243,17 @@ body {
 /* ============================ */
 
 
-/* --- Стили основного контента и подвала --- */
-main.container {
-    padding-top: 30px;
-    padding-bottom: 30px;
-}
-
+/* --- Стили подвала --- */
 .main-footer {
+     /* flex-shrink: 0; Не нужно, т.к. main растягивается */
      text-align: center;
-     margin-top: 50px;
+     margin-top: auto; /* Автоматический отступ сверху прижимает к низу */
      padding: 30px 20px;
      background-color: #e9ecef;
      color: #6c757d;
      border-top: 1px solid #dee2e6;
      font-size: 0.9rem;
+     width: 100%; /* Чтобы занимал всю ширину */
  }
 
  /* Общие стили кнопок .btn */

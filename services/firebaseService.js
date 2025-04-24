@@ -626,6 +626,110 @@ async function deleteBooking(bookingId) {
     }
 }
 
+/**
+ * Получает бронирования по определенному статусу, опционально фильтруя по компании.
+ * @param {string} status Требуемый статус ('Ожидает подтверждения', 'Активна' и т.д.).
+ * @param {string} [companyId] Опциональный ID компании для фильтрации.
+ * @returns {Promise<Array<object>>} Массив отфильтрованных бронирований.
+ */
+async function getBookingsByStatus(status, companyId = null) {
+    log.info(`[getBookingsByStatus] Fetching bookings with status '${status}'${companyId ? ' for company ' + companyId : ''}`);
+    try {
+        const allBookings = await getAllBookings(); // Получаем все бронирования
+        let filteredBookings = allBookings.filter(booking => booking && booking.Status === status);
+
+        if (companyId) {
+            // Если указана компания, фильтруем дополнительно
+            const companyProperties = await getPropertiesByCompanyId(companyId);
+            const companyPropertyIds = new Set(companyProperties.map(p => p.Id));
+            filteredBookings = filteredBookings.filter(booking =>
+                booking && booking.PropertyId && companyPropertyIds.has(booking.PropertyId)
+            );
+            log.debug(`[getBookingsByStatus] Filtered ${filteredBookings.length} bookings for company ${companyId} and status '${status}'.`);
+        } else {
+            log.debug(`[getBookingsByStatus] Found ${filteredBookings.length} bookings with status '${status}' (all companies).`);
+        }
+
+        return filteredBookings;
+    } catch (error) {
+        log.error(`[FirebaseService] Error in getBookingsByStatus (status: ${status}, company: ${companyId}):`, error);
+        return []; // Возвращаем пустой массив при ошибке
+    }
+}
+
+/**
+ * Получает предстоящие заезды и выезды для активных бронирований в ближайшие N дней.
+ * @param {string} [companyId] Опциональный ID компании для фильтрации.
+ * @param {number} [daysAhead=7] Количество дней для проверки (включая сегодня).
+ * @returns {Promise<{checkIns: Array<object>, checkOuts: Array<object>}>} Объект с массивами заездов и выездов.
+ */
+async function getUpcomingCheckInsOuts(companyId = null, daysAhead = 7) {
+    log.info(`[getUpcomingCheckInsOuts] Fetching upcoming check-ins/outs within ${daysAhead} days${companyId ? ' for company ' + companyId : ''}`);
+    try {
+        const allBookings = await getAllBookings();
+        let relevantBookings = allBookings.filter(b => b && b.Status === 'Активна'); // Только активные
+
+        if (companyId) {
+            // Фильтруем по компании, если указана
+            const companyProperties = await getPropertiesByCompanyId(companyId);
+            const companyPropertyIds = new Set(companyProperties.map(p => p.Id));
+            relevantBookings = relevantBookings.filter(b =>
+                b && b.PropertyId && companyPropertyIds.has(b.PropertyId)
+            );
+            log.debug(`[getUpcomingCheckInsOuts] Found ${relevantBookings.length} active bookings for company ${companyId}.`);
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Устанавливаем начало текущего дня
+        const todayMs = today.getTime();
+
+        const futureDate = new Date(today);
+        futureDate.setDate(today.getDate() + daysAhead);
+        const futureDateMs = futureDate.getTime();
+
+        const checkIns = [];
+        const checkOuts = [];
+
+        relevantBookings.forEach(booking => {
+            try {
+                if (booking.StartDate) {
+                    const startDate = new Date(booking.StartDate);
+                    startDate.setHours(0, 0, 0, 0);
+                    const startMs = startDate.getTime();
+                    if (startMs >= todayMs && startMs < futureDateMs) {
+                         // Добавляем детали объекта для удобства отображения
+                         // Попробуем получить из кэша или сделать доп. запрос
+                         // Пока просто добавим ID
+                        checkIns.push({ ...booking, propertyTitle: `ID: ${booking.PropertyId}` });
+                    }
+                }
+                if (booking.EndDate) {
+                    const endDate = new Date(booking.EndDate);
+                    endDate.setHours(0, 0, 0, 0);
+                    const endMs = endDate.getTime();
+                    // Заезд может быть сегодня, а выезд - нет. Выезды ищем >= today и < future
+                    if (endMs >= todayMs && endMs < futureDateMs) {
+                        checkOuts.push({ ...booking, propertyTitle: `ID: ${booking.PropertyId}` });
+                    }
+                }
+            } catch (dateError) {
+                log.warn(`[getUpcomingCheckInsOuts] Error processing dates for booking ${booking.Id}:`, dateError);
+            }
+        });
+
+        log.info(`[getUpcomingCheckInsOuts] Found ${checkIns.length} upcoming check-ins and ${checkOuts.length} check-outs.`);
+
+        // TODO: Оптимизация - Можно добавить получение названий объектов одним запросом после фильтрации
+        // Например, собрать все PropertyId из checkIns и checkOuts, получить их и добавить Title
+
+        return { checkIns, checkOuts };
+
+    } catch (error) {
+        log.error(`[FirebaseService] Error in getUpcomingCheckInsOuts (company: ${companyId}, days: ${daysAhead}):`, error);
+        return { checkIns: [], checkOuts: [] }; // Возвращаем пустые массивы при ошибке
+    }
+}
+
 
 // --- Отзывы (Reviews) ---
 
@@ -1368,6 +1472,7 @@ module.exports = {
     getAllUsers,
     saveUser,
     deleteUser,
+    calculateTotalUnreadChats,
     // Companies
     getCompanyById,
     createCompany,
@@ -1385,6 +1490,8 @@ module.exports = {
     getBookingById,
     getAllBookings,
     getBookingsByUserId,
+    getBookingsByStatus,
+    getUpcomingCheckInsOuts,
     saveBooking,
     deleteBooking,
     // Reviews
@@ -1413,5 +1520,4 @@ module.exports = {
     // Helpers
     getUserAvatarDataUri,
     getCompanyLogoDataUri,
-    calculateTotalUnreadChats
 };

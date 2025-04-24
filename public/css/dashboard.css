@@ -1,605 +1,554 @@
 /* public/css/dashboard.css */
 
-.dashboard-container {
-    padding-top: 20px;
-    max-width: 1200px; /* Ограничим максимальную ширину для лучшего вида на больших экранах */
+/* Удаляем или комментируем старые стили, если они мешают */
+
+/* .dashboard-container { ... } */
+/* .dashboard-title { ... } */
+/* .dashboard-section { ... } */
+/* .dashboard-widget { ... } */
+
+/* Новые стили для редизайна */
+body {
+    background-color: #f8f9fa; /* Светлый фон для всей страницы */
+    color: #333;
 }
 
-.dashboard-container h1 {
-    font-size: 1.8rem; /* Чуть меньше заголовок */
-    font-weight: 600;
-    margin-bottom: 10px;
-    color: #2c3e50;
+.dashboard-container-new {
+    max-width: 1400px;
+    margin: 2.5rem auto; /* Немного увеличим отступ сверху/снизу */
+    padding: 0 25px; /* Немного увеличим боковые отступы */
 }
 
-.dashboard-subtitle {
-    font-size: 0.95rem; /* Чуть меньше */
-    color: #7f8c8d;
-    margin-bottom: 25px;
-}
-
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); /* Слегка увеличим мин. ширину */
-    gap: 20px; /* Уменьшим гэп */
-}
-
-.dashboard-widget {
-    background-color: #ffffff;
-    border-radius: 10px; /* Меньше скругление */
-    padding: 20px; /* Уменьшим паддинг */
+.dashboard-header {
     display: flex;
-    align-items: center; /* Выровняем иконку по центру */
-    gap: 15px; /* Уменьшим гэп */
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); /* Более мягкая тень */
-    border: 1px solid #e9ecef; /* Более мягкая граница */
-    position: relative;
-    overflow: hidden;
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-    opacity: 0;
-    transform: translateY(15px);
-}
-
-.dashboard-widget:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-}
-
-/* Анимация появления */
-@keyframes slideUpFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(15px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.animate-slide-up {
-    animation: slideUpFadeIn 0.4s ease-out forwards;
-}
-
-.widget-icon {
-    flex-shrink: 0;
-    width: 45px; /* Уменьшим иконку */
-    height: 45px;
-    border-radius: 8px; /* Скругленный квадрат */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.3rem;
-    color: #ffffff;
-}
-
-.widget-content {
-    flex-grow: 1;
-}
-
-.widget-title {
-    font-size: 0.9rem; /* Уменьшим */
-    font-weight: 500;  /* Не такой жирный */
-    color: #6c757d; /* Сероватый */
-    margin-top: 0;
-    margin-bottom: 4px; /* Меньше отступ */
-    line-height: 1.3;
-}
-
-.widget-value {
-    font-size: 1.8rem; /* Уменьшим */
-    font-weight: 600; /* Не такой жирный */
-    color: #343a40;
-    margin-top: 0;
-    margin-bottom: 3px;
-    line-height: 1.1;
-}
-
-.widget-description {
-    font-size: 0.8rem;
-    color: #adb5bd;
-    margin-top: 0;
-    margin-bottom: 10px;
-}
-
-.widget-link {
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--primary-color, #0d6efd);
-    text-decoration: none;
-    transition: color 0.2s ease;
-}
-
-.widget-link:hover {
-    color: #0a58ca;
-    text-decoration: none; /* Уберем подчеркивание */
-}
-
-/* Цвета для ролей (используем один цвет, можно вернуть градиенты) */
-.widget-tenant .widget-icon { background-color: #198754; } /* Зеленый */
-.widget-owner .widget-icon { background-color: #0d6efd; } /* Синий */
-.widget-admin .widget-icon { background-color: #dc3545; } /* Красный */
-
-/* --- Блок Актуальных Задач --- */
-.actionable-items-section {
-    background-color: #ffffff;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    border: 1px solid #e9ecef;
-    /* Убрали padding из .dashboard-widget, чтобы list-group прилегал к краям */
-}
-
-.actionable-items-section .card-header {
-    background-color: #f8f9fa; /* Светлый фон для заголовка */
-    color: #495057; /* Темно-серый текст */
-    font-weight: 600; /* Более жирный заголовок */
-    padding: 0.75rem 1.25rem; /* Стандартный паддинг хедера */
-    border-bottom: 1px solid #e9ecef; /* Граница снизу */
-    border-top-left-radius: 10px; /* Скругление углов хедера */
-    border-top-right-radius: 10px;
-}
-.actionable-items-section .card-header i {
-    margin-right: 0.5rem;
-}
-
-.actionable-items-section .list-group-flush .list-group-item {
-    background-color: transparent;
-    border-top: 1px solid #f1f3f5; /* Очень светлый разделитель */
-    padding: 0; /* Убираем паддинг у li, добавляем в ссылку */
-}
-
-.actionable-items-section .list-group-flush .list-group-item:first-child {
-    border-top: none;
-}
-
-.actionable-items-section .list-group-item a {
-    display: flex;
-    align-items: center;
     justify-content: space-between;
-    padding: 0.8rem 1.25rem; /* Паддинг внутри ссылки */
-    color: #343a40; /* Основной цвет текста */
-    text-decoration: none;
-    transition: background-color 0.15s ease-in-out;
+    align-items: center;
+    margin-bottom: 2.5rem; /* Увеличим отступ */
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #dee2e6;
 }
 
-.actionable-items-section .list-group-item a:hover {
-    background-color: #f8f9fa; /* Фон при наведении */
-    color: #0d6efd;
+.dashboard-main-title {
+    font-size: 2.2rem; /* Немного уменьшим для баланса */
+    font-weight: 700; /* Сделаем жирнее */
+    color: #212529;
+    margin: 0;
 }
 
-.actionable-items-section .list-group-item a > span {
-     flex-grow: 1;
-     margin-right: 1rem;
-     display: flex; /* Для выравнивания иконки и текста */
-     align-items: center;
-     gap: 0.75rem; /* Отступ между иконкой и текстом */
-}
-
-.actionable-items-section .list-group-item a > span > i {
-    font-size: 1em; /* Размер иконки */
-    color: #6c757d; /* Серый цвет иконки по умолчанию */
-    width: 20px; /* Фиксированная ширина для выравнивания */
-    text-align: center;
-}
-
-/* Цвета иконок задач */
-.actionable-item-pending-booking i.fa-hourglass-start { color: #0d6efd; } /* Синий */
-.actionable-item-check-in i.fa-sign-in-alt { color: #198754; } /* Зеленый */
-.actionable-item-check-out i.fa-sign-out-alt { color: #dc3545; } /* Красный */
-
-
-.actionable-items-section .list-group-item .fa-chevron-right {
-    color: #adb5bd; /* Светлая стрелка */
-    transition: transform 0.2s ease-in-out;
-    font-size: 0.8em;
-}
-
-.actionable-items-section .list-group-item a:hover .fa-chevron-right {
-    transform: translateX(4px);
-    color: #0d6efd;
-}
-
-/* --- Общие улучшения для дашборда --- */
-
-.dashboard-title {
+.user-info {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 1.5rem;
-    color: #343a40;
-    font-weight: 600;
 }
 
 .user-role-badge {
-    font-size: 0.75rem;
-    padding: 0.2em 0.6em;
-    border-radius: 0.25rem;
+    padding: 0.4em 0.8em;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 20px;
     color: #fff;
+    text-transform: capitalize;
+}
+
+/* Цвета для ролей */
+.user-role-admin { background-color: #dc3545; }
+.user-role-owner { background-color: #0d6efd; }
+.user-role-staff { background-color: #6c757d; }
+.user-role-tenant { background-color: #198754; }
+
+/* Сетка для карточек - более сложная структура */
+.dashboard-grid {
+    display: grid;
+    /* Определяем колонки: левая шире, две правые уже */
+     grid-template-columns: 2fr 1fr 1fr;
+     /* Определяем строки: пусть высота определяется контентом */
+     grid-template-rows: auto auto auto;
+     /* Определяем области сетки согласно макету */
+     grid-template-areas:
+        "notifications balance  rentals"
+        "notifications objects  tasks"
+        "bookings      bookings bookings";
+    gap: 1.8rem;
+}
+
+/* Назначаем карточкам их области в сетке */
+.card-notifications {
+    grid-area: notifications;
+}
+
+.card-balance {
+    grid-area: balance;
+}
+
+.card-active-rentals {
+    grid-area: rentals;
+}
+
+.card-objects {
+    grid-area: objects;
+}
+
+.card-tasks {
+    grid-area: tasks;
+}
+
+.card-recent-bookings {
+    grid-area: bookings;
+}
+
+/* Стили для карточек */
+.dashboard-card {
+    background-color: #fff;
+    border-radius: 12px; /* Сделаем скругление больше */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06); /* Мягкая, чуть более заметная тень */
+    padding: 1.5rem; /* Уменьшаем внутренние отступы */
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid #eef0f2; /* Очень светлая рамка */
+}
+
+.dashboard-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+}
+
+.card-title {
+    font-size: 1rem;
     font-weight: 500;
-    vertical-align: middle;
+    color: #5a6169;
+    margin-bottom: 1rem; /* Уменьшаем отступ */
+    display: flex;
+    align-items: center;
 }
 
-/* Цвета для ролей (можете настроить) */
-.user-role-tenant { background-color: #198754; } /* Зеленый */
-.user-role-owner { background-color: #0d6efd; } /* Синий */
-.user-role-staff { background-color: #6c757d; } /* Серый */
-.user-role-admin { background-color: #dc3545; } /* Красный */
-
-.dashboard-section {
-    margin-bottom: 2rem;
+.card-title i {
+    margin-right: 0.6rem; /* Уменьшаем отступ иконки */
+    color: #889098;
 }
 
-.widget-list .widget-title {
-    margin-bottom: 1rem;
-    font-size: 1.1rem;
-    font-weight: 500;
-    color: #495057;
+.card-value {
+    font-size: 2.2rem; /* Немного уменьшаем */
+    font-weight: 600;
+    color: #1e2022;
+    margin-bottom: 0.2rem; /* Уменьшаем отступ */
+    line-height: 1.2;
 }
 
-.widget-recent-list {
+.card-description {
+    font-size: 0.85rem;
+    color: #889098;
+    margin-bottom: 1rem; /* Уменьшаем отступ */
+}
+
+.card-link {
+    margin-top: 0.8rem; /* Уменьшаем отступ сверху для компактности */
+    font-size: 0.85rem;
+    color: #0d6efd;
+    text-decoration: none;
+    font-weight: 600; /* Жирнее */
+    align-self: flex-start;
+}
+
+.card-link:hover {
+    text-decoration: underline;
+}
+
+/* Стили для списков Уведомлений */
+.card-notifications .card-list {
     list-style: none;
     padding-left: 0;
-    margin-bottom: 0;
+    margin-bottom: 1rem; /* Отступ до кнопки "Все уведомления" */
 }
 
-.widget-recent-list li {
-    /* display: flex; */ /* Заменяем flex на grid */
-    display: grid;
-    /* Определяем колонки: основное инфо (гибкое), дата (авто), статус (авто) */
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    gap: 0.75rem 1rem; /* Пространство между строками и колонками */
-    align-items: center;
-    padding: 0.85rem 1.25rem;
-    border-bottom: 1px solid #f1f3f5; /* Тонкий разделитель */
-    font-size: 0.875rem; /* Немного меньше */
-    transition: background-color 0.15s ease;
+.card-notifications .card-list li {
+    /* Убираем старые стили grid, используем flex */
+    display: flex;
+    align-items: flex-start; /* Выравнивание по верху */
+    gap: 0.75rem; /* Пространство между иконкой и текстом */
+    padding: 0.7rem 0; /* Увеличим вертикальный отступ */
+    border-bottom: 1px solid #f0f2f5;
+    font-size: 0.85rem; /* Чуть меньше шрифт */
+    line-height: 1.4;
 }
 
-.widget-recent-list li:last-child {
+.card-notifications .card-list li:last-child {
     border-bottom: none;
 }
 
-.widget-recent-list li:hover {
-    background-color: #fcfdff; /* Очень легкий фон при наведении */
-}
-
-.recent-item-main {
-    /* flex-grow: 1; */ /* Больше не нужно с grid */
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    /* margin-right: 1rem; */ /* Управляется gap в grid */
-    min-width: 0; /* Для правильного переноса текста */
-    grid-column: 1 / 2; /* Занимает первую колонку */
-}
-
-.recent-item-icon {
-    color: #6c757d;
-    width: 16px;
-    text-align: center;
+.card-notifications .notification-icon-container {
     flex-shrink: 0;
+    width: 25px; /* Ширина для иконки */
+    text-align: center;
+    margin-top: 2px; /* Небольшой сдвиг вниз для выравнивания */
 }
 
-.recent-item-title {
-    font-weight: 500;
-    color: #343a40;
-    text-decoration: none;
-    transition: color 0.2s;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.card-notifications .notification-icon {
+    font-size: 1rem; /* Размер иконки */
+    color: #6c757d; /* Цвет иконки */
 }
 
-.recent-item-title:hover {
-     color: var(--primary-color, #0d6efd);
-}
-
-.recent-item-details {
-    color: #6c757d;
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    flex-shrink: 0; /* Не сжимать дату */
-    /* margin-right: 1rem; */ /* Управляется gap в grid */
-    font-size: 0.85rem;
-    grid-column: 2 / 3; /* Занимает вторую колонку */
-    white-space: nowrap; /* Предотвращаем перенос даты */
-}
-
-.recent-item-details i {
-    color: #adb5bd;
-}
-
-.recent-item-status {
-    font-size: 0.75rem; /* Меньше статус */
-    padding: 0.25rem 0.6rem;
-    border-radius: 6px; /* Более скругленный */
-    font-weight: 500;
-    white-space: nowrap;
-    border: none; /* Убираем рамку */
-    flex-shrink: 0; /* Не сжимать статус */
-    grid-column: 3 / 4; /* Занимает третью колонку */
-    justify-self: end; /* Прижимаем статус к правому краю колонки */
-}
-
-/* --- Адаптивность для недавних бронирований --- */
-@media (max-width: 992px) {
-    .widget-recent-list li {
-        /* Меняем сетку на две колонки: основное + дата | статус */
-        grid-template-columns: minmax(0, 1fr) auto;
-        /* flex-wrap: wrap; */ /* Больше не нужно */
-        gap: 0.5rem 1rem; /* Пространство между строками и элементами */
-        padding: 0.75rem 1rem;
-    }
-    .recent-item-main {
-        /* width: 100%; */ /* Больше не нужно */
-        /* margin-right: 0; */
-        /* order: 1; */
-        grid-column: 1 / 3; /* Занимает обе колонки в первой строке */
-    }
-    .recent-item-details {
-        /* order: 2; */
-        /* margin-right: 0; */
-        grid-column: 1 / 2; /* Вторая строка, первая колонка */
-        justify-self: start; /* Выравнивание по началу */
-    }
-    .recent-item-status {
-        /* order: 3; */
-        /* margin-left: auto; */ /* Заменено на justify-self */
-        grid-column: 2 / 3; /* Вторая строка, вторая колонка */
-        justify-self: end; /* Выравнивание по концу */
-    }
-}
-
-@media (max-width: 480px) {
-    .recent-bookings-section .card-header {
-        padding: 0.75rem 1rem;
-    }
-    .recent-bookings-section .card-header h2 {
-        font-size: 1rem;
-    }
-    .widget-recent-list li {
-         /* Одна колонка */
-        grid-template-columns: minmax(0, 1fr);
-        padding: 0.7rem 1rem;
-        gap: 0.4rem 0.5rem; /* Уменьшаем gap */
-    }
-    .recent-item-main {
-       gap: 0.5rem;
-       grid-column: 1 / 2; /* Все элементы занимают одну колонку */
-    }
-    .recent-item-details {
-        grid-column: 1 / 2;
-        justify-self: start;
-    }
-    .recent-item-status {
-        grid-column: 1 / 2;
-        justify-self: start; /* Статус тоже слева */
-        /* margin-left: 0; */
-    }
-}
-
-/* Дополнительные стили для флеш-сообщений, если они нужны на этой странице */
-.flash-message {
-    padding: 12px 20px; margin-bottom: 20px; border-radius: 6px;
-    border: 1px solid transparent; position: relative; font-size: 0.95rem;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
- }
- .flash-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
- .flash-error { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
- .flash-info { color: #055160; background-color: #cff4fc; border-color: #b6effb; }
- .flash-message .close-flash {
-    position: absolute; top: 50%; right: 15px; transform: translateY(-50%);
-    background: none; border: none; font-size: 1.5rem; line-height: 1;
-    color: inherit; opacity: 0.6; cursor: pointer; padding: 0 5px;
-  }
-  .flash-message .close-flash:hover { opacity: 0.9; }
-
-/* Убираем анимацию по умолчанию, если она не нужна везде */
-/* .animate-slide-up { animation: none; opacity: 1; transform: none; } */
-/* Если нужна анимация только для виджетов, а не для actionable-items: */
-.dashboard-widget.animate-slide-up {
-     animation: slideUpFadeIn 0.4s ease-out forwards;
-}
-.actionable-items-section { /* Убираем анимацию для блока задач */
-    opacity: 1;
-    transform: none;
-}
-
-/* --- Секция недавних бронирований (Переработанный дизайн) --- */
-.recent-bookings-section {
-    background-color: #ffffff;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    border: 1px solid #e9ecef;
-    margin-bottom: 2rem;
-    overflow: hidden; /* Чтобы скругление работало с внутренними элементами */
-}
-
-.recent-bookings-section .card-header {
-    background-color: #f8f9fa;
-    color: #495057;
-    font-weight: 600;
-    padding: 0.85rem 1.25rem; /* Немного компактнее */
-    border-bottom: 1px solid #e9ecef;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.recent-bookings-section .card-header h2 {
-    margin: 0;
-    font-size: 1.05rem; /* Чуть больше */
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-}
-
-.recent-bookings-section .card-header h2 i {
-    color: #6c757d; /* Иконка в заголовке */
-}
-
-.recent-bookings-section .card-header .view-all-link {
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--primary-color, #0d6efd);
-    text-decoration: none;
-}
-
-.recent-bookings-section .card-header .view-all-link:hover {
-    color: #0a58ca;
-}
-
-.widget-recent-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.widget-recent-list li {
-    display: flex;
-    /* Используем grid для лучшего контроля колонок */
-    /* display: grid; */
-    /* grid-template-columns: minmax(150px, 1.5fr) minmax(100px, 1fr) auto auto; */
-    /* gap: 0.75rem; */
-    align-items: center;
-    padding: 0.85rem 1.25rem;
-    border-bottom: 1px solid #f1f3f5; /* Тонкий разделитель */
-    font-size: 0.875rem; /* Немного меньше */
-    transition: background-color 0.15s ease;
-}
-
-.widget-recent-list li:last-child {
-    border-bottom: none;
-}
-
-.widget-recent-list li:hover {
-    background-color: #fcfdff; /* Очень легкий фон при наведении */
-}
-
-.recent-item-main {
+.card-notifications .notification-content {
     flex-grow: 1;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-right: 1rem;
-    min-width: 0; /* Для правильного переноса текста */
 }
 
-.recent-item-icon {
-    color: #6c757d;
-    width: 16px;
-    text-align: center;
-    flex-shrink: 0;
-}
-
-.recent-item-title {
-    font-weight: 500;
+.card-notifications .notification-title {
+    font-weight: 600;
     color: #343a40;
+    margin-bottom: 0.1rem;
+    display: block; /* Чтобы занимал всю строку */
+}
+
+.card-notifications .notification-message {
+    color: #555;
+    /* Можно добавить обрезку, если нужно */
+    /* display: -webkit-box; */
+    /* -webkit-line-clamp: 2; */
+    /* -webkit-box-orient: vertical; */
+    /* overflow: hidden; */
+}
+
+.card-notifications .notification-link {
+    margin-top: 0.2rem;
+    font-size: 0.8rem;
+    color: #0d6efd;
     text-decoration: none;
-    transition: color 0.2s;
 }
 
-.recent-item-title:hover {
-     color: var(--primary-color, #0d6efd);
+.card-notifications .notification-link:hover {
+    text-decoration: underline;
 }
 
-.recent-item-details {
-    color: #6c757d;
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    flex-shrink: 0; /* Не сжимать дату */
-    margin-right: 1rem;
-    font-size: 0.85rem;
+/* Ссылка "Все уведомления" */
+.card-notifications .card-link {
+     margin-top: auto; /* Прижимаем к низу */
+     text-align: center;
+     display: block;
+     padding-top: 0.5rem;
 }
 
-.recent-item-details i {
-    color: #adb5bd;
+/* --- Стили для карточки Задач (уточнение) --- */
+.card-tasks .card-list {
+     margin-bottom: 0.8rem; /* Еще компактнее */
+     max-height: 250px; /* Ограничим высоту, добавим скролл при необходимости */
+     overflow-y: auto; /* Добавляем скролл, если задач много */
+     padding-right: 5px; /* Небольшой отступ справа для скроллбара */
 }
 
-.recent-item-status {
-    font-size: 0.75rem; /* Меньше статус */
-    padding: 0.25rem 0.6rem;
-    border-radius: 6px; /* Более скругленный */
-    font-weight: 500;
+/* Стилизация скроллбара (опционально, для красоты) */
+.card-tasks .card-list::-webkit-scrollbar {
+    width: 5px;
+}
+.card-tasks .card-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+.card-tasks .card-list::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 10px;
+}
+.card-tasks .card-list::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+}
+
+.card-tasks .card-list li {
+    padding: 0.6rem 0.1rem; /* Компактнее */
+    border-bottom: 1px solid #f0f2f5;
+    font-size: 0.9rem;
+}
+
+.card-tasks .task-type-indicator {
+    grid-column: 1 / 2;
+    padding: 0.2em 0.5em;
+    border-radius: 5px;
+    font-size: 0.7rem; /* Чуть меньше шрифт */
+    font-weight: 600;
+    color: #fff;
+    text-align: center;
+    line-height: 1.3;
     white-space: nowrap;
 }
 
-/* --- Адаптивность для недавних бронирований --- */
-@media (max-width: 992px) {
-    .widget-recent-list li {
-        flex-wrap: wrap; /* Разрешаем перенос */
-        gap: 0.5rem 1rem; /* Пространство между строками и элементами */
-        padding: 0.75rem 1rem;
-    }
-    .recent-item-main {
-        width: 100%; /* Занимает всю ширину в первой строке */
-        margin-right: 0;
-        order: 1; /* Идет первым */
-    }
-    .recent-item-details {
-        order: 2; /* Идет вторым */
-        margin-right: 0;
-    }
-    .recent-item-status {
-        order: 3; /* Идет третьим */
-        margin-left: auto; /* Прижимаем к правому краю, если есть место */
-    }
+.card-tasks .task-type-indicator i {
+    font-size: 0.9em; /* Уменьшим иконку */
 }
 
-@media (max-width: 480px) {
-    .recent-bookings-section .card-header {
-        padding: 0.75rem 1rem;
-    }
-    .recent-bookings-section .card-header h2 {
-        font-size: 1rem;
-    }
-    .widget-recent-list li {
-        padding: 0.7rem 1rem;
-    }
-    .recent-item-main {
-       gap: 0.5rem;
-    }
-    .recent-item-status {
-        margin-left: 0; /* На самых маленьких экранах не прижимаем вправо */
-        /* Можно сделать чтобы статус был под датой */
-        /* width: 100%; */
-        /* text-align: left; */
-        /* margin-top: 0.25rem; */
-    }
+.card-tasks .task-details {
+    grid-column: 1 / 2; /* Описание в первой колонке */
+    grid-row: 1 / 2;
+    font-size: 0.85rem; /* Чуть меньше */
+}
+
+.card-tasks .task-time {
+    grid-column: 2 / 3; /* Время во второй колонке */
+    grid-row: 1 / 3; /* Занимает обе строки по высоте */
+    align-self: center; /* Центрируем по вертикали */
+    text-align: right;
+    font-size: 0.8rem; /* Чуть меньше */
+}
+
+.card-tasks .no-tasks {
+    color: #6c757d;
+    font-style: italic;
+    text-align: center;
+    padding: 1.5rem 0; /* Увеличим отступ если нет задач */
+    border-bottom: none;
+}
+
+/* Стили для таблицы */
+.card-table {
+    grid-column: 1 / -1;
+    /* Убираем padding, т.к. он будет у .table-responsive и .card-title */
+    padding: 0;
+}
+
+.card-table .card-title {
+    padding: 1.5rem 1.5rem 0 1.5rem;
+    margin-bottom: 0.8rem;
+}
+
+.table-responsive {
+    /* Добавляем горизонтальный скролл, если таблица шире */
+    overflow-x: auto;
+    margin-bottom: 0;
+    padding: 0 1.5rem 0.8rem 1.5rem;
+}
+
+/* ИСПРАВЛЕНИЕ: Ссылка "Все бронирования" под таблицей */
+.card-table .card-link {
+    display: block; /* Занимает всю ширину */
+    text-align: center; /* Центрируем текст */
+    padding: 0.8rem 1.5rem 1.2rem; /* Паддинги для отступов */
+    margin-top: 0; /* Убираем верхний отступ, т.к. есть у table-responsive */
+    border-top: 1px solid #dee2e6; /* Линия сверху для отделения */
+}
+
+.dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.dashboard-table th,
+.dashboard-table td {
+    padding: 0.8rem 1rem; /* Возвращаем паддинги ячеек к пред. значению */
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+    white-space: nowrap; /* Предотвращаем перенос строк */
+}
+
+.dashboard-table th {
+    background-color: #f7f9fc; /* Еще светлее фон заголовка */
+    font-weight: 600;
+    color: #5a6169;
+    font-size: 0.85rem; /* Меньше шрифт заголовков */
+    text-transform: uppercase; /* Заголовки капсом */
+    letter-spacing: 0.5px; /* Небольшой разрядка */
+}
+
+.dashboard-table tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.dashboard-table tbody tr:hover {
+    background-color: #f8f9fa; /* Светлый фон при наведении */
+}
+
+/* Значки статусов в таблице */
+.status-badge {
+    display: inline-block;
+    padding: 0.35em 0.8em;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 18px; /* Более круглые */
+    text-align: center;
+}
+
+.status-confirmed {
+    background-color: #d1e7dd; /* Светло-зеленый */
+    color: #0f5132;
+}
+
+.status-pending {
+    background-color: #fff3cd; /* Светло-желтый */
+    color: #664d03;
+}
+
+.status-cancelled {
+    background-color: #f8d7da; /* Светло-красный */
+    color: #58151c;
+}
+
+.status-other {
+    background-color: #e2e3e5; /* Серый */
+    color: #41464b;
 }
 
 /* Адаптивность */
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
     .dashboard-grid {
-        grid-template-columns: 1fr; /* Один виджет в ряд */
-    }
-    .widget-value {
-        font-size: 1.8rem; /* Уменьшаем значение */
-    }
-    .widget-recent-list li {
-        flex-direction: column; /* Элементы списка друг под другом */
-        align-items: flex-start;
-        gap: 5px;
-    }
-    .recent-item-status {
-        margin-left: 0; /* Убираем прижатие вправо */
-        margin-top: 5px;
+        /* На экранах поменьше можно переключиться на 2-3 колонки */
+        grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
     }
 }
 
-@media (max-width: 480px) {
-    .dashboard-widget {
-        flex-direction: column; /* Иконка над контентом */
-        align-items: center; /* Центрируем все */
-        text-align: center;
-        padding: 20px;
+@media (max-width: 992px) { /* Планшеты */
+     .dashboard-grid {
+        /* 2 колонки: Уведомления + Задачи | Баланс/Аренды/Объекты */
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto auto auto;
+        grid-template-areas:
+            "notifications balance"
+            "notifications rentals"
+            "tasks         objects"
+            "bookings      bookings";
     }
-    .widget-icon {
-        margin-bottom: 15px; /* Отступ под иконкой */
+}
+
+@media (max-width: 768px) { /* Мобильные */
+    .dashboard-container-new {
+        padding: 0 15px;
     }
-    .widget-content {
-        width: 100%; /* Контент на всю ширину */
+    .dashboard-header {
+        flex-direction: column; /* В столбик заголовок и роль */
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+    }
+    .dashboard-main-title {
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+    }
+    .dashboard-grid {
+        /* Все карточки в одну колонку */
+        grid-template-columns: 1fr;
+        grid-template-rows: auto; /* Пусть высота определяется автоматически */
+        grid-template-areas:
+            "notifications"
+            "balance"
+            "rentals"
+            "objects"
+            "tasks"
+            "bookings";
+        gap: 1.2rem;
+    }
+    .dashboard-card {
+        padding: 1.2rem;
+    }
+    .card-value {
+        font-size: 2rem;
+    }
+    .card-tasks .card-list {
+        max-height: none; /* Убираем ограничение высоты на мобильных */
+        overflow-y: visible;
+    }
+    .card-tasks .card-list li {
+        grid-template-columns: 1fr auto; /* Описание + Тип | Время */
+        row-gap: 0.2rem;
+        column-gap: 0.5rem;
+        padding: 0.6rem 0;
+    }
+    .card-tasks .task-type-indicator { /* Используем новый класс */
+        grid-column: 1 / 2;
+        grid-row: 2 / 3; /* Тип под описанием */
+        justify-self: start; /* Выравнивание влево */
+        width: fit-content; /* Ширина по содержимому */
+    }
+    .card-tasks .task-details {
+        grid-column: 1 / 2; /* Описание в первой колонке */
+        grid-row: 1 / 2;
+    }
+     .card-tasks .task-time {
+        grid-column: 2 / 3; /* Время во второй колонке */
+        grid-row: 1 / 3; /* Занимает обе строки по высоте */
+        align-self: center; /* Центрируем по вертикали */
+        text-align: right;
+    }
+    .dashboard-table th,
+    .dashboard-table td {
+        padding: 0.7rem 0.8rem;
+    }
+}
+
+.card.tasks-card .card-body {
+    /* Добавляем эти стили */
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Занимаем всю высоту карточки */
+}
+
+/* НОВЫЙ СТИЛЬ: Контейнер для списка задач */
+.task-list-container {
+    flex-grow: 1; /* Занимает доступное пространство */
+    overflow-y: auto; /* Добавляет скролл по вертикали, если нужно */
+    /* Опционально: можно задать max-height, если вся карточка не должна растягиваться */
+    /* max-height: 300px; */
+    margin-bottom: 1rem; /* Отступ снизу перед ссылкой "Все задачи" */
+}
+
+/* Стили для самих задач */
+.task-item {
+    display: flex;
+    align-items: center; /* Выравниваем иконку и текст по центру */
+    justify-content: space-between; /* Время справа */
+    padding: 0.5rem 0; /* Небольшие отступы сверху/снизу */
+    border-bottom: 1px solid #eee; /* Разделитель */
+    gap: 0.5rem; /* Пространство между иконкой и текстом */
+}
+
+.task-item:last-child {
+    border-bottom: none; /* Убираем разделитель у последнего элемента */
+}
+
+.task-icon {
+    flex-shrink: 0; /* Иконка не сжимается */
+    font-size: 1.1rem;
+    min-width: 20px; /* Минимальная ширина для иконки */
+    text-align: center;
+}
+
+.task-details {
+    flex-grow: 1; /* Текст занимает основное пространство */
+    font-size: 0.85rem; /* Немного уменьшим шрифт деталей */
+    color: #333;
+    /* Добавляем для предотвращения некрасивого переноса */
+    white-space: nowrap; /* Запрещаем перенос текста */
+    overflow: hidden; /* Скрываем то, что не помещается */
+    text-overflow: ellipsis; /* Добавляем троеточие */
+}
+
+.task-time {
+    flex-shrink: 0; /* Время не сжимается */
+    font-size: 0.75rem;
+    color: #777;
+    margin-left: 0.5rem; /* Небольшой отступ слева от времени */
+}
+
+/* Ссылка "Все задачи" */
+.tasks-card .card-body > a {
+    display: block; /* Чтобы занимала всю ширину */
+    text-align: center;
+    margin-top: auto; /* Прижимаем ссылку к низу, если есть место */
+    padding-top: 0.5rem;
+}
+
+/* --- Стили сетки для Арендатора --- */
+.tenant-dashboard-grid {
+    grid-template-columns: repeat(4, 1fr); /* 4 равные колонки */
+    grid-template-areas: none; /* Отключаем именованные области */
+    grid-template-rows: auto; /* Высота строк по контенту - оставляем auto или можно попробовать 1fr */
+    grid-auto-rows: 1fr; /* Добавляем это, чтобы строки (даже одна) пытались занять равное пространство */
+    /* Назначать grid-area для каждой карточки арендатора больше не нужно */
+    align-items: stretch; /* Убедимся, что ячейки растягиваются по высоте (хотя это дефолт) */
+}
+
+/* Заставляем карточки внутри сетки арендатора растягиваться на всю высоту ячейки */
+.tenant-dashboard-grid > .dashboard-card {
+    height: 100%;
+}
+
+/* Адаптивность */
+@media (max-width: 1200px) {
+    .dashboard-grid {
+        /* На экранах поменьше можно переключиться на 2-3 колонки */
+        grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
     }
 }

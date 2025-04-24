@@ -12,153 +12,332 @@
 <body>
     <%- include('partials/header') %>
 
-    <main class="container dashboard-container">
-        <h1 class="dashboard-title">
-            <i class="fas fa-tachometer-alt"></i> Панель управления
-            <span class="user-role-badge user-role-<%= currentUser.role.toLowerCase() %>"><%= currentUser.role %></span>
-        </h1>
+    <main class="container dashboard-container-new">
+        <div class="dashboard-header">
+            <h1 class="dashboard-main-title">Панель управления</h1>
+            <div class="user-info">
+                 <span class="user-role-badge user-role-<%= currentUser.role.toLowerCase() %>"><%= currentUser.role %></span>
+                 <!-- Можно добавить выпадающее меню пользователя -->
+            </div>
+        </div>
 
         <%- include('partials/messages') %>
 
-        <!-- Блок Актуальных Задач -->
-        <% if (typeof dashboardData !== 'undefined' && dashboardData.actionableItems && dashboardData.actionableItems.length > 0) { %>
-            <div class="dashboard-section actionable-items-section card shadow-sm mb-4">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Актуальные задачи</h5>
-                </div>
-                <ul class="list-group list-group-flush">
-                    <% dashboardData.actionableItems.forEach(item => { %>
-                        <li class="list-group-item actionable-item actionable-item-<%= item.type %>">
-                            <a href="<%= item.link %>" class="text-decoration-none d-flex justify-content-between align-items-center">
-                                <span>
-                                    <% if (item.type === 'pending-booking') { %> <i class="fas fa-hourglass-start text-primary me-2"></i> <% } %>
-                                    <% if (item.type === 'check-in') { %> <i class="fas fa-sign-in-alt text-success me-2"></i> <% } %>
-                                    <% if (item.type === 'check-out') { %> <i class="fas fa-sign-out-alt text-danger me-2"></i> <% } %>
-                                    <%= item.text %>
-                                </span>
-                                <i class="fas fa-chevron-right text-muted small"></i>
-                            </a>
-                        </li>
-                    <% }) %>
-                </ul>
-            </div>
-        <% } %>
-        <!-- Конец Блока Актуальных Задач -->
+        <div class="dashboard-grid <% if (currentUser.role === 'Tenant') { %>tenant-dashboard-grid<% } %>">
 
-        <div class="row gy-4">
-            <!-- Разные блоки для разных ролей -->
-            <%# === Виджеты для Арендатора (Tenant) === %>
-            <% if (currentUser.role === 'Tenant' && locals.dashboardData && !dashboardData.error) { %>
-                <div class="dashboard-widget widget-tenant animate-slide-up">
-                    <div class="widget-icon"><i class="fas fa-wallet"></i></div>
-                    <div class="widget-content">
-                        <h3 class="widget-title">Текущий баланс</h3>
-                        <p class="widget-value"><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(dashboardData.balance ?? 0) %></p>
-                        <a href="/profile/balance-history" class="widget-link">История операций →</a>
-                    </div>
+            <!-- Карточка Уведомлений (Заменяет Актуальные Задачи) -->
+            <% if (typeof dashboardData !== 'undefined' && dashboardData.actionableItems && dashboardData.actionableItems.length > 0) { %>
+                <div class="dashboard-card card-notifications">
+                    <h5 class="card-title"><i class="fas fa-bell"></i> Уведомления</h5>
+                    <ul class="card-list">
+                        <% dashboardData.actionableItems.forEach(item => { %>
+                            <li class="list-item actionable-item actionable-item-<%= item.type %>">
+                                <a href="<%= item.link %>" class="list-item-link">
+                                    <span>
+                                        <% if (item.type === 'pending-booking') { %> <i class="fas fa-hourglass-start text-primary me-2"></i> <% } %>
+                                        <% if (item.type === 'check-in') { %> <i class="fas fa-sign-in-alt text-success me-2"></i> <% } %>
+                                        <% if (item.type === 'check-out') { %> <i class="fas fa-sign-out-alt text-danger me-2"></i> <% } %>
+                                        <%= item.text %>
+                                    </span>
+                                    <i class="fas fa-chevron-right text-muted small"></i>
+                                </a>
+                            </li>
+                        <% }) %>
+                    </ul>
+                     <a href="/notifications" class="card-link">Все уведомления →</a>
                 </div>
-                <div class="dashboard-widget widget-tenant animate-slide-up" style="animation-delay: 0.1s;">
-                    <div class="widget-icon"><i class="fas fa-calendar-check"></i></div>
-                    <div class="widget-content">
-                        <h3 class="widget-title">Активные бронирования</h3>
-                        <p class="widget-value"><%= dashboardData.activeBookingsCount ?? 0 %></p>
-                        <a href="/bookings" class="widget-link">Все бронирования →</a>
-                    </div>
-                </div>
-                 <% if (dashboardData.recentActiveBookings && dashboardData.recentActiveBookings.length > 0) { %>
-                    <div class="dashboard-widget widget-full-width widget-list animate-slide-up" style="animation-delay: 0.2s;">
-                         <h3 class="widget-title"><i class="fas fa-history"></i> Недавние активные брони</h3>
-                         <ul class="widget-recent-list">
-                             <% dashboardData.recentActiveBookings.forEach(booking => { %>
-                                 <li> <a href="/properties/<%= booking.PropertyId %>" class="recent-item-title"><%= booking.PropertyTitle %></a> <span class="recent-item-details"> <i class="far fa-calendar-alt"></i> <%= booking.StartDateFormatted %> - <%= booking.EndDateFormatted %> </span> <span class="recent-item-status status-active">Активна</span> </li>
-                             <% }) %>
-                         </ul>
-                    </div>
-                 <% } %>
             <% } %>
 
-            <%# === Виджеты для Владельца/Персонала (Owner/Staff) === %>
+            <!-- === Виджеты для Владельца/Персонала (Owner/Staff) === -->
             <% if ((currentUser.role === 'Owner' || currentUser.role === 'Staff') && locals.dashboardData && !dashboardData.error) { %>
-                 <%# Виджет Баланса Компании %>
-                <div class="dashboard-widget widget-owner animate-slide-up">
-                    <div class="widget-icon"><i class="fas fa-wallet"></i></div>
-                    <div class="widget-content">
-                        <h3 class="widget-title">Баланс Компании</h3>
-                        <p class="widget-value"><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(dashboardData.companyBalance ?? 0) %></p>
-                        <p class="widget-description"><%= dashboardData.companyName || 'Название не указано' %></p>
-                        <!-- <a href="/company/balance-history?id=<%= currentUser.companyId %>" class="widget-link">История →</a> -->
-                    </div>
-                </div>
-                 <%# Виджет Мои Объекты %>
-                 <div class="dashboard-widget widget-owner animate-slide-up" style="animation-delay: 0.05s;">
-                    <div class="widget-icon"><i class="fas fa-home"></i></div>
-                    <div class="widget-content">
-                        <h3 class="widget-title">Мои объекты</h3>
-                        <p class="widget-value"><%= dashboardData.totalProperties ?? 0 %></p>
-                        <p class="widget-description"><%= dashboardData.availableProperties ?? 0 %> доступно</p>
-                        <a href="/properties" class="widget-link">Управлять объектами →</a>
-                    </div>
-                </div>
-                 <%# Виджет Аренды %>
-                 <div class="dashboard-widget widget-owner animate-slide-up" style="animation-delay: 0.1s;">
-                    <div class="widget-icon"><i class="fas fa-key"></i></div>
-                    <div class="widget-content">
-                        <h3 class="widget-title">Активные аренды</h3>
-                        <p class="widget-value"><%= dashboardData.activeRentalsCount ?? 0 %></p>
-                        <p class="widget-description">Всего <%= dashboardData.totalRentalsCount ?? 0 %> бронирований</p>
-                        <a href="/rentals" class="widget-link">Управлять арендами →</a>
-                    </div>
+                <div class="dashboard-card card-summary card-balance">
+                    <h5 class="card-title">Баланс Компании</h5>
+                    <div class="card-value"><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(dashboardData.companyBalance ?? 0) %></div>
+                    <p class="card-description"><%= dashboardData.companyName || 'Название не указано' %></p>
+                    <a href="/company/billing" class="card-link">Управлять балансом →</a> <!-- Пример ссылки -->
                 </div>
 
-                 <%# Список недавних бронирований %>
+                 <div class="dashboard-card card-summary card-objects">
+                    <h5 class="card-title">Объекты</h5>
+                    <div class="card-value"><%= dashboardData.totalProperties ?? 0 %></div>
+                    <p class="card-description"><%= dashboardData.availableProperties ?? 0 %> доступно</p>
+                    <a href="/properties" class="card-link">Управлять объектами →</a>
+                </div>
+
+                 <div class="dashboard-card card-summary card-active-rentals">
+                    <h5 class="card-title">Активные Аренды</h5>
+                    <div class="card-value"><%= dashboardData.activeRentalsCount ?? 0 %></div>
+                    <p class="card-description">Всего <%= dashboardData.totalRentalsCount ?? 0 %> бронирований</p>
+                    <a href="/rentals" class="card-link">Управлять арендами →</a>
+                </div>
+
+                 <!-- Карточка Задач (Пример) -->
+                 <div class="dashboard-card card-tasks">
+                    <h5 class="card-title"><i class="fas fa-tasks"></i> Задачи</h5>
+                    <div class="task-list-container">
+                        <% if (dashboardData.tasks && dashboardData.tasks.length > 0) { %>
+                            <ul class="list-unstyled">
+                                <% dashboardData.tasks.forEach(task => { %>
+                                    <li class="task-item" data-task-id="<%= task.id %>" data-task-type="<%= task.type %>">
+                                        <% let iconClass = 'fa-question-circle'; %>
+                                        <% if (task.type === 'new-message') { iconClass = 'fa-envelope'; } %>
+                                        <% if (task.type === 'pending-booking') { iconClass = 'fa-file-signature'; } %>
+                                        <% if (task.type === 'check-in') { iconClass = 'fa-arrow-right-to-bracket'; } %>
+                                        <% if (task.type === 'check-out') { iconClass = 'fa-arrow-right-from-bracket'; } %>
+                                        <div class="task-icon">
+                                            <i class="fas <%= iconClass %>"></i>
+                                        </div>
+                                        <a href="<%= task.link %>" class="task-details" title="<%= task.details %>">
+                                            <%= task.details %>
+                                        </a>
+                                        <span class="task-time"><%= task.time %></span>
+                                    </li>
+                                <% }); %>
+                            </ul>
+                        <% } else { %>
+                            <p class="text-muted text-center py-3">Нет активных задач.</p>
+                        <% } %>
+                    </div>
+                    <% if (typeof dashboardData !== 'undefined' && dashboardData.tasks && dashboardData.tasks.length > 0) { %>
+                        <a href="/tasks" class="card-link">Все задачи →</a> <%# Ссылка видна только если есть задачи %>
+                    <% } %>
+                 </div>
+
+                 <!-- Таблица Недавних Бронирований -->
                  <% if (dashboardData.recentBookings && dashboardData.recentBookings.length > 0) { %>
-                     <div class="dashboard-widget widget-full-width widget-list animate-slide-up" style="animation-delay: 0.15s;">
-                          <h3 class="widget-title"><i class="fas fa-history"></i> Недавние бронирования</h3>
-                          <ul class="widget-recent-list">
-                              <% dashboardData.recentBookings.forEach(booking => { %>
-                                <% let statusClass = 'status-other'; if (booking.Status === 'Активна') statusClass = 'status-active'; else if (booking.Status === 'Отменена' || booking.Status === 'Аннулирована') statusClass = 'status-cancelled'; %>
-                                <li> <span class="recent-item-details"> <i class="far fa-user"></i> <%= booking.TenantName %> </span> <span class="recent-item-title" title="<%= booking.PropertyTitle %>"> → <%= booking.PropertyTitle.substring(0, 30) %><% if(booking.PropertyTitle.length > 30) { %>...<% } %></span> <span class="recent-item-details"> <i class="far fa-calendar-alt"></i> <%= booking.StartDateFormatted %> </span> <span class="recent-item-status <%= statusClass %>"><%= booking.Status %></span> </li>
-                             <% }) %>
-                          </ul>
-                          <a href="/rentals" class="widget-link" style="margin-top: 10px; display: block; text-align: right;">Все аренды →</a>
+                     <div class="dashboard-card card-table card-recent-bookings">
+                         <h5 class="card-title"><i class="fas fa-list-alt"></i> Недавние бронирования</h5>
+                         <div class="table-responsive">
+                             <table class="dashboard-table">
+                                 <thead>
+                                     <tr>
+                                         <th>Клиент</th>
+                                         <th>Объект</th>
+                                         <th>Заезд</th>
+                                         <th>Выезд</th>
+                                         <th>Статус</th>
+                                     </tr>
+                                 </thead>
+                                 <tbody>
+                                     <% dashboardData.recentBookings.slice(0, 5).forEach(booking => { %> <%# Показываем только 5 последних %>
+                                        <% let statusClass = 'status-other'; let statusText = booking.Status;
+                                           if (booking.Status === 'Confirmed' || booking.Status === 'Активна') { statusClass = 'status-confirmed'; statusText = 'Confirmed'; }
+                                           else if (booking.Status === 'Pending') { statusClass = 'status-pending'; statusText = 'Pending'; }
+                                           else if (booking.Status === 'Cancelled' || booking.Status === 'Отменена' || booking.Status === 'Аннулирована') { statusClass = 'status-cancelled'; statusText = 'Cancelled'; }
+                                        %>
+                                         <tr>
+                                             <td><%= booking.TenantName %></td>
+                                             <td title="<%= booking.PropertyTitle %>"><%= booking.PropertyTitle.substring(0, 25) %><% if(booking.PropertyTitle.length > 25) { %>...<% } %></td>
+                                             <td><%= booking.StartDateFormatted %></td>
+                                             <td><%= booking.EndDateFormatted %></td>
+                                             <td><span class="status-badge <%= statusClass %>"><%= statusText %></span></td>
+                                         </tr>
+                                     <% }) %>
+                                 </tbody>
+                             </table>
+                         </div>
+                         <a href="/rentals" class="card-link">Все бронирования →</a>
                      </div>
                  <% } %>
             <% } %>
 
-            <%# === Виджеты для Администратора (Admin) === %>
-            <% if (currentUser.role === 'Admin' && locals.dashboardData && !dashboardData.error) { %>
-                 <div class="dashboard-widget widget-admin animate-slide-up">
-                    <div class="widget-icon"><i class="fas fa-users"></i></div>
-                    <div class="widget-content">
-                        <h3 class="widget-title">Пользователи</h3>
-                        <p class="widget-value"><%= dashboardData.totalUsers ?? 0 %></p>
-                        <a href="/users" class="widget-link">Управление →</a>
-                    </div>
-                </div>
-                 <div class="dashboard-widget widget-admin animate-slide-up" style="animation-delay: 0.05s;">
-                    <div class="widget-icon"><i class="fas fa-city"></i></div>
-                    <div class="widget-content">
-                        <h3 class="widget-title">Объекты</h3>
-                        <p class="widget-value"><%= dashboardData.totalProperties ?? 0 %></p>
-                        <a href="/properties" class="widget-link">Все объекты →</a>
-                    </div>
-                </div>
-                 <div class="dashboard-widget widget-admin animate-slide-up" style="animation-delay: 0.1s;">
-                    <div class="widget-icon"><i class="fas fa-file-signature"></i></div>
-                    <div class="widget-content">
-                         <h3 class="widget-title">Бронирования</h3>
-                        <p class="widget-value"><%= dashboardData.totalBookings ?? 0 %></p>
-                        <p class="widget-description"><%= dashboardData.activeBookings ?? 0 %> активно</p>
-                        <a href="/rentals" class="widget-link">Управление →</a>
-                    </div>
-                </div>
-                <%# Здесь БЫЛ проблемный комментарий - УДАЛЕН %>
-            <% } %>
+             <!-- === Виджеты для Арендатора (Tenant) === -->
+             <% if (currentUser.role === 'Tenant' && locals.dashboardData && !dashboardData.error) { %>
+                 <div class="dashboard-card card-summary tenant-balance-card">
+                     <h5 class="card-title"><i class="fas fa-wallet"></i> Текущий баланс</h5>
+                     <div class="card-value"><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(dashboardData.balance ?? 0) %></div>
+                     <a href="/profile/balance-history" class="card-link mt-auto">История операций →</a>
+                 </div>
+
+                 <div class="dashboard-card card-summary tenant-bookings-card">
+                     <h5 class="card-title"><i class="fas fa-calendar-check"></i> Мои бронирования</h5>
+                     <div class="card-value"><%= dashboardData.totalBookingsCount ?? 0 %> всего</div>
+                     <% if (dashboardData.activeBookingsCount > 0) { %>
+                         <p class="card-description">
+                             <%= dashboardData.activeBookingsCount %> активно.
+                             <% if (dashboardData.nextEventDateFormatted) { %>
+                                 <br>След. событие: <strong><%= dashboardData.nextEventDateFormatted %></strong>
+                             <% } %>
+                         </p>
+                     <% } else { %>
+                         <p class="card-description">Нет активных бронирований.</p>
+                     <% } %>
+                     <a href="/bookings" class="card-link mt-auto">Все бронирования →</a>
+                 </div>
+
+                 <div class="dashboard-card card-action tenant-profile-card">
+                     <h5 class="card-title"><i class="fas fa-user-circle"></i> Мой профиль</h5>
+                     <p class="card-description">Редактирование личных данных и настроек.</p>
+                     <a href="/profile" class="btn btn-secondary mt-auto">Перейти в профиль</a>
+                 </div>
+
+                 <div class="dashboard-card card-action tenant-search-card">
+                     <h5 class="card-title"><i class="fas fa-search"></i> Найти жилье</h5>
+                     <p class="card-description">Просмотр доступных вариантов для аренды.</p>
+                     <a href="/properties" class="btn btn-primary mt-auto">Посмотреть объекты</a>
+                 </div>
+
+                   <% if (dashboardData.recentActiveBookings && dashboardData.recentActiveBookings.length > 0) { %>
+                     <div class="dashboard-card card-table card-recent-bookings">
+                          <h5 class="card-title"><i class="fas fa-history"></i> Мои активные бронирования</h5>
+                            <div class="table-responsive">
+                              <table class="dashboard-table">
+                                  <thead>
+                                      <tr>
+                                          <th>Объект</th>
+                                          <th>Заезд</th>
+                                          <th>Выезд</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                    <% dashboardData.recentActiveBookings.forEach(booking => { %>
+                                        <tr>
+                                            <td> <a href="/properties/<%= booking.PropertyId %>" class="recent-item-title"><%= booking.PropertyTitle %></a> </td>
+                                            <td> <%= booking.StartDateFormatted %> </td>
+                                            <td> <%= booking.EndDateFormatted %> </td>
+                                        </tr>
+                                    <% }) %>
+                                  </tbody>
+                              </table>
+                            </div>
+                             <a href="/bookings" class="card-link">Все бронирования →</a>
+                     </div>
+                   <% } %>
+             <% } %>
+
+             <!-- === Виджеты для Администратора (Admin) === -->
+             <% if (currentUser.role === 'Admin' && locals.dashboardData && !dashboardData.error) { %>
+                  <div class="dashboard-card card-summary">
+                     <h5 class="card-title"><i class="fas fa-users"></i> Пользователи</h5>
+                     <div class="card-value"><%= dashboardData.totalUsers ?? 0 %></div>
+                     <a href="/users" class="card-link">Управление →</a>
+                 </div>
+                  <div class="dashboard-card card-summary">
+                     <h5 class="card-title"><i class="fas fa-city"></i> Объекты</h5>
+                     <div class="card-value"><%= dashboardData.totalProperties ?? 0 %></div>
+                     <a href="/properties" class="card-link">Все объекты →</a>
+                 </div>
+                  <div class="dashboard-card card-summary">
+                     <h5 class="card-title"><i class="fas fa-file-signature"></i> Бронирования</h5>
+                     <div class="card-value"><%= dashboardData.totalBookings ?? 0 %></div>
+                      <p class="card-description"><%= dashboardData.activeBookings ?? 0 %> активно</p>
+                     <a href="/rentals" class="card-link">Управление →</a>
+                 </div>
+                 <!-- Дополнительные админские карточки при необходимости -->
+             <% } %>
 
         </div> <!-- /.dashboard-grid -->
 
     </main>
 
     <%- include('partials/footer') %>
+
+    <!-- Подключение Socket.IO клиента -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const socket = io(); // Подключаемся к Socket.IO серверу
+            const taskList = document.querySelector('.card-tasks .card-list');
+            const noTasksLi = taskList?.querySelector('.no-tasks'); // Элемент "Нет задач"
+            const tasksCardLink = document.querySelector('.card-tasks .card-link'); // Ссылка "Все задачи"
+            const currentUserId = '<%= currentUser.id %>'; // Получаем ID пользователя
+
+            // 1. Регистрация пользователя на сервере Socket.IO
+            if (currentUserId) {
+                socket.emit('register_user', currentUserId);
+                console.log('[Socket.IO Client] Sent register_user event for user:', currentUserId);
+            }
+
+            // 2. Функция для создания HTML элемента задачи
+            function createTaskElement(task) {
+                // Определяем иконку, текст и класс в зависимости от типа задачи
+                let iconClass = 'fa-info-circle';
+                let typeText = 'Задача';
+                let typeClass = 'default';
+                if (task.type === 'pending-booking') { iconClass = 'fa-hourglass-half'; typeText = 'Заявка'; typeClass = 'pending'; }
+                 else if (task.type === 'new-message') { iconClass = 'fa-envelope'; typeText = 'Сообщение'; typeClass = 'message'; }
+                 else if (task.type === 'check-in') { iconClass = 'fa-sign-in-alt'; typeText = 'Заезд'; typeClass = 'check-in'; }
+                 else if (task.type === 'check-out') { iconClass = 'fa-sign-out-alt'; typeText = 'Выезд'; typeClass = 'check-out'; }
+                // Добавьте другие типы по аналогии
+
+                const li = document.createElement('li');
+                li.className = `task-item task-type-${task.type || 'default'}`;
+                // Добавляем атрибут для легкого поиска и удаления
+                if(task.id) li.dataset.taskId = task.id;
+
+                const detailsHtml = task.link
+                    ? `<a href="${escapeHtml(task.link)}">${escapeHtml(task.details)}</a>`
+                    : escapeHtml(task.details);
+
+                li.innerHTML = `
+                    <span class="task-type-indicator ${typeClass}"><i class="fas ${iconClass} me-1"></i>${escapeHtml(typeText)}</span>
+                    <span class="task-details">${detailsHtml}</span>
+                    <span class="task-time">${escapeHtml(task.time || '')}</span>
+                `;
+                return li;
+            }
+
+            // 3. Функция для обновления видимости "Нет задач" и ссылки "Все задачи"
+            function updateTaskVisibility() {
+                if (!taskList) return;
+                const hasTasks = taskList.querySelector('.task-item'); // Проверяем, есть ли элементы задач
+                if (hasTasks) {
+                    if(noTasksLi) noTasksLi.style.display = 'none'; // Скрываем "Нет задач"
+                    if(tasksCardLink) tasksCardLink.style.display = ''; // Показываем ссылку "Все задачи"
+                } else {
+                    if(noTasksLi) noTasksLi.style.display = ''; // Показываем "Нет задач"
+                    else { // Если элемента .no-tasks не было, создаем его
+                       const noTasksElement = document.createElement('li');
+                       noTasksElement.className = 'no-tasks';
+                       noTasksElement.textContent = 'Нет активных задач';
+                       taskList.appendChild(noTasksElement);
+                    }
+                    if(tasksCardLink) tasksCardLink.style.display = 'none'; // Скрываем ссылку "Все задачи"
+                }
+            }
+
+            // 4. Обработчик события новой задачи от сервера
+            socket.on('dashboard:new_task', (newTask) => {
+                console.log('[Socket.IO Client] Received dashboard:new_task:', newTask);
+                if (!taskList) return;
+
+                // Удаляем старую задачу с таким же ID, если она есть (для обновления)
+                const existingTask = taskList.querySelector(`li[data-task-id="${newTask.id}"]`);
+                if(existingTask) {
+                    existingTask.remove();
+                }
+
+                const taskElement = createTaskElement(newTask);
+                taskList.appendChild(taskElement); // Добавляем новую задачу в список
+                updateTaskVisibility(); // Обновляем видимость плейсхолдера/ссылки
+            });
+
+            // 5. Обработчик события удаления задачи от сервера
+            socket.on('dashboard:remove_task', (taskId) => {
+                 console.log('[Socket.IO Client] Received dashboard:remove_task:', taskId);
+                 if (!taskList || !taskId) return;
+                 const taskToRemove = taskList.querySelector(`li[data-task-id="${taskId}"]`);
+                 if (taskToRemove) {
+                     taskToRemove.remove();
+                     updateTaskVisibility(); // Обновляем видимость плейсхолдера/ссылки
+                 }
+            });
+
+             // 6. Первичная проверка видимости при загрузке страницы
+             updateTaskVisibility();
+
+            // Вспомогательная функция для экранирования HTML
+            function escapeHtml(unsafe) {
+                if (typeof unsafe !== 'string') return unsafe; // Возвращаем как есть, если не строка
+                return unsafe
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+        });
+    </script>
 </body>
 </html>

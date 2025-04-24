@@ -183,6 +183,17 @@ router.post('/:id/confirm', isLoggedIn, isCompanyMemberOrAdmin, async (req, res,
             const teamNotificationReject = { type: 'warning', title: 'Бронь отклонена (средства)', message: `Запрос (#${bookingId.substring(0,6)}) для "<strong>${property.Title || '?'}</strong>" (Арендатор: ${tenant.FullName || tenant.Username}) <strong>автоматически отклонен</strong> из-за недостатка средств при попытке подтверждения пользователем ${confirmerUser.username}.`, bookingId: bookingId };
             const socketDataReject = { bookingId: bookingId, newStatus: 'Отклонена', reason: rejectionReason, changedBy: confirmerUser.username, propertyTitle: property.Title || '?', tenantName: tenant.FullName || tenant.Username };
             await notifyCompanyTeam(companyId, 'booking_status_changed', socketDataReject, confirmerUser.username, io, userSockets, 'confirm_insufficient_funds', teamNotificationReject);
+
+            // --->>> ДОБАВЛЕНО: Удаление задачи Dashboard при авто-отклонении <<<---
+            const taskIdToRemove = `book-${bookingId}`;
+            const teamMembersUsernames = [company.ownerUsername, ...(company.staff ? Object.keys(company.staff) : [])].filter(Boolean);
+            teamMembersUsernames.forEach(username => {
+                const userRoom = `user:${username}`;
+                io.to(userRoom).emit('dashboard:remove_task', taskIdToRemove);
+                log.info(`[Rental Confirm Funds] Emitted 'dashboard:remove_task' (${taskIdToRemove}) to room ${userRoom}`);
+            });
+            // --->>> КОНЕЦ ДОБАВЛЕНИЯ <<<---
+
             throw new Error('Недостаточно средств у арендатора для подтверждения. Бронь отклонена.');
         }
         const updates = {};
@@ -218,6 +229,17 @@ router.post('/:id/confirm', isLoggedIn, isCompanyMemberOrAdmin, async (req, res,
         const teamNotificationConfirm = { type: 'success', title: 'Бронь подтверждена', message: `Бронь (#${bookingId.substring(0,6)}) для "<strong>${property.Title || '?'}</strong>" (Арендатор: ${tenant.FullName || tenant.Username}) <strong>подтверждена</strong> пользователем ${confirmerUser.username}.`, bookingId: bookingId };
         const socketDataConfirm = { bookingId: bookingId, newStatus: newStatus, changedBy: confirmerUser.username, propertyTitle: property.Title || '?', tenantName: tenant.FullName || tenant.Username };
         await notifyCompanyTeam(companyId, 'booking_status_changed', socketDataConfirm, confirmerUser.username, io, userSockets, 'confirm', teamNotificationConfirm);
+
+        // --->>> ДОБАВЛЕНО: Удаление задачи Dashboard при подтверждении <<<---
+        const taskIdToRemoveConfirmed = `book-${bookingId}`;
+        const teamUsernamesConfirm = [company.ownerUsername, ...(company.staff ? Object.keys(company.staff) : [])].filter(Boolean);
+        teamUsernamesConfirm.forEach(username => {
+            const userRoom = `user:${username}`;
+            io.to(userRoom).emit('dashboard:remove_task', taskIdToRemoveConfirmed);
+            log.info(`[Rental Confirm] Emitted 'dashboard:remove_task' (${taskIdToRemoveConfirmed}) to room ${userRoom}`);
+        });
+        // --->>> КОНЕЦ ДОБАВЛЕНИЯ <<<---
+
         res.status(200).json({ success: true, message: 'Бронирование подтверждено.', newStatus: newStatus, tenantName: tenant.FullName || tenant.Username, propertyTitle: property.Title || '?' });
     } catch (error) {
         log.error(`[Rental Confirm AJAX v6.2] ERROR confirming booking ${bookingId}:`, error);
@@ -255,6 +277,19 @@ router.post('/:id/reject', isLoggedIn, isCompanyMemberOrAdmin, async (req, res, 
              const teamNotificationReject = { type: 'warning', title: 'Бронь отклонена', message: `Запрос (#${bookingId.substring(0,6)}) для "<strong>${property?.Title || '?'}</strong>" (Арендатор: ${tenant?.FullName || tenant?.Username || '?'}) <strong>отклонен</strong> пользователем ${rejecterUser.username}.${reason ? ' Причина: '+reason : ''}`, bookingId: bookingId };
              const socketDataReject = { bookingId: bookingId, newStatus: newStatus, reason: reason, changedBy: rejecterUser.username, propertyTitle: property?.Title || '?', tenantName: tenant?.FullName || tenant?.Username || '?' };
              await notifyCompanyTeam(companyId, 'booking_status_changed', socketDataReject, rejecterUser.username, io, userSockets, 'reject', teamNotificationReject);
+
+             // --->>> ДОБАВЛЕНО: Удаление задачи Dashboard при отклонении <<<---
+             const companyForNotify = await firebaseService.getCompanyById(companyId).catch(e => null);
+             if (companyForNotify) {
+                 const taskIdToRemoveRejected = `book-${bookingId}`;
+                 const teamUsernamesReject = [companyForNotify.ownerUsername, ...(companyForNotify.staff ? Object.keys(companyForNotify.staff) : [])].filter(Boolean);
+                 teamUsernamesReject.forEach(username => {
+                     const userRoom = `user:${username}`;
+                     io.to(userRoom).emit('dashboard:remove_task', taskIdToRemoveRejected);
+                     log.info(`[Rental Reject] Emitted 'dashboard:remove_task' (${taskIdToRemoveRejected}) to room ${userRoom}`);
+                 });
+             } else { log.warn(`[Rental Reject] Could not find company ${companyId} to remove dashboard task.`); }
+             // --->>> КОНЕЦ ДОБАВЛЕНИЯ <<<---
         }
         res.status(200).json({ success: true, message: 'Бронирование отклонено.', newStatus: newStatus, rejectedReason: reason, tenantName: tenant?.FullName || tenant?.Username || '?', propertyTitle: property?.Title || '?' });
     } catch (error) {
