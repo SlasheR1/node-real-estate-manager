@@ -219,6 +219,11 @@ app.get('/', async (req, res, next) => {
     const dashboardData = { role: currentUser.role };
     try {
         log.info(`[Dashboard GET] Loading data for ${currentUser.username} (${currentUser.role})`);
+        // --- Переменные для актуальных задач ---
+        dashboardData.actionableItems = []; // Инициализируем пустой массив
+        const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
+
         // --- Логика Дашборда (загрузка данных в зависимости от роли) ---
         if (currentUser.role === 'Tenant') {
             const [balance, bookings] = await Promise.all([
@@ -234,6 +239,20 @@ app.get('/', async (req, res, next) => {
                  return { ...b, PropertyTitle: prop?.Title || 'Объект удален', StartDateFormatted: b.StartDate ? new Date(b.StartDate).toLocaleDateString('ru-RU') : '?', EndDateFormatted: b.EndDate ? new Date(b.EndDate).toLocaleDateString('ru-RU') : '?'};
              }));
              dashboardData.recentActiveBookings = activeBookingsWithDetails;
+
+             // ---> ДОБАВЛЕНО: Поиск актуальных задач для Tenant <--- 
+             activeBookings.forEach(b => {
+                 const startDate = b.StartDate ? new Date(b.StartDate) : null;
+                 const endDate = b.EndDate ? new Date(b.EndDate) : null;
+                 if (startDate && startDate >= todayStart && startDate <= todayEnd) {
+                     dashboardData.actionableItems.push({ type: 'check-in', text: `Заезд сегодня по бронированию объекта "${activeBookingsWithDetails.find(d => d.Id === b.Id)?.PropertyTitle || 'Неизвестный объект'}"`, link: `/bookings#booking-${b.Id}` });
+                 }
+                 if (endDate && endDate >= todayStart && endDate <= todayEnd) {
+                      dashboardData.actionableItems.push({ type: 'check-out', text: `Выезд сегодня по бронированию объекта "${activeBookingsWithDetails.find(d => d.Id === b.Id)?.PropertyTitle || 'Неизвестный объект'}"`, link: `/bookings#booking-${b.Id}` });
+                 }
+             });
+             // ---> КОНЕЦ ДОБАВЛЕНИЯ <--- 
+
         } else if ((currentUser.role === 'Owner' || currentUser.role === 'Staff') && currentUser.companyId) {
             const companyId = currentUser.companyId;
              const [company, properties, allBookings, users] = await Promise.all([
@@ -263,6 +282,30 @@ app.get('/', async (req, res, next) => {
                      StartDateFormatted: b.StartDate ? new Date(b.StartDate).toLocaleDateString('ru-RU') : '?'
                  }));
              dashboardData.recentBookings = recentBookings;
+
+             // ---> ДОБАВЛЕНО: Поиск актуальных задач для Owner/Staff <--- 
+             const pendingBookings = companyBookings.filter(b => b.Status === 'Ожидает подтверждения');
+             pendingBookings.forEach(b => {
+                 const propertyTitle = propertiesMap.get(b.PropertyId) || 'Неизвестный объект';
+                 const tenantName = usersMap.get(b.UserId) || 'Неизвестный';
+                 dashboardData.actionableItems.push({ type: 'pending-booking', text: `Новый запрос на бронирование объекта "${propertyTitle}" от ${tenantName}`, link: `/rentals#booking-${b.Id}` }); // Ссылка на Упр. Арендами
+             });
+
+             const activeCompanyBookings = companyBookings.filter(b => b.Status === 'Активна');
+             activeCompanyBookings.forEach(b => {
+                 const startDate = b.StartDate ? new Date(b.StartDate) : null;
+                 const endDate = b.EndDate ? new Date(b.EndDate) : null;
+                 const propertyTitle = propertiesMap.get(b.PropertyId) || 'Неизвестный объект';
+                 const tenantName = usersMap.get(b.UserId) || 'Неизвестный';
+                 if (startDate && startDate >= todayStart && startDate <= todayEnd) {
+                     dashboardData.actionableItems.push({ type: 'check-in', text: `Заезд сегодня: ${tenantName} в объект "${propertyTitle}"`, link: `/rentals#booking-${b.Id}` });
+                 }
+                 if (endDate && endDate >= todayStart && endDate <= todayEnd) {
+                      dashboardData.actionableItems.push({ type: 'check-out', text: `Выезд сегодня: ${tenantName} из объекта "${propertyTitle}"`, link: `/rentals#booking-${b.Id}` });
+                 }
+             });
+             // ---> КОНЕЦ ДОБАВЛЕНИЯ <--- 
+
         } else if (currentUser.role === 'Admin') {
             const [users, properties, bookings] = await Promise.all([
                  firebaseService.getAllUsers(),

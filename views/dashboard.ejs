@@ -13,16 +13,40 @@
     <%- include('partials/header') %>
 
     <main class="container dashboard-container">
-        <h1>Привет, <%= currentUser.fullName || currentUser.username %>!</h1>
-        <p class="dashboard-subtitle">Обзор вашей активности:</p>
+        <h1 class="dashboard-title">
+            <i class="fas fa-tachometer-alt"></i> Панель управления
+            <span class="user-role-badge user-role-<%= currentUser.role.toLowerCase() %>"><%= currentUser.role %></span>
+        </h1>
 
         <%- include('partials/messages') %>
-        <% if (locals.dashboardData && dashboardData.error) { %>
-            <div class="flash-message flash-error"><%= dashboardData.error %></div>
+
+        <!-- Блок Актуальных Задач -->
+        <% if (typeof dashboardData !== 'undefined' && dashboardData.actionableItems && dashboardData.actionableItems.length > 0) { %>
+            <div class="dashboard-section actionable-items-section card shadow-sm mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Актуальные задачи</h5>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <% dashboardData.actionableItems.forEach(item => { %>
+                        <li class="list-group-item actionable-item actionable-item-<%= item.type %>">
+                            <a href="<%= item.link %>" class="text-decoration-none d-flex justify-content-between align-items-center">
+                                <span>
+                                    <% if (item.type === 'pending-booking') { %> <i class="fas fa-hourglass-start text-primary me-2"></i> <% } %>
+                                    <% if (item.type === 'check-in') { %> <i class="fas fa-sign-in-alt text-success me-2"></i> <% } %>
+                                    <% if (item.type === 'check-out') { %> <i class="fas fa-sign-out-alt text-danger me-2"></i> <% } %>
+                                    <%= item.text %>
+                                </span>
+                                <i class="fas fa-chevron-right text-muted small"></i>
+                            </a>
+                        </li>
+                    <% }) %>
+                </ul>
+            </div>
         <% } %>
+        <!-- Конец Блока Актуальных Задач -->
 
-        <div class="dashboard-grid">
-
+        <div class="row gy-4">
+            <!-- Разные блоки для разных ролей -->
             <%# === Виджеты для Арендатора (Tenant) === %>
             <% if (currentUser.role === 'Tenant' && locals.dashboardData && !dashboardData.error) { %>
                 <div class="dashboard-widget widget-tenant animate-slide-up">
@@ -55,7 +79,7 @@
 
             <%# === Виджеты для Владельца/Персонала (Owner/Staff) === %>
             <% if ((currentUser.role === 'Owner' || currentUser.role === 'Staff') && locals.dashboardData && !dashboardData.error) { %>
-                <%# Виджет Баланса Компании %>
+                 <%# Виджет Баланса Компании %>
                 <div class="dashboard-widget widget-owner animate-slide-up">
                     <div class="widget-icon"><i class="fas fa-wallet"></i></div>
                     <div class="widget-content">
