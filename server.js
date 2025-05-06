@@ -617,6 +617,20 @@ app.get('/', async (req, res, next) => {
             // ИСПРАВЛЕНО: Ограничиваем количество задач до 3
             dashboardData.tasks = dashboardData.tasks.slice(0, 3);
 
+            // --- Добавлено: Обработка логотипа компании ---
+            let logoSrc = '/images/placeholder-logo.png'; // Логотип по умолчанию
+            if (company.LogoImageData && typeof company.LogoImageData === 'string') {
+                try {
+                    // Простая проверка на JPEG или PNG по началу строки base64
+                    let type = company.LogoImageData.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
+                    logoSrc = `data:${type};base64,${company.LogoImageData}`;
+                } catch (e) {
+                    log.warn(`[Dashboard GET] Error creating logo data URI for company ${companyId}:`, e);
+                }
+            }
+            dashboardData.companyLogoSrc = logoSrc; // Добавляем в данные для дашборда
+            // --- Конец добавленного кода ---
+
         } else if (currentUser.role === 'Admin') {
             const [users, properties, bookings] = await Promise.all([
                  firebaseService.getAllUsers(),

@@ -25,6 +25,63 @@
 
         <div class="dashboard-grid <% if (currentUser.role === 'Tenant') { %>tenant-dashboard-grid<% } %>">
 
+            <!-- === Карточка Быстрых Действий === -->
+            <div class="dashboard-card card-quick-actions">
+                <% if (currentUser.role === 'Owner') { %>
+                <div class="quick-actions-section">
+                    <h6 class="quick-actions-title">Быстрые действия</h6>
+                    <a href="/properties/new" class="btn btn-primary-action">
+                        <i class="fas fa-plus-circle"></i> Добавить объект
+                    </a>
+                    <a href="/properties" class="btn btn-secondary-action">
+                        <i class="fas fa-th-list"></i> Мои объекты
+                    </a>
+                    <a href="/rentals" class="btn btn-secondary-action">
+                        <i class="fas fa-tasks"></i> Управление арендами
+                    </a>
+                    <a href="/company/manage" class="btn btn-secondary-action">
+                        <i class="fas fa-building"></i> Управление компанией
+                    </a>
+                    <a href="/profile" class="btn btn-secondary-action">
+                        <i class="fas fa-user-cog"></i> Настройки профиля
+                    </a>
+                </div>
+                <% } else if (currentUser.role === 'Tenant') { %>
+                    <div class="quick-actions-section">
+                        <h6 class="quick-actions-title">Быстрый доступ</h6>
+                        <a href="/properties" class="btn btn-primary-action">
+                            <i class="fas fa-search"></i> Найти и арендовать
+                        </a>
+                        <a href="/bookings" class="btn btn-secondary-action">
+                            <i class="fas fa-calendar-check"></i> Мои бронирования
+                        </a>
+                        <a href="/profile" class="btn btn-secondary-action">
+                            <i class="fas fa-user-edit"></i> Редактировать профиль
+                        </a>
+                         <a href="/profile/balance-history" class="btn btn-secondary-action">
+                            <i class="fas fa-wallet"></i> Мой баланс
+                        </a>
+                    </div>
+                <% } else if (currentUser.role === 'Admin') { %>
+                    <div class="quick-actions-section">
+                        <h6 class="quick-actions-title">Администрирование</h6>
+                        <a href="/users" class="btn btn-primary-action">
+                            <i class="fas fa-users-cog"></i> Пользователи
+                        </a>
+                        <a href="/properties/all" class="btn btn-secondary-action"> {/* Пример другой ссылки для админа */}
+                            <i class="fas fa-city"></i> Все объекты
+                        </a>
+                        <a href="/rentals/all" class="btn btn-secondary-action"> {/* Пример другой ссылки для админа */}
+                            <i class="fas fa-list-alt"></i> Все аренды
+                        </a>
+                        <a href="/system/settings" class="btn btn-secondary-action">
+                            <i class="fas fa-cogs"></i> Настройки системы
+                        </a>
+                    </div>
+                <% } %>
+            </div>
+            <!-- === Конец Карточки Быстрых Действий === -->
+
             <!-- Карточка Уведомлений (Заменяет Актуальные Задачи) -->
             <% if (typeof dashboardData !== 'undefined' && dashboardData.actionableItems && dashboardData.actionableItems.length > 0) { %>
                 <div class="dashboard-card card-notifications">
@@ -54,7 +111,6 @@
                     <h5 class="card-title">Баланс Компании</h5>
                     <div class="card-value"><%= new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(dashboardData.companyBalance ?? 0) %></div>
                     <p class="card-description"><%= dashboardData.companyName || 'Название не указано' %></p>
-                    <a href="/company/billing" class="card-link">Управлять балансом →</a> <!-- Пример ссылки -->
                 </div>
 
                  <div class="dashboard-card card-summary card-objects">

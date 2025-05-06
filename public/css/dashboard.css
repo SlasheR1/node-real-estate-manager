@@ -58,21 +58,20 @@ body {
 /* Сетка для карточек - более сложная структура */
 .dashboard-grid {
     display: grid;
-    /* Определяем колонки: левая шире, две правые уже */
-     grid-template-columns: 2fr 1fr 1fr;
-     /* Определяем строки: пусть высота определяется контентом */
-     grid-template-rows: auto auto auto;
-     /* Определяем области сетки согласно макету */
-     grid-template-areas:
-        "notifications balance  rentals"
-        "notifications objects  tasks"
-        "bookings      bookings bookings";
+    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+        "profile balance  rentals" /* 'profile' здесь теперь будет 'quick-actions' */
+        "profile objects  tasks"   /* 'profile' здесь теперь будет 'quick-actions' */
+        "bookings bookings bookings";
     gap: 1.8rem;
 }
 
 /* Назначаем карточкам их области в сетке */
-.card-notifications {
-    grid-area: notifications;
+.card-quick-actions { /* БЫЛО: .card-profile-company */
+    grid-area: profile; /* Оставляем то же имя области для простоты, но это теперь карточка быстрых действий */
+    display: flex; /* Чтобы секция .quick-actions-section могла растянуться */
+    flex-direction: column;
 }
 
 .card-balance {
@@ -98,13 +97,13 @@ body {
 /* Стили для карточек */
 .dashboard-card {
     background-color: #fff;
-    border-radius: 12px; /* Сделаем скругление больше */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06); /* Мягкая, чуть более заметная тень */
-    padding: 1.5rem; /* Уменьшаем внутренние отступы */
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    padding: 1.5rem; /* Уменьшаем внутренние отступы, т.к. у .quick-actions-section будут свои */
     display: flex;
     flex-direction: column;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border: 1px solid #eef0f2; /* Очень светлая рамка */
+    border: 1px solid #eef0f2;
 }
 
 .dashboard-card:hover {
@@ -552,3 +551,166 @@ body {
         grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
     }
 }
+
+/* === Стили для Новой Карточки Профиля/Компании === */
+.card-profile-company {
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* Отступ между секцией пользователя и компании */
+    padding: 25px; /* Внутренние отступы */
+    background-color: #fff; /* Белый фон, как у других карточек */
+    /* Можно добавить градиент или другой фон для выделения */
+    /* background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); */
+}
+
+.profile-section {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    position: relative; /* Для позиционирования ссылки редактирования */
+}
+
+.user-profile {
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+
+.card-profile-company .profile-avatar,
+.card-profile-company .company-logo {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%; /* Круглый аватар */
+    object-fit: cover;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.card-profile-company .company-logo {
+    border-radius: 15%; /* Слегка скругленный логотип компании */
+}
+
+.profile-details {
+    flex-grow: 1;
+}
+
+.profile-details .profile-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    color: var(--dark-color);
+}
+
+.profile-details .user-role-badge {
+    margin: 0; /* Убираем отступ, если он есть у бэджа */
+}
+
+.profile-details .company-name {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin: 0 0 3px 0;
+    color: var(--text-color);
+}
+
+.profile-details .company-role {
+    font-size: 0.85rem;
+    color: var(--secondary-color);
+    margin: 0;
+}
+
+.profile-edit-link {
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+    opacity: 0.6;
+    transition: opacity 0.2s ease, color 0.2s ease;
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+.profile-edit-link:hover {
+    color: var(--primary-color);
+    opacity: 1;
+}
+
+/* Стили для Email/Phone в профиле */
+.profile-contact {
+    font-size: 0.85rem;
+    color: #6c757d; /* Серый цвет */
+    margin: 5px 0 0 0; /* Небольшой отступ сверху */
+    display: flex;
+    align-items: center;
+    gap: 6px; /* Отступ между иконкой и текстом */
+}
+
+.profile-contact i {
+    color: #adb5bd; /* Еще более светлый серый для иконок */
+}
+
+/* === Стили для Карточки Быстрых Действий === */
+.quick-actions-section {
+    padding: 10px; /* Добавим немного внутренних отступов для самой секции */
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Отступ между кнопками */
+    flex-grow: 1; /* Позволяет секции занять все доступное место в .card-quick-actions */
+    justify-content: center; /* Центрируем кнопки по вертикали, если их мало */
+}
+
+.quick-actions-title {
+    font-size: 1.1rem; /* Сделаем заголовок чуть крупнее */
+    font-weight: 600;
+    color: var(--text-color-dark, #343a40);
+    margin-bottom: 15px; /* Увеличим отступ снизу */
+    text-align: center; /* Центрируем заголовок */
+}
+
+.btn.btn-primary-action,
+.btn.btn-secondary-action {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* Выравниваем контент кнопки (иконка + текст) по левому краю */
+    gap: 10px; /* Увеличим отступ между иконкой и текстом */
+    padding: 12px 18px; /* Увеличим паддинги для более крупных кнопок */
+    border-radius: var(--border-radius-lg, 8px); /* Чуть больше скругление */
+    text-decoration: none;
+    font-size: 0.95rem; /* Чуть крупнее шрифт кнопок */
+    font-weight: 500;
+    transition: all 0.2s ease;
+    width: 100%; 
+    box-sizing: border-box;
+    text-align: left; /* Текст внутри кнопки выравниваем по левому краю */
+}
+
+.btn.btn-primary-action i,
+.btn.btn-secondary-action i {
+    font-size: 1.1em; /* Немного увеличим размер иконок в кнопках */
+    min-width: 20px; /* Гарантируем место для иконки */
+    text-align: center;
+}
+
+.btn.btn-primary-action {
+    background-color: var(--primary-color, #0d6efd);
+    color: #fff;
+    border: 1px solid var(--primary-color, #0d6efd);
+}
+
+.btn.btn-primary-action:hover {
+    background-color: var(--primary-color-dark, #0b5ed7);
+    border-color: var(--primary-color-dark, #0a58ca);
+    color: #fff;
+}
+
+.btn.btn-secondary-action {
+    background-color: var(--light-bg, #f8f9fa);
+    color: var(--text-color, #212529);
+    border: 1px solid var(--border-color, #dee2e6);
+}
+
+.btn.btn-secondary-action:hover {
+    background-color: #e9ecef;
+    border-color: #ced4da;
+    color: var(--text-color, #212529);
+}
+/* === Конец Стилей для Карточки Быстрых Действий === */
+
+/* =================================================== */
