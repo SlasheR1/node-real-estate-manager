@@ -1,413 +1,204 @@
-<!-- views/rentals-management.ejs -->
+<!-- views/rentals-management.ejs (Полностью новая версия v7.2 - Исправлено отображение и кнопка) -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= title %></title>
-    <!-- Подключаем основные стили и таблицы из файлов -->
     <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/tables.css">
-    <!-- Font Awesome для иконок -->
+    <!-- Можно использовать стили из tables.css или определить здесь -->
+    <!-- <link rel="stylesheet" href="/css/tables.css"> -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Стили для этой страницы -->
     <style>
-        /* --- Глобальные переменные и базовые стили (как в примере) --- */
         :root {
-            --primary-color: #0d6efd;
+            --primary-color: #0d6efd; /* Синий Bootstrap */
             --primary-dark: #0b5ed7;
-            --secondary-color: #6c757d;
-            --success-color: #198754; /* Чуть темнее для лучшего контраста */
-            --success-dark: #157347;
-            --danger-color: #dc3545;
-            --danger-dark: #bb2d3b;
-            --warning-color: #ffc107;
-            --warning-dark: #ffae00;
-            --info-color: #0dcaf0;
-            --info-dark: #0baccc;
-            --orange-color: #fd7e14; /* Добавим оранжевый для аннулирования */
-            --orange-dark: #e37012;
-            --light-color: #f8f9fa;
-            --dark-color: #343a40; /* Темнее для текста */
-            --grey-light: #f1f5f9;
-            --grey-medium: #e2e8f0;
-            --grey-dark: #64748b;
-            --border-radius: 8px;
-            --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Мягче тень */
-            --transition-speed: 0.3s;
+            --secondary-color: #6c757d; /* Серый */
+            --success-color: #198754; /* Зеленый */
+            --danger-color: #dc3545; /* Красный */
+            --warning-color: #ffc107; /* Желтый */
+            --orange-color: #fd7e14; /* Оранжевый */
+            --light-grey: #f8f9fa;
+            --medium-grey: #e9ecef;
+            --dark-grey: #495057;
+            --text-color: #212529;
+            --border-radius: 0.5rem; /* 8px */
+            --card-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            --transition-speed: 0.25s;
         }
 
-        body {
-            background-color: #f8fafd; /* Немного другой оттенок фона */
-            color: var(--dark-color);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            line-height: 1.6;
-        }
+        body { background-color: #f4f7fc; font-family: 'Inter', sans-serif; color: var(--text-color); line-height: 1.6;}
+        .container { max-width: 1300px; margin: 0 auto; padding: 30px 20px; }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 25px 20px; /* Немного больше отступы */
-        }
+        /* Заголовок страницы */
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 35px; padding-bottom: 15px; border-bottom: 1px solid var(--medium-grey); }
+        .page-header h1 { font-size: 1.9rem; font-weight: 600; margin: 0; color: var(--text-color); }
 
-        /* --- Стили заголовка (как в примере) --- */
-        h1 {
-            position: relative;
-            font-weight: 600;
-            font-size: 2rem; /* Чуть крупнее */
-            color: var(--dark-color);
-            margin-bottom: 40px; /* Больше отступ снизу */
-            display: inline-block;
-        }
+        /* Сообщения JS */
+        #js-messages-rentals { margin-bottom: 25px; }
+        #js-messages-rentals .flash-message { padding: 16px 25px; margin-bottom: 20px; border-radius: var(--border-radius); border-left: 5px solid transparent; position: relative; font-size: 0.98rem; box-shadow: var(--card-shadow); animation: slideInDown 0.5s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; opacity: 0; transform: translateY(-20px); }
+        @keyframes slideInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        #js-messages-rentals .flash-success { color: #0a3622; background-color: #d1e7dd; border-left-color: var(--success-color); }
+        #js-messages-rentals .flash-error { color: #58151c; background-color: #f8d7da; border-left-color: var(--danger-color); }
+        #js-messages-rentals .flash-info { color: #055160; background-color: #cff4fc; border-left-color: var(--info-color); }
+        #js-messages-rentals .flash-warning { color: #664d03; background-color: #fff3cd; border-left-color: var(--warning-color);}
+        #js-messages-rentals .flash-message .close-flash { position: absolute; top: 50%; right: 18px; transform: translateY(-50%); background: none; border: none; font-size: 1.8rem; line-height: 1; color: inherit; opacity: 0.5; cursor: pointer; padding: 0 5px; transition: all 0.2s ease; }
+        #js-messages-rentals .flash-message .close-flash:hover { opacity: 0.9; transform: translateY(-50%) rotate(90deg) scale(1.1); }
 
-        h1::after {
-            content: '';
-            position: absolute;
-            bottom: -10px; /* Немного ниже */
-            left: 0;
-            width: 60%;
-            height: 3px;
-            background: linear-gradient(90deg, var(--primary-color), var(--info-color)); /* Градиент */
-            border-radius: 2px;
-            transition: width 0.4s ease;
-        }
-
-        h1:hover::after {
-            width: 100%;
-        }
-
-        /* --- Стили заголовков секций --- */
-        .rentals-section h2 {
-            font-size: 1.6rem; /* Крупнее подзаголовок */
-            font-weight: 600;
-            margin-bottom: 25px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid var(--grey-medium); /* Четче разделитель */
-            color: var(--dark-color);
-            display: flex;
-            align-items: center;
-            gap: 12px; /* Больше отступ у иконки */
-            position: relative;
-        }
-
-         .rentals-section h2::before { /* Добавим элемент для красоты */
-            content: '';
-            position: absolute;
-            left: 0;
-            bottom: -2px; /* На линии border-bottom */
-            width: 50px;
-            height: 2px;
-            background-color: var(--primary-color);
-            border-radius: 1px;
-            transition: width 0.3s ease;
-         }
-
-         .rentals-section h2:hover::before {
-            width: 100px;
-         }
-
-        .rentals-section h2 i {
-            color: var(--primary-color); /* Иконка в цвет темы */
-            font-size: 1em; /* Размер иконки относительно h2 */
-        }
-
-        .rentals-section h2 span {
-             font-weight: 500;
-             font-size: 0.9em;
-             color: var(--secondary-color);
-             margin-left: 5px;
-        }
-
-        /* --- Стили таблицы (как в примере) --- */
-        .data-table {
-            width: 100%;
-            background-color: white;
+        /* --- ИСПРАВЛЕНО: Стили Фильтров --- */
+        .filter-bar {
+            display: grid; /* Используем Grid для лучшего контроля */
+            grid-template-columns: 1fr 1fr auto; /* Поиск | Статус | Кнопка */
+            gap: 20px; /* Отступы между элементами */
+            align-items: flex-end; /* Выравниваем по нижнему краю */
+            background-color: #fff;
+            padding: 18px 25px;
             border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-            border-collapse: separate;
-            border-spacing: 0;
-            overflow: hidden; /* Важно для border-radius */
+            box-shadow: var(--card-shadow);
             margin-bottom: 30px;
         }
-
-        .data-table thead th {
-            background-color: var(--grey-light);
-            font-weight: 600;
-            padding: 16px 15px; /* Больше паддинг */
-            text-align: left;
-            color: var(--dark-color);
-            border-bottom: 2px solid var(--grey-medium);
-            position: relative;
-            white-space: nowrap; /* Предотвращаем перенос заголовков */
+        .filter-group { display: flex; flex-direction: column; }
+        .filter-group label { font-size: 0.8rem; font-weight: 500; color: var(--dark-grey); margin-bottom: 6px; }
+        .filter-group input, .filter-group select { width: 100%; padding: 10px 14px; border: 1px solid var(--medium-grey); border-radius: 6px; font-size: 0.9rem; height: 40px; /* Фикс высота */}
+        .filter-group input:focus, .filter-group select:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15); }
+        #resetFiltersBtn {
+            padding: 10px 18px;
+            background-color: var(--secondary-color);
+            color: white; border: none; border-radius: 6px; cursor: pointer;
+            transition: background-color var(--transition-speed);
+            height: 40px; /* Та же высота, что и у инпутов */
+            display: inline-flex; align-items: center; gap: 5px; /* Иконка и текст */
         }
-
-        .data-table thead th::after {
-            content: '';
-            position: absolute;
-            bottom: -2px; /* На линии border-bottom */
-            left: 0;
-            width: 0;
-            height: 2px;
-            background-color: var(--primary-color);
-            transition: width 0.3s ease;
+        #resetFiltersBtn:hover { background-color: #5a6268; }
+        /* Адаптивность фильтров */
+        @media (max-width: 768px) {
+            .filter-bar { grid-template-columns: 1fr; /* Все в одну колонку */ }
+            #resetFiltersBtn { width: 100%; justify-content: center; margin-top: 10px; } /* Кнопка на всю ширину */
         }
+        /* --- КОНЕЦ стилей фильтров --- */
 
-        .data-table thead th:hover::after {
-            width: 100%;
-        }
+        /* Стили секций */
+        .rentals-section { margin-bottom: 40px; background-color: #fff; border-radius: var(--border-radius); box-shadow: var(--card-shadow); overflow: hidden; }
+        .section-header { padding: 18px 25px; background-color: var(--light-grey); border-bottom: 1px solid var(--medium-grey); display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background-color var(--transition-speed); }
+        .section-header:hover { background-color: #eef2f7; }
+        .section-header h2 { font-size: 1.3rem; font-weight: 600; margin: 0; color: var(--dark-color); }
+        .section-header h2 i { color: var(--primary-color); font-size: 1em; margin-right: 8px; /* Отступ иконки */}
+        .section-header .count-badge { background-color: var(--primary-color); color: white; font-size: 0.8rem; padding: 3px 8px; border-radius: 10px; font-weight: 500; margin-left: 8px; min-width: 22px; text-align: center; }
+        .section-header .toggle-icon { margin-left: auto; font-size: 1rem; color: var(--secondary-color); transition: transform var(--transition-speed); }
+        .section-content { padding: 0; /* Убираем падинг у контента, добавляем в table-responsive */ max-height: 2000px; overflow: hidden; transition: max-height 0.5s ease-in-out, opacity 0.4s ease; opacity: 1; }
+        .section-content.collapsed { max-height: 0; opacity: 0; border-top: none; }
+        .rentals-section.collapsed .toggle-icon { transform: rotate(-90deg); }
 
-        .data-table tbody tr {
-            transition: all var(--transition-speed) ease;
-            border-bottom: 1px solid var(--grey-medium); /* Тоньше линия */
-        }
+        /* Стили таблицы внутри секций */
+        .table-responsive { overflow-x: auto; padding: 5px 25px 25px; /* Добавляем падинг сюда */}
+        .data-table { border-collapse: collapse; width: 100%; }
+        .data-table thead th { background-color: transparent; border-bottom: 2px solid var(--medium-grey); font-size: 0.8rem; color: var(--dark-grey); padding: 12px 15px; /* Уменьшил падинг заголовков */ text-transform: uppercase; letter-spacing: 0.5px; text-align: left; }
+        .data-table tbody tr { transition: background-color var(--transition-speed); border-bottom: 1px solid var(--medium-grey); }
+        .data-table tbody tr:last-child { border-bottom: none; }
+        .data-table tbody tr:hover { background-color: #f8fafd; }
+        .data-table tbody td { padding: 14px 15px; /* Уменьшил падинг ячеек */ vertical-align: middle; font-size: 0.9rem; /* Уменьшил шрифт */}
+        .data-table tbody td a { color: var(--primary-color); text-decoration: none; font-weight: 500; }
+        .data-table tbody td a:hover { text-decoration: underline; color: var(--primary-dark); }
 
-        .data-table tbody tr:last-child {
-            border-bottom: none;
-        }
+        /* Статусы */
+        .status-label { padding: 5px 12px; border-radius: 15px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; text-transform: uppercase; border: 1px solid transparent; }
+        .status-active { background-color: #d1e7dd; color: #0f5132; border-color: #a3cfbb; } .status-active i::before { content: "\f00c"; }
+        .status-pending { background-color: #fff3cd; color: #664d03; border-color: #ffe69c; } .status-pending i::before { content: "\f254"; }
+        .status-rejected { background-color: #f8d7da; color: #842029; border-color: #f5c2c7; } .status-rejected i::before { content: "\f05e"; }
+        .status-cancelled { background-color: #fdeae8; color: #9e2f20; border-color: #f8c6bf; } .status-cancelled i::before { content: "\f057"; }
+        .status-annulled { background-color: #e9ecef; color: #495057; border-color: #d6dade; } .status-annulled i::before { content: "\f071"; }
+        .status-completed { background-color: #e0e0e0; color: #505050; border-color: #c0c0c0; } .status-completed i::before { content: "\f560"; } /* flag-checkered */
+        .status-other { background-color: var(--light-grey); color: var(--dark-grey); border-color: var(--medium-grey); } .status-other i::before { content: "\f128"; }
 
-        .data-table tbody tr:hover {
-            background-color: rgba(13, 110, 253, 0.04); /* Слегка голубой фон при ховере */
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-        }
+        /* Кнопки действий */
+        .btn-action { padding: 5px 8px; font-size: 0.75rem; border-radius: 6px; border: none; cursor: pointer; transition: all var(--transition-speed); display: inline-flex; align-items: center; justify-content: center; }
+        .btn-action i { font-size: 0.9em; width: 1em; text-align: center; }
+        .btn-confirm { background-color: var(--success-color); color: white; } .btn-confirm:hover:not(:disabled) { background-color: var(--success-dark); transform: scale(1.05); }
+        .btn-reject { background-color: var(--danger-color); color: white; } .btn-reject:hover:not(:disabled) { background-color: var(--danger-dark); transform: scale(1.05); }
+        .btn-annul { background-color: var(--orange-color); color: white; } .btn-annul:hover:not(:disabled) { background-color: var(--orange-dark); transform: scale(1.05); }
+        .btn-delete { background-color: #6c757d; color: white; } .btn-delete:hover:not(:disabled) { background-color: #5a6268; transform: scale(1.05); }
+        .btn-action:disabled { opacity: 0.6; cursor: not-allowed; }
+        .button-spinner { display: none; animation: spin 1s linear infinite; }
+        .btn-action:disabled .button-spinner { display: inline-block; }
+        .btn-action:disabled i:not(.button-spinner) { display: none; }
+        .actions-cell { display: flex; gap: 6px; }
 
-        .data-table tbody td {
-            padding: 16px 15px; /* Синхронизируем паддинг с th */
-            vertical-align: middle;
-            font-size: 0.95rem; /* Чуть меньше шрифт в ячейках */
-        }
+        /* Сообщения об отсутствии данных */
+        .no-data-message { text-align: center; padding: 25px; color: var(--secondary-color); font-style: italic; }
+        .no-data-message i { display: block; font-size: 1.8rem; margin-bottom: 10px; color: var(--medium-grey); }
+        .hidden { display: none !important; }
 
-        .data-table tbody td a {
-            color: var(--primary-color);
-            text-decoration: none;
-            font-weight: 500;
-            transition: color var(--transition-speed) ease;
-        }
-         .data-table tbody td a:hover {
-            color: var(--primary-dark);
-            text-decoration: underline;
-         }
+        /* Пагинация (только для истории) */
+        #historyPaginationContainer { margin-top: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; padding: 15px 25px; border-top: 1px solid var(--medium-grey); background-color: var(--light-grey); }
+        #historyPaginationContainer.hidden { display: none !important; }
+        #historyPaginationControls { display: flex; align-items: center; gap: 6px; }
+        #historyPaginationControls button { padding: 6px 12px; font-size: 0.9rem; border: 1px solid var(--medium-grey); background-color: #fff; color: var(--primary-color); cursor: pointer; border-radius: 6px; }
+        #historyPaginationControls button:hover:not(:disabled) { background-color: #e9ecef; }
+        #historyPaginationControls button.active { background-color: var(--primary-color); color: #fff; }
+        #historyPaginationControls button:disabled { color: #adb5bd; cursor: not-allowed; }
+        #historyPaginationInfo { font-size: 0.9rem; color: var(--dark-grey); }
+        #historyItemsPerPageSelect { padding: 5px 8px; font-size: 0.85rem; border-radius: 4px; border: 1px solid var(--medium-grey); margin-left: 8px; }
 
-        /* --- Улучшенные стили статусов --- */
-        .status-label {
-            padding: 5px 10px; /* Немного больше паддинг */
-            border-radius: var(--border-radius); /* Скругление как у кнопок */
-            font-size: 0.8rem; /* Чуть меньше */
-            font-weight: 600; /* Жирнее */
-            display: inline-flex; /* Для выравнивания с иконкой */
-            align-items: center;
-            gap: 5px;
-            text-transform: uppercase; /* Заглавные буквы */
-            letter-spacing: 0.5px; /* Небольшой разрыв между буквами */
-            border: 1px solid transparent; /* Для консистентности */
-        }
-        /* Active */
-        .status-active { background-color: #d1e7dd; color: #0f5132; border-color: #a3cfbb; }
-        /* Pending */
-        .status-pending { background-color: #fff3cd; color: #664d03; border-color: #ffe69c; }
-        /* Rejected */
-        .status-rejected { background-color: #f8d7da; color: #842029; border-color: #f5c2c7; }
-        /* Cancelled by tenant */
-        .status-cancelled { background-color: #fdeae8; color: #9e2f20; border-color: #f8c6bf; }
-        /* Annulled by admin/owner */
-        .status-annulled { background-color: #e9ecef; color: #495057; border-color: #d6dade; }
-        /* Other/Default */
-        .status-other { background-color: var(--grey-light); color: var(--grey-dark); border-color: var(--grey-medium); }
+        /* Анимации */
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes row-highlight-success { 0% { background-color: rgba(25, 135, 84, 0.1); } 100% { background-color: transparent; } }
+        @keyframes row-highlight-warning { 0% { background-color: rgba(255, 193, 7, 0.1); } 100% { background-color: transparent; } }
+        @keyframes row-highlight-danger { 0% { background-color: rgba(220, 53, 69, 0.1); } 100% { background-color: transparent; } }
+        .highlight-success { animation: row-highlight-success 1.5s ease-out; }
+        .highlight-warning { animation: row-highlight-warning 1.5s ease-out; }
+        .highlight-danger { animation: row-highlight-danger 1.5s ease-out; }
+        @keyframes row-fade-out { to { opacity: 0; transform: scale(0.95); } }
+        .row-deleting { animation: row-fade-out 0.4s ease-in forwards; }
 
-        .status-cell .fa-info-circle {
-            color: var(--secondary-color);
-            cursor: help;
-            transition: color var(--transition-speed);
-        }
-        .status-cell .fa-info-circle:hover {
-            color: var(--dark-color);
-        }
+        /* Модалка причины отклонения */
+       /* ================================== */
+        /* == Стили Модального Окна (Общие) == */
+        /* ================================== */
 
-        /* --- Стили кнопок (как в примере) --- */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 8px 16px;
-            border-radius: var(--border-radius);
-            font-weight: 500;
-            font-size: 0.9rem; /* Стандартный размер шрифта */
-            transition: all var(--transition-speed) ease;
-            border: 1px solid transparent; /* Добавляем рамку для консистентности */
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.07);
-            white-space: nowrap; /* Предотвращаем перенос текста кнопки */
-            vertical-align: middle; /* Важно для выравнивания в ячейке */
-        }
-
-        .btn::before { /* Эффект волны */
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: width 0.5s, height 0.5s;
-            z-index: 1;
-        }
-
-        .btn:hover:not(:disabled)::before {
-            width: 300%;
-            height: 300%;
-        }
-
-        .btn:active:not(:disabled) {
-            transform: translateY(1px);
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        }
-
-        .btn .button-text {
-            position: relative;
-            z-index: 2;
-            display: inline-block; /* Чтобы vertical-align работал */
-            vertical-align: middle;
-        }
-
-        .btn i:not(.button-spinner) { /* Стили для иконок в кнопках (если будут) */
-             margin-right: 6px;
-             font-size: 0.9em;
-             position: relative;
-             z-index: 2;
-             vertical-align: middle;
-        }
-
-        .btn:disabled {
-            opacity: 0.65;
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-
-        .btn:disabled::before {
-            display: none;
-        }
-
-        /* Цвета кнопок */
-        .btn-primary { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
-        .btn-primary:hover:not(:disabled) { background-color: var(--primary-dark); border-color: var(--primary-dark); }
-
-        .btn-secondary { background-color: var(--secondary-color); color: white; border-color: var(--secondary-color); }
-        .btn-secondary:hover:not(:disabled) { background-color: #5a6268; border-color: #545b62; }
-
-        .btn-confirm { background-color: var(--success-color); color: white; border-color: var(--success-color); }
-        .btn-confirm:hover:not(:disabled) { background-color: var(--success-dark); border-color: var(--success-dark); }
-
-        .btn-reject { background-color: var(--danger-color); color: white; border-color: var(--danger-color); }
-        .btn-reject:hover:not(:disabled) { background-color: var(--danger-dark); border-color: var(--danger-dark); }
-
-        .btn-annul { background-color: var(--orange-color); color: white; border-color: var(--orange-color); }
-        .btn-annul:hover:not(:disabled) { background-color: var(--orange-dark); border-color: var(--orange-dark); }
-
-        .btn-delete { background-color: #a71d2a; color: white; border-color: #a71d2a; } /* Темнее красный для удаления */
-        .btn-delete:hover:not(:disabled) { background-color: #8b1823; border-color: #8b1823; }
-
-        /* Маленькие кнопки */
-        .btn-small {
-            padding: 6px 12px;
-            font-size: 0.8rem;
-        }
-         .btn-small i:not(.button-spinner) {
-             margin-right: 4px;
-         }
-
-        /* Ячейка с действиями */
-        .actions-cell {
-            display: flex;
-            gap: 8px; /* Отступ между кнопками */
-            flex-wrap: wrap; /* Перенос кнопок если не влезают */
-            align-items: center; /* Вертикальное выравнивание кнопок */
-        }
-
-        .actions-cell form {
-            margin: 0; /* Убираем лишние отступы у формы */
-            display: inline-block; /* Чтобы формы были в строку */
-        }
-
-        /* --- Стили модального окна (как в примере) --- */
-        .modal { /* Наш кастомный класс, не бутстраповский */
-            display: none;
+        .modal { /* Контейнер-оверлей */
+            display: none; /* Скрыто по умолчанию */
             position: fixed;
             z-index: 1050; /* Выше чем header обычно */
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
-            overflow: auto;
-            background-color: rgba(0, 0, 0, 0.6); /* Темнее фон */
+            overflow: auto; /* Добавляет прокрутку, если контент не влезает */
+            background-color: rgba(0, 0, 0, 0.6); /* Полупрозрачный фон */
             backdrop-filter: blur(4px); /* Размытие фона */
             opacity: 0;
-            transition: opacity var(--transition-speed) ease;
+            transition: opacity var(--transition-speed, 0.25s) ease;
         }
 
-        .modal.visible { /* Класс для показа */
+        .modal.visible { /* Класс для показа оверлея */
+            display: block; /* Делаем видимым перед анимацией */
             opacity: 1;
         }
 
+        /* Общие стили для контента ВСЕХ модальных окон */
         .modal-content {
-            background-color: #fefefe;
-            margin: 10% auto; /* Отступ сверху больше */
-            padding: 30px; /* Больше паддинг */
-            border: none; /* Убираем рамку */
-            width: 90%;
-            max-width: 500px; /* Макс ширина */
-            border-radius: var(--border-radius);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); /* Выразительнее тень */
-            transform: translateY(-40px) scale(0.95); /* Начальное состояние для анимации */
+            background-color: #fefefe; /* Белый фон */
+            margin: 10% auto; /* Отступ сверху/снизу и авто по бокам для центрирования */
+            padding: 30px; /* Внутренние отступы */
+            border: none; /* Убираем стандартную рамку */
+            width: 90%; /* Ширина на маленьких экранах */
+            max-width: 500px; /* Максимальная ширина */
+            border-radius: var(--border-radius, 8px); /* Скругление углов */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); /* Тень */
+            position: relative; /* Для позиционирования кнопки закрытия */
+            /* Анимация появления */
+            transform: translateY(-40px) scale(0.95);
             opacity: 0;
-            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); /* Плавная анимация */
-            position: relative;
+            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease;
         }
 
-        .modal.visible .modal-content {
+        .modal.visible .modal-content { /* Конечное состояние анимации */
             transform: translateY(0) scale(1);
             opacity: 1;
         }
 
-#resetFiltersBtn { /* <<<< ИЗМЕНЯЕМ СТИЛИ КНОПКИ СБРОСА */
-            /* Размеры и выравнивание */
-            padding: 10px 18px; /* Вертикальный паддинг как у инпутов, горизонтальный по вкусу */
-            height: calc(1.5em + 0.75rem * 2 + 2px); /* Попробуем вычислить высоту как у bootstrap input ~40px */
-            /* Визуальный стиль (пример "secondary" кнопки) */
-            background-color: #6c757d; /* Серый фон (или var(--secondary-color)) */
-            color: white; /* Белый текст */
-            border: 1px solid #6c757d; /* Рамка в цвет фона */
-            border-radius: var(--border-radius); /* Скругление как у других элементов */
-            text-decoration: none; /* Убираем подчеркивание, если было */
-            cursor: pointer;
-            transition: all var(--transition-speed) ease;
-            font-size: 0.9rem; /* Размер шрифта как у маленьких кнопок */
-            line-height: 1.5; /* Стандартная высота строки */
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* Легкая тень */
-            display: inline-flex; /* Для выравнивания иконки и текста */
-            align-items: center;
-            justify-content: center;
-            align-self: flex-end; /* Оставляем прижатие к нижнему краю группы */
-        }
-
-        #resetFiltersBtn:hover:not(:disabled) {
-            background-color: #5a6268; /* Темнее серый при наведении */
-            border-color: #545b62;
-            transform: translateY(-1px); /* Небольшой подъем */
-            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-        }
-        #resetFiltersBtn i {
-             margin-right: 6px; /* Отступ иконки */
-             font-size: 0.9em;
-         }
-         #resetFiltersBtn:disabled {
-             opacity: 0.65;
-             cursor: not-allowed;
-             box-shadow: none;
-             transform: none;
-         }
+        /* Общий стиль кнопки закрытия */
         .close-modal {
             position: absolute;
             top: 15px;
@@ -418,404 +209,85 @@
             cursor: pointer;
             line-height: 1;
             transition: all 0.2s ease;
-            padding: 0 5px; /* Чтобы легче было попасть */
+            padding: 0 5px; /* Увеличиваем область клика */
+            z-index: 10; /* Поверх заголовка */
         }
 
-        .close-modal:hover, .close-modal:focus {
-            color: var(--danger-color); /* Красный при наведении */
-            transform: rotate(90deg) scale(1.1); /* Эффект при наведении */
+        .close-modal:hover,
+        .close-modal:focus {
+            color: var(--danger-color, #dc3545); /* Красный при наведении */
+            transform: rotate(90deg) scale(1.1); /* Эффект вращения */
+            outline: none; /* Убираем стандартный фокус */
         }
 
+        /* Общий стиль заголовка модального окна */
         .modal-content h2 {
             margin-top: 0;
             margin-bottom: 25px;
-            font-size: 1.5rem; /* Крупнее заголовок модалки */
+            font-size: 1.5rem; /* Размер заголовка */
             font-weight: 600;
-            color: var(--dark-color);
-            border-bottom: 1px solid var(--grey-medium);
+            color: var(--dark-color, #343a40);
+            border-bottom: 1px solid var(--medium-grey, #e9ecef); /* Разделитель */
             padding-bottom: 15px;
+            text-align: center; /* Центрируем заголовок */
         }
 
-         .modal-content p { /* Стили для обычного текста в модалке */
-            margin-bottom: 15px;
-            font-size: 1rem;
-            color: var(--secondary-color);
-        }
-         .modal-content p strong {
-            color: var(--dark-color);
-            font-weight: 500;
-         }
-
-        .modal-content .form-group {
-            margin-bottom: 20px;
-        }
-
-        .modal-content .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: var(--dark-color);
-            font-size: 0.95rem;
-        }
-
-        .modal-content .form-control { /* Общий стиль для инпутов/текстареа */
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid var(--grey-medium);
-            border-radius: var(--border-radius);
-            font-size: 1rem;
-            line-height: 1.5;
-            box-sizing: border-box;
-            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-        }
-
-        .modal-content .form-control:focus {
-            border-color: var(--primary-color);
-            outline: 0;
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.2); /* Фокус как в примере */
-        }
-
-        .modal-content textarea.form-control {
-            min-height: 100px; /* Минимальная высота для текстареа */
-            resize: vertical; /* Разрешаем менять высоту */
-        }
-
-        .modal-footer { /* Футер модалки */
+        /* Общий стиль футера модального окна */
+        .modal-footer {
             display: flex;
-            justify-content: flex-end;
-            gap: 10px;
+            justify-content: flex-end; /* Кнопки справа */
+            gap: 10px; /* Отступ между кнопками */
             margin-top: 25px;
             padding-top: 20px;
-            border-top: 1px solid var(--grey-medium);
+            border-top: 1px solid var(--medium-grey, #e9ecef); /* Разделитель */
         }
 
-        /* --- Стили сообщений (как в примере) --- */
-        #js-messages-rentals {
-            margin-bottom: 25px;
-            position: relative; /* Для позиционирования сообщений */
-            z-index: 10; /* Чтобы были над таблицей при анимации */
-        }
+        /* =============================================== */
+        /* == Стили для КОНКРЕТНЫХ Модальных Окон == */
+        /* =============================================== */
 
-        #js-messages-rentals .flash-message {
-            padding: 16px 25px; /* Больше паддинг */
+        /* --- Модальное окно подтверждения (#customConfirmModal) --- */
+        #customConfirmModal .modal-content {
+            max-width: 450px; /* Чуть уже для подтверждения */
+            text-align: center; /* Центрируем текст параграфа */
+        }
+        #customConfirmModal .modal-content p {
+            font-size: 1.05rem; /* Чуть крупнее текст */
+            color: var(--secondary-color, #6c757d); /* Серый цвет текста */
+            line-height: 1.7;
             margin-bottom: 20px;
-            border-radius: var(--border-radius);
-            border-left: 5px solid transparent; /* Яркая полоса слева */
-            position: relative;
-            font-size: 0.98rem; /* Чуть крупнее текст */
-            box-shadow: var(--box-shadow);
-            animation: slideInDown 0.5s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
-            opacity: 0;
-            transform: translateY(-20px);
+        }
+        #customConfirmModal .modal-footer {
+            justify-content: center; /* Центрируем кнопки в окне подтверждения */
+        }
+        #customConfirmModal #confirmOk {
+             background-color: var(--primary-color);
+             color: white;
+        }
+        #customConfirmModal #confirmOk:hover {
+            background-color: var(--primary-dark);
         }
 
-        @keyframes slideInDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
 
-        #js-messages-rentals .flash-success { color: #0a3622; background-color: #d1e7dd; border-left-color: var(--success-color); }
-        #js-messages-rentals .flash-error { color: #58151c; background-color: #f8d7da; border-left-color: var(--danger-color); }
-        #js-messages-rentals .flash-info { color: #055160; background-color: #cff4fc; border-left-color: var(--info-color); }
+        /* --- Модальное окно причины отклонения (#rejectReasonModal) --- */
+        #rejectReasonModal .modal-content {
+            max-width: 500px; /* Стандартная ширина */
+        }
+        #rejectReasonModal .modal-content h2 span { /* Для ID брони в заголовке */
+            font-family: monospace; font-size: 0.9em; color: var(--secondary-color, #6c757d);
+            background-color: var(--light-grey, #f8f9fa); padding: 2px 6px; border-radius: 4px; margin-left: 5px;
+        }
+        #rejectReasonModal .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: var(--dark-color, #343a40); font-size: 0.95rem; }
+        #rejectReasonModal textarea.form-control { width: 100%; padding: 12px 15px; border: 1px solid var(--medium-grey, #ced4da); border-radius: var(--border-radius, 8px); font-size: 1rem; line-height: 1.5; box-sizing: border-box; min-height: 100px; resize: vertical; transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out; }
+        #rejectReasonModal textarea.form-control:focus { border-color: var(--primary-color); outline: 0; box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.2); }
+        #rejectReasonModal #modalError { color: var(--danger-color, #dc3545); font-size: 0.9rem; margin-top: 8px; display: none; font-weight: 500; }
+        #rejectReasonModal #confirmRejectBtn { background-color: var(--danger-color); color: white; }
+        #rejectReasonModal #confirmRejectBtn:hover { background-color: var(--danger-dark); }
+        #rejectReasonModal .modal-footer { justify-content: flex-end; }
 
-        #js-messages-rentals .flash-message .close-flash {
-            position: absolute;
-            top: 50%;
-            right: 18px; /* Правее */
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            font-size: 1.8rem; /* Крупнее крестик */
-            line-height: 1;
-            color: inherit;
-            opacity: 0.5; /* Менее заметный */
-            cursor: pointer;
-            padding: 0 5px;
-            transition: all 0.2s ease;
-        }
-
-        #js-messages-rentals .flash-message .close-flash:hover {
-            opacity: 0.9;
-            transform: translateY(-50%) rotate(90deg) scale(1.1); /* Эффект при наведении */
-        }
-
-        /* --- Спиннер (как в примере) --- */
-        .button-spinner {
-            margin-left: 8px; /* Больше отступ */
-            display: none;
-            font-size: 1em; /* Размер спиннера относительно кнопки */
-            color: inherit; /* Наследует цвет текста кнопки */
-            vertical-align: middle; /* Выравнивание */
-        }
-
-        button:disabled .button-spinner {
-            display: inline-block;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* --- Сообщение "Нет бронирований" --- */
-        .no-bookings-message {
-            text-align: center;
-            color: var(--secondary-color);
-            margin-top: 30px;
-            padding: 25px;
-            background-color: var(--grey-light);
-            border-radius: var(--border-radius);
-            font-size: 1.05rem;
-            border: 1px dashed var(--grey-medium); /* Штриховая рамка */
-        }
-        .no-bookings-message i {
-            display: block;
-            font-size: 2.5rem;
-            margin-bottom: 15px;
-            color: var(--grey-dark);
-        }
-
-        /* --- Анимация появления строк таблицы (как в примере) --- */
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Применяем анимацию к обеим таблицам */
-        #pendingBookingsTableBody tr,
-        #otherBookingsTableBody tr {
-            opacity: 0;
-            animation: fadeInUp 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
-        }
-
-        /* Задержка для каждой строки */
-        <% const maxDelayItems = 10; %>
-    <% for(let i = 1; i <= maxDelayItems; i++) { %>
-        #pendingBookingsTableBody tr:nth-child(<%= i %>),
-        #otherBookingsTableBody tr:nth-child(<%= i %>) {
-            animation-delay: <%= (i - 1) * 0.07 %>s; /* Небольшая задержка */
-        }
-    <% } %>
-
-        /* Анимация при перемещении строки */
-        @keyframes fadeOutDown {
-            to { opacity: 0; transform: translateY(15px); }
-        }
-        @keyframes fadeInFromTop {
-            from { opacity: 0; transform: translateY(-15px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .row-fade-out { animation: fadeOutDown 0.4s ease-out forwards; }
-        .row-fade-in { animation: fadeInFromTop 0.4s ease-in forwards; }
-
-        /* Анимация удаления строки */
-        @keyframes fadeOutLeft {
-            to { opacity: 0; transform: translateX(-30px); }
-        }
-        .row-deleting {
-             background-color: rgba(220, 53, 69, 0.1); /* Красный фон при удалении */
-             animation: fadeOutLeft 0.5s ease-in forwards;
-        }
-
-        /* Тултипы для кнопок (как в примере) */
-        [data-tooltip] {
-            position: relative;
-        }
-
-        [data-tooltip]::after {
-            content: attr(data-tooltip);
-            position: absolute;
-            bottom: 125%;
-            left: 50%;
-            transform: translateX(-50%) scale(0.9); /* Начинаем чуть меньше */
-            padding: 6px 10px;
-            background-color: rgba(33, 37, 41, 0.9); /* Темный фон */
-            color: white;
-            font-size: 0.8rem;
-            font-weight: 500; /* Чуть жирнее */
-            border-radius: 4px;
-            white-space: nowrap;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* Та же анимация */
-            pointer-events: none;
-            z-index: 100; /* Выше остального */
-        }
-
-        [data-tooltip]::before { /* Стрелочка тултипа */
-            content: '';
-            position: absolute;
-            bottom: 125%;
-            left: 50%;
-            transform: translateX(-50%) translateY(100%) scale(0.9);
-            border-width: 5px;
-            border-style: solid;
-            border-color: rgba(33, 37, 41, 0.9) transparent transparent transparent;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            pointer-events: none;
-            z-index: 100;
-        }
-
-        [data-tooltip]:hover::after,
-        [data-tooltip]:hover::before {
-            opacity: 1;
-            visibility: visible;
-            bottom: 135%; /* Появляется чуть выше */
-            transform: translateX(-50%) scale(1); /* Плавное увеличение */
-        }
-        [data-tooltip]:hover::before {
-             transform: translateX(-50%) translateY(100%) scale(1);
-        }
-
-        /* Анимация встряхивания для ошибки в модалке */
-         @keyframes shake-error {
-             0%, 100% { transform: translateX(0); }
-             10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-             20%, 40%, 60%, 80% { transform: translateX(5px); }
-         }
-        .shake-error {
-            animation: shake-error 0.5s cubic-bezier(.36,.07,.19,.97) both;
-            border-color: var(--danger-color) !important; /* Выделить рамку */
-        }
-         #modalError {
-            color: var(--danger-color);
-            font-size: 0.9rem;
-            margin-top: -10px; /* Ближе к полю */
-            margin-bottom: 15px;
-            display: none; /* Скрыто по умолчанию */
-            font-weight: 500;
-         }
-
-         /* === NEW Styles for Filter Bar === */
-        .filter-bar {
-            display: flex;
-            flex-wrap: wrap; /* Allow wrapping on smaller screens */
-            align-items: center;
-            gap: 15px; /* Spacing between elements */
-            background-color: #ffffff;
-            padding: 15px 20px; /* Padding inside the bar */
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-            margin-bottom: 30px; /* Space below the bar */
-            border: 1px solid var(--grey-medium);
-        }
-
-        .filter-group {
-            display: flex;
-            flex-direction: column; /* Label above input/select */
-        }
-
-        .filter-group label {
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: var(--grey-dark);
-            margin-bottom: 5px;
-        }
-
-        /* Search Input Wrapper */
-        .search-input-wrapper {
-            flex-grow: 1; /* Takes up available space */
-            min-width: 250px; /* Minimum width for the search */
-            position: relative;
-        }
-
-        .search-input-wrapper .search-icon {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--grey-dark);
-            opacity: 0.7;
-            font-size: 0.9em;
-        }
-
-        #rentalSearchInput {
-            width: 100%;
-            padding: 10px 15px 10px 38px; /* Padding for icon */
-            border: 1px solid var(--grey-medium);
-            border-radius: var(--border-radius);
-            font-size: 0.95rem;
-            transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
-        }
-
-        #rentalSearchInput:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
-        }
-
-        /* Status Filter Wrapper */
-        .status-filter-wrapper {
-            min-width: 200px; /* Ensure select has enough width */
-        }
-
-        #rentalStatusFilter {
-            width: 100%;
-            padding: 10px 15px;
-            border: 1px solid var(--grey-medium);
-            border-radius: var(--border-radius);
-            font-size: 0.95rem;
-            background-color: white;
-            cursor: pointer;
-            transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
-        }
-
-        #rentalStatusFilter:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
-        }
-
-        /* Message for no filter results */
-        #noFilterResultsMessage {
-            display: none; /* Hidden by default */
-            text-align: center;
-            margin: 30px 0;
-            padding: 15px;
-            background-color: var(--light-color);
-            color: var(--secondary-color);
-            border-radius: var(--border-radius);
-            border: 1px dashed var(--grey-medium);
-        }
-        #noFilterResultsMessage i { /* Optional icon */
-             margin-right: 8px;
-        }
-
-        /* --- Styles for Pagination Container --- */
-        .pagination-container {
-            margin-top: 25px;
-            margin-bottom: 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-            padding: 12px 15px;
-            background-color: white;
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-            max-width: 1200px; /* Или ширина вашего основного .container */
-            margin-left: auto;  /* Центрирование блока */
-            margin-right: auto; /* Центрирование блока */
-            box-sizing: border-box;
-        }
-        .pagination-controls { display: flex; align-items: center; gap: 6px; }
-        .pagination-controls button { padding: 8px 14px; font-size: 0.95rem; border: none; background-color: #fff; color: var(--primary-color); cursor: pointer; border-radius: var(--border-radius); transition: all 0.2s ease; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); min-width: 40px; text-align: center; position: relative; overflow: hidden; }
-        .pagination-controls button::before { content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0; background-color: rgba(13, 110, 253, 0.1); border-radius: 50%; transform: translate(-50%, -50%); transition: width 0.4s, height 0.4s; }
-        .pagination-controls button:hover:not(:disabled)::before { width: 200%; height: 200%; }
-        .pagination-controls button:hover:not(:disabled) { background-color: #f8f9fa; color: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); }
-        .pagination-controls button:disabled { color: #adb5bd; background-color: #f8f9fa; cursor: not-allowed; opacity: 0.7; box-shadow: none; }
-        .pagination-controls button.active { background-color: var(--primary-color); color: #fff; cursor: default; font-weight: 500; box-shadow: 0 2px 5px rgba(13, 110, 253, 0.3); }
-        .pagination-controls span { margin: 0 5px; color: var(--secondary-color); }
-        .pagination-info { font-size: 0.95rem; color: var(--secondary-color); display: flex; align-items: center; gap: 10px; }
-        .pagination-info select { padding: 6px 10px; border: 1px solid #ced4da; border-radius: var(--border-radius); font-size: 0.9rem; vertical-align: middle; transition: all 0.2s ease; cursor: pointer; background-color: white; }
-        .pagination-info select:focus { border-color: var(--primary-color); outline: 0; box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15); }
-        .pagination-info label { margin-bottom: 0; }
-        .pagination-container.hidden { display: none !important; } /* Class to hide pagination */
-        .hidden-row { display: none; } /* Class to hide table rows */
+        #modalError { color: var(--danger-color); font-size: 0.9rem; margin-top: 5px; display: none; font-weight: 500; }
+        #rejectReasonTextarea.shake-error { animation: shake-error 0.5s cubic-bezier(.36,.07,.19,.97) both; border-color: var(--danger-color) !important; }
+        @keyframes shake-error { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); } 20%, 40%, 60%, 80% { transform: translateX(5px); } }
 
     </style>
 </head>
@@ -823,24 +295,20 @@
     <%- include('partials/header') %>
 
     <main class="container">
-        <h1><%= title %></h1>
+        <div class="page-header">
+            <h1><%= title %></h1>
+        </div>
 
-        <!-- Сообщения с сервера (если есть) -->
-        <%- include('partials/messages') %>
-        <!-- Контейнер для JS сообщений -->
         <div id="js-messages-rentals"></div>
 
-        <%# --- Filter Bar --- %>
+        <!-- Фильтры -->
         <div class="filter-bar">
-            <div class="filter-group search-input-wrapper">
+            <div class="filter-group">
                 <label for="rentalSearchInput">Поиск</label>
-                <div class="search-input-wrapper">
-                     <i class="fas fa-search search-icon"></i>
-                     <input type="text" id="rentalSearchInput" placeholder="По объекту, арендатору, ID...">
-                </div>
+                <input type="text" id="rentalSearchInput" placeholder="Объект, арендатор, ID...">
             </div>
-            <div class="filter-group status-filter-wrapper">
-                <label for="rentalStatusFilter">Фильтр по статусу</label>
+            <div class="filter-group">
+                <label for="rentalStatusFilter">Статус</label>
                 <select id="rentalStatusFilter">
                     <option value="">Все статусы</option>
                     <option value="Ожидает подтверждения">Ожидает подтверждения</option>
@@ -848,581 +316,483 @@
                     <option value="Отклонена">Отклонена</option>
                     <option value="Отменена">Отменена</option>
                     <option value="Аннулирована">Аннулирована</option>
+                    <option value="Завершена">Завершена</option>
                 </select>
             </div>
-            <%# Можно добавить кнопку сброса фильтров сюда или оставить только внутри advanced (если они будут) %>
-             <div class="filter-group" style="margin-top: auto;"> <%# Убрана label, кнопка сама по себе %>
-                  <button type="button" id="resetFiltersBtn" class="btn btn-secondary btn-small" style="align-self: flex-end;">
-                     <i class="fas fa-undo"></i> Сбросить
-                  </button>
-             </div>
+            <!-- ИСПРАВЛЕНИЕ: Перемещаем кнопку сброса сюда -->
+            <div class="filter-group">
+                 <label> </label> <!-- Пустая метка для выравнивания -->
+                 <button type="button" id="resetFiltersBtn" class="btn btn-secondary btn-small"><i class="fas fa-undo"></i> Сбросить</button>
+            </div>
         </div>
-        <%# --- End Filter Bar --- %>
 
-        <%# Сообщение об отсутствии результатов фильтрации %>
-        <p id="noFilterResultsMessage">
-            <i class="fas fa-filter"></i> По вашему запросу бронирований не найдено. Попробуйте изменить фильтры.
-        </p>
+        <!-- Сообщение об отсутствии результатов фильтрации -->
+        <p class="no-data-message hidden" id="noFilterResultsMessage"><i class="fas fa-filter"></i> По вашему запросу бронирований не найдено.</p>
 
-
-        <%# Логика разделения на таблицы и переменная isAdminUser остаются БЕЗ ИЗМЕНЕНИЙ %>
-        <%
-            const allBookings = Array.isArray(bookings) ? bookings : [];
-            // Разделение больше не нужно, JS будет сам рассортировывать строки
-            const isAdminUser = locals.currentUser && locals.currentUser.role === 'Admin';
-            const bookingsExist = allBookings.length > 0;
-        %>
-
-        <!-- ЕДИНАЯ Таблица для ВСЕХ Бронирований -->
-        <section class="rentals-section">
-             <h2>
-                 <i class="fas fa-list-alt"></i>
-                 Все Бронирования (<span id="totalBookingCount"><%= allBookings.length %></span>)
-                 <span id="filteredBookingCount" style="display: none;"></span> <%# Для показа отфильтрованного кол-ва %>
-             </h2>
-             <div class="table-responsive">
-                 <table class="data-table">
-                     <thead>
-                         <tr>
-                             <th>Объект</th>
-                             <th>Арендатор</th>
-                             <th>Даты</th>
-                             <th>Сумма</th>
-                             <th>Статус</th>
-                             <th>Действия</th>
-                         </tr>
-                     </thead>
-                     <%# --- !!! ВАЖНО: Присваиваем ID ТЕПЕРЬ ЭТОЙ ТАБЛИЦЕ !!! --- %>
-                     <tbody id="rentalsTableBody">
-                         <% if (bookingsExist) { %>
-                             <% allBookings.forEach(booking => { %>
-                                 <%
-                                     let statusClass = 'status-other';
-                                     let statusText = booking.Status || 'Неизвестен';
-                                     switch(booking.Status) {
-                                         case 'Активна': statusClass = 'status-active'; break;
-                                         case 'Ожидает подтверждения': statusClass = 'status-pending'; break;
-                                         case 'Отклонена': statusClass = 'status-rejected'; break;
-                                         case 'Отменена': statusClass = 'status-cancelled'; break;
-                                         case 'Аннулирована': statusClass = 'status-annulled'; break;
-                                     }
-                                     // Генерируем data-* атрибуты для JS фильтрации
-                                     const dataAttributes = `
-                                         id="rental-row-${booking.Id}"
-                                         data-status="${(booking.Status || '')}"
-                                         data-property-title="${(booking.PropertyTitle || '')}"
-                                         data-tenant-name="${(booking.TenantName || '')}"
-                                         data-booking-id="${(booking.Id || '')}"
-                                     `;
-                                 %>
-                                 <tr <%- dataAttributes %>>
-                                     <td>
-                                         <a href="/properties/<%= booking.PropertyId %>" title="<%= booking.PropertyTitle %>">
-                                             <%= booking.PropertyTitle.substring(0, 30) %><% if(booking.PropertyTitle.length > 30) { %>...<% } %>
-                                         </a>
-                                     </td>
-                                     <td><%= booking.TenantName %></td>
-                                     <td><%= booking.StartDateFormatted %> - <%= booking.EndDateFormatted %></td>
-                                     <td><%= booking.TotalCost ? new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 }).format(booking.TotalCost) : 'Н/Д' %></td>
-                                     <td class="status-cell">
-                                         <span class="status-label <%= statusClass %>" title="Статус: <%= booking.Status %>"><%= statusText %></span>
-                                         <% if (booking.Status === 'Отклонена' && booking.RejectedReason) { %>
-                                             <i class="fas fa-info-circle" data-tooltip="Причина отклонения: <%= booking.RejectedReason %>" style="margin-left: 5px;"></i>
-                                         <% } %>
-                                     </td>
-                                     <td class="actions-cell">
-                                          <% if (booking.Status === 'Ожидает подтверждения') { %>
-                                             <form class="rental-action-form" data-action="confirm" data-booking-id="<%= booking.Id %>" action="/rentals/<%= booking.Id %>/confirm" method="POST">
-                                                 <button type="submit" class="btn btn-small btn-confirm" data-tooltip="Подтвердить"> <span class="button-text"><i class="fas fa-check"></i></span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button>
-                                             </form>
-                                             <form class="rental-action-form" data-action="reject" data-booking-id="<%= booking.Id %>" action="/rentals/<%= booking.Id %>/reject" method="POST">
-                                                 <button type="button" class="btn btn-small btn-reject reject-button" data-tooltip="Отклонить"> <span class="button-text"><i class="fas fa-times"></i></span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button>
-                                             </form>
-                                          <% } else if (booking.Status === 'Активна') { %>
-                                             <form class="rental-action-form" data-action="cancel" data-booking-id="<%= booking.Id %>" action="/rentals/<%= booking.Id %>/cancel" method="POST">
-                                                 <button type="submit" class="btn btn-small btn-annul" data-tooltip="Аннулировать"> <span class="button-text"><i class="fas fa-ban"></i></span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button>
-                                             </form>
-                                          <% } %>
-                                          <% if (isAdminUser && ['Отклонена', 'Отменена', 'Аннулирована'].includes(booking.Status)) { %>
-                                             <form class="rental-action-form" data-action="delete" data-booking-id="<%= booking.Id %>" action="/rentals/<%= booking.Id %>/delete" method="POST">
-                                                 <button type="submit" class="btn btn-small btn-delete" data-tooltip="Удалить запись"> <span class="button-text"><i class="fas fa-trash-alt"></i></span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button>
-                                             </form>
-                                         <% } else if (!['Ожидает подтверждения', 'Активна'].includes(booking.Status)) { %>
-                                              <span>-</span> <%# Показываем прочерк для завершенных/отмененных, если не админ %>
-                                         <% } %>
-                                     </td>
-                                 </tr>
-                             <% }) %>
-                         <% } else { %>
-                             <%# Строка "Нет бронирований" управляется JS %>
-                         <% } %>
-                     </tbody>
-                 </table>
-             </div>
-              <!-- Сообщение об отсутствии бронирований ВООБЩЕ -->
-             <p class="no-bookings-message" id="noBookingsMessage" style="display: <%= bookingsExist ? 'none' : 'block' %>;">
-                 <i class="fas fa-calendar-times"></i> Нет данных об арендах для отображения.
-             </p>
+        <!-- Секция: Ожидают подтверждения -->
+        <section class="rentals-section" id="pendingSection">
+            <div class="section-header" onclick="toggleSection('pendingContent', this)">
+                <h2><i class="fas fa-hourglass-half"></i> Ожидают подтверждения</h2>
+                <span class="count-badge" id="pendingCountBadge">0</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </div>
+            <div class="section-content" id="pendingContent">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead><tr><th>Объект</th><th>Арендатор</th><th>Даты</th><th>Сумма</th><th>Действия</th></tr></thead>
+                        <tbody id="pendingTableBody"></tbody>
+                    </table>
+                </div>
+                <p class="no-data-message hidden" id="noPendingMessage"><i class="fas fa-inbox"></i> Нет ожидающих бронирований.</p>
+            </div>
         </section>
+
+        <!-- Секция: Активные -->
+        <section class="rentals-section" id="activeSection">
+            <div class="section-header" onclick="toggleSection('activeContent', this)">
+                <h2><i class="fas fa-play-circle"></i> Активные</h2>
+                <span class="count-badge" id="activeCountBadge">0</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </div>
+            <div class="section-content collapsed" id="activeContent">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead><tr><th>Объект</th><th>Арендатор</th><th>Даты</th><th>Сумма</th><th>Действия</th></tr></thead>
+                        <tbody id="activeTableBody"></tbody>
+                    </table>
+                </div>
+                <p class="no-data-message hidden" id="noActiveMessage"><i class="fas fa-calendar-check"></i> Нет активных аренд.</p>
+            </div>
+        </section>
+
+        <!-- Секция: История -->
+        <section class="rentals-section" id="historySection">
+            <div class="section-header" onclick="toggleSection('historyContent', this)">
+                <h2><i class="fas fa-history"></i> История</h2>
+                <span class="count-badge" id="historyCountBadge">0</span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+            </div>
+            <div class="section-content collapsed" id="historyContent">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead><tr><th>Объект</th><th>Арендатор</th><th>Даты</th><th>Сумма</th><th>Статус</th><th>Действия</th></tr></thead>
+                        <tbody id="historyTableBody"></tbody>
+                    </table>
+                </div>
+                <p class="no-data-message hidden" id="noHistoryMessage"><i class="fas fa-archive"></i> Нет завершенных или отмененных бронирований.</p>
+                 <!-- Пагинация для истории -->
+                 <div class="pagination-container hidden" id="historyPaginationContainer">
+                    <div class="pagination-info">
+                        <span id="historyPaginationInfo"></span>
+                        <select id="historyItemsPerPageSelect">
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="20">20</option>
+                             <option value="50">50</option> <%# Добавим 50 %>
+                        </select>
+                        <label for="historyItemsPerPageSelect">на странице</label>
+                    </div>
+                    <div class="pagination-controls" id="historyPaginationControls"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Сообщение, если бронирований нет ВООБЩЕ -->
+        <p class="no-data-message hidden" id="noBookingsOverallMessage"><i class="fas fa-folder-open"></i> Нет данных об арендах для отображения.</p>
 
     </main>
 
-    <!-- Модальное окно для причины отклонения (стилизованное как в примере) -->
-    <div id="rejectReasonModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal">×</span>
-            <h2>Причина отклонения брони #<span id="rejectBookingIdSpan"></span></h2>
-            <form id="rejectReasonForm">
-                <input type="hidden" id="rejectBookingIdInput">
-                <div class="form-group">
-                    <label for="rejectReasonTextarea">Укажите причину (необязательно):</label>
-                    <textarea id="rejectReasonTextarea" class="form-control" rows="4" placeholder="Например: Объект недоступен в указанные даты"></textarea>
-                    <p id="modalError"></p> <!-- Место для ошибки валидации модалки -->
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary close-modal-button">Отмена</button>
-                    <button type="submit" id="confirmRejectBtn" class="btn btn-reject">
-                        <span class="button-text">Отклонить бронь</span>
-                        <i class="fas fa-spinner fa-spin button-spinner"></i>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Модальное окно для кастомного подтверждения (из примера) -->
-    <div id="customConfirmModal" class="modal">
-         <div class="modal-content">
-             <span class="close-modal">×</span>
-             <h2 id="customConfirmTitle">Подтвердите действие</h2>
-             <p id="customConfirmMessage">Вы уверены?</p>
-             <div class="modal-footer">
-                 <button type="button" id="confirmCancel" class="btn btn-secondary">Отмена</button>
-                 <button type="button" id="confirmOk" class="btn btn-primary">Подтвердить</button>
-             </div>
-         </div>
-    </div>
-    <div class="pagination-container hidden" id="paginationContainer">
-            <div class="pagination-info">
-                 <span id="paginationInfo"></span>
-                 <select id="itemsPerPageSelect">
-                    <option value="5">5</option>
-                    <option value="10" selected>10</option>
-                    <option value="20">20</option>
-                    <option value="50">50</option>
-                 </select>
-                 <label for="itemsPerPageSelect">на странице</label>
-            </div>
-            <div class="pagination-controls" id="paginationControls">
-                <%# Кнопки будут генерироваться JS %>
-            </div>
-        </div>
+    <!-- Модальные окна (код не изменился) -->
+     <div id="rejectReasonModal" class="modal"> <div class="modal-content"> <span class="close-modal" onclick="closeRejectModal()">×</span> <h2>Причина отклонения #<span id="rejectBookingIdSpan"></span></h2> <form id="rejectReasonForm"> <input type="hidden" id="rejectBookingIdInput"> <div class="form-group"> <label for="rejectReasonTextarea">Укажите причину:</label> <textarea id="rejectReasonTextarea" class="form-control" rows="4" placeholder="Причина отклонения (необязательно)"></textarea> <p id="modalError"></p> </div> <div class="modal-footer"> <button type="button" class="btn btn-secondary close-modal-button">Отмена</button> <button type="submit" id="confirmRejectBtn" class="btn btn-danger"> <span class="button-text">Отклонить бронь</span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button> </div> </form> </div> </div>
+     <div id="customConfirmModal" class="modal"> <div class="modal-content"> <span class="close-modal">×</span> <h2 id="customConfirmTitle">Подтвердите действие</h2> <p id="customConfirmMessage">Вы уверены?</p> <div class="modal-footer"> <button type="button" id="confirmCancel" class="btn btn-secondary">Отмена</button> <button type="button" id="confirmOk" class="btn btn-primary">Подтвердить</button> </div> </div> </div>
 
     <%- include('partials/footer') %>
 
+    <!-- Скрипты -->
     <script>
-        // --- DOM Элементы ---
-         const tableBody = document.getElementById('rentalsTableBody');
-        const paginationContainer = document.getElementById('paginationContainer');
-        const paginationControls = document.getElementById('paginationControls');
-        const paginationInfo = document.getElementById('paginationInfo');
-        const itemsPerPageSelect = document.getElementById('itemsPerPageSelect');
-        const noBookingsMessage = document.getElementById('noBookingsMessage');
-        const noFilterResultsMessage = document.getElementById('noFilterResultsMessage');
-        const jsMessagesContainer = document.getElementById('js-messages-rentals');
+        // --- Глобальные переменные и DOM Элементы ---
         const isAdmin = JSON.parse('<%- JSON.stringify(isAdminUser) %>');
+        let allBookingsData = []; // Инициализируем пустым
+        try {
+             // --- ИСПРАВЛЕНО: Используем innerHTML для безопасного парсинга JSON из EJS ---
+             const jsonDataElement = document.createElement('textarea');
+             jsonDataElement.innerHTML = '<%- allBookingsJson || '[]' %>';
+             allBookingsData = JSON.parse(jsonDataElement.value);
+             console.log(`[Rentals Init] Successfully parsed ${allBookingsData.length} bookings from EJS.`);
+         } catch (e) {
+             console.error("[Rentals Init] CRITICAL ERROR parsing bookings JSON:", e);
+             // Показываем сообщение об ошибке пользователю
+              showRentalsJsMessage('error', 'Ошибка загрузки данных бронирований. Попробуйте обновить страницу.', false);
+         }
+
+        const jsMessagesContainer = document.getElementById('js-messages-rentals');
+        // Filter Elements
         const searchInput = document.getElementById('rentalSearchInput');
         const statusFilter = document.getElementById('rentalStatusFilter');
         const resetFiltersBtn = document.getElementById('resetFiltersBtn');
-        const totalCountSpan = document.getElementById('totalBookingCount');
-        const filteredCountSpan = document.getElementById('filteredBookingCount');
+        // Section Elements
+        const pendingSection = { body: document.getElementById('pendingTableBody'), noDataMsg: document.getElementById('noPendingMessage'), countBadge: document.getElementById('pendingCountBadge') };
+        const activeSection = { body: document.getElementById('activeTableBody'), noDataMsg: document.getElementById('noActiveMessage'), countBadge: document.getElementById('activeCountBadge') };
+        const historySection = { body: document.getElementById('historyTableBody'), noDataMsg: document.getElementById('noHistoryMessage'), countBadge: document.getElementById('historyCountBadge'), paginationContainer: document.getElementById('historyPaginationContainer'), paginationControls: document.getElementById('historyPaginationControls'), paginationInfo: document.getElementById('historyPaginationInfo'), itemsPerPageSelect: document.getElementById('historyItemsPerPageSelect') };
+        const noFilterResultsMessage = document.getElementById('noFilterResultsMessage');
+        const noBookingsOverallMessage = document.getElementById('noBookingsOverallMessage');
+        // Modal Elements (Reject & Confirm) - Определения как раньше
+        const rejectModal = document.getElementById('rejectReasonModal'); const rejectBookingIdSpan = document.getElementById('rejectBookingIdSpan'); const rejectBookingIdInput = document.getElementById('rejectBookingIdInput'); const rejectReasonTextarea = document.getElementById('rejectReasonTextarea'); const rejectReasonForm = document.getElementById('rejectReasonForm'); const confirmRejectBtn = document.getElementById('confirmRejectBtn'); const modalError = document.getElementById('modalError'); let rejectTargetFormElement = null;
+        const confirmModal = document.getElementById('customConfirmModal'); const confirmTitle = document.getElementById('customConfirmTitle'); const confirmMessage = document.getElementById('customConfirmMessage'); const confirmOkButton = document.getElementById('confirmOk'); const confirmCancelButton = document.getElementById('confirmCancel'); let confirmResolve = null;
+        // Pagination State (for History)
+        let historyCurrentPage = 1;
+        let historyItemsPerPage = parseInt(historySection.itemsPerPageSelect?.value || '10');
+        let filteredHistoryBookings = []; // Store filtered history bookings
 
-        // --- Modal Windows Elements ---
-        const rejectModal = document.getElementById('rejectReasonModal');
-        const rejectBookingIdSpan = document.getElementById('rejectBookingIdSpan');
-        const rejectBookingIdInput = document.getElementById('rejectBookingIdInput');
-        const rejectReasonTextarea = document.getElementById('rejectReasonTextarea');
-        const rejectReasonForm = document.getElementById('rejectReasonForm');
-        const confirmRejectBtn = document.getElementById('confirmRejectBtn');
-        const modalError = document.getElementById('modalError');
-        let rejectTargetFormElement = null;
-
-        const confirmModal = document.getElementById('customConfirmModal');
-        const confirmTitle = document.getElementById('customConfirmTitle');
-        const confirmMessage = document.getElementById('customConfirmMessage');
-        const confirmOkButton = document.getElementById('confirmOk');
-        const confirmCancelButton = document.getElementById('confirmCancel');
-        let confirmResolve = null;
-
-        // --- Global Variables ---
-        // Собираем все строки из EJS один раз
-        const allRows = Array.from(tableBody.querySelectorAll('tr'));
-        let currentPage = 1;
-        let itemsPerPage = parseInt(itemsPerPageSelect.value);
-
-        // --- Functions ---
-
-        // Show JS Messages
-        function showRentalsJsMessage(type, text, allowHtml = false) {
-             if (!jsMessagesContainer) return;
-             jsMessagesContainer.innerHTML = '';
-             const messageDiv = document.createElement('div');
-             messageDiv.className = `flash-message flash-${type}`;
-             if (allowHtml) { messageDiv.innerHTML = text; } else { messageDiv.textContent = text; }
-             const closeButton = document.createElement('button');
-             closeButton.type = 'button'; closeButton.className = 'close-flash'; closeButton.innerHTML = '×';
-             closeButton.onclick = () => { messageDiv.style.opacity = '0'; setTimeout(() => messageDiv.remove(), 300); };
-             messageDiv.appendChild(closeButton);
-             jsMessagesContainer.appendChild(messageDiv);
-             setTimeout(() => { if (messageDiv.parentNode) { messageDiv.style.opacity = '0'; setTimeout(() => { if (messageDiv.parentNode) messageDiv.remove(); }, 300); } }, 6000);
+        // --- Helper Functions (Без изменений) ---
+        function showRentalsJsMessage(type, text, allowHtml = false) { /* ... */ if (!jsMessagesContainer) return; jsMessagesContainer.innerHTML = ''; const messageDiv = document.createElement('div'); messageDiv.className = `flash-message flash-${type}`; if (allowHtml) { messageDiv.innerHTML = text; } else { messageDiv.textContent = text; } const closeButton = document.createElement('button'); closeButton.type = 'button'; closeButton.className = 'close-flash'; closeButton.innerHTML = '×'; closeButton.onclick = () => { messageDiv.style.opacity = '0'; setTimeout(() => messageDiv.remove(), 300); }; messageDiv.appendChild(closeButton); jsMessagesContainer.appendChild(messageDiv); messageDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease'; messageDiv.style.opacity = '0'; messageDiv.style.transform = 'translateY(-10px)'; setTimeout(() => { messageDiv.style.opacity = '1'; messageDiv.style.transform = 'translateY(0)';}, 10); setTimeout(() => { if (messageDiv.parentNode) { messageDiv.style.opacity = '0'; messageDiv.style.transform = 'translateY(-10px)'; setTimeout(() => { if (messageDiv.parentNode) messageDiv.remove(); }, 300); } }, 6000); }
+        function escapeHtml(unsafe) { 
+            if (typeof unsafe !== 'string') return unsafe;
+            return unsafe.replace(/&/g, "&amp;")
+                         .replace(/</g, "&lt;")
+                         .replace(/>/g, "&gt;")
+                         .replace(/"/g, "&quot;")
+                         .replace(/'/g, "&#39;");
         }
+        function openRejectModal(buttonElement) { /* ... */ rejectTargetFormElement = buttonElement.closest('form'); if (!rejectTargetFormElement) return; const bookingId = rejectTargetFormElement.dataset.bookingId; rejectBookingIdSpan.textContent = bookingId.substring(0, 8) + '...'; rejectBookingIdInput.value = bookingId; rejectReasonTextarea.value = ''; rejectReasonTextarea.classList.remove('shake-error'); modalError.style.display = 'none'; confirmRejectBtn.disabled = false; const rejectBtnText = confirmRejectBtn.querySelector('.button-text'); if (rejectBtnText) rejectBtnText.textContent = 'Отклонить бронь'; rejectModal.style.display = 'block'; setTimeout(() => { rejectModal.classList.add('visible'); document.body.style.overflow = 'hidden'; }, 10); rejectReasonTextarea.focus(); }
+        function closeRejectModal() { /* ... */ rejectModal.classList.remove('visible'); setTimeout(() => { rejectModal.style.display = 'none'; if(!confirmModal || confirmModal.style.display !== 'block') document.body.style.overflow='';}, 300); rejectTargetFormElement = null; }
+        function showCustomConfirm(title, message, confirmText = 'Подтвердить', cancelText = 'Отмена') { /* ... */ return new Promise((resolve) => { confirmTitle.innerHTML = title; confirmMessage.innerHTML = message; confirmOkButton.textContent = confirmText; confirmCancelButton.textContent = cancelText; confirmResolve = resolve; confirmModal.style.display = 'block'; setTimeout(() => { confirmModal.classList.add('visible'); document.body.style.overflow='hidden';}, 10); }); }
+        function closeConfirmModal(result) { /* ... */ confirmModal.classList.remove('visible'); setTimeout(() => { confirmModal.style.display = 'none'; if(!rejectModal || rejectModal.style.display !== 'block') document.body.style.overflow=''; }, 300); if (confirmResolve) { confirmResolve(result); confirmResolve = null; } }
+        [rejectModal, confirmModal].filter(Boolean).forEach(modal => { modal.querySelectorAll('.close-modal, .close-modal-button, #confirmCancel').forEach(button => { button.addEventListener('click', () => { if (modal.id === 'rejectReasonModal') closeRejectModal(); if (modal.id === 'customConfirmModal') closeConfirmModal(false); }); }); modal.addEventListener('click', (event) => { if (event.target === modal) { if (modal.id === 'rejectReasonModal') closeRejectModal(); if (modal.id === 'customConfirmModal') closeConfirmModal(false); } }); });
+        document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { if (rejectModal?.classList.contains('visible')) closeRejectModal(); if (confirmModal?.classList.contains('visible')) closeConfirmModal(false); } });
+        if(confirmOkButton) confirmOkButton.addEventListener('click', () => closeConfirmModal(true));
+        function toggleSection(contentId, headerElement) { const content = document.getElementById(contentId); const icon = headerElement.querySelector('.toggle-icon'); const section = headerElement.closest('.rentals-section'); if (content && icon && section) { content.classList.toggle('collapsed'); section.classList.toggle('collapsed'); } }
+        function generateStatusLabel(status, rejectedReason = null) { /* ... (code from previous step, including Завершена) ... */ let statusClass = 'status-other'; let statusText = status || 'Неизвестен'; let icon = 'fa-question'; switch(status) { case 'Активна': statusClass = 'status-active'; icon = 'fa-play-circle'; break; case 'Ожидает подтверждения': statusClass = 'status-pending'; icon = 'fa-hourglass-half'; break; case 'Отклонена': statusClass = 'status-rejected'; icon = 'fa-ban'; break; case 'Отменена': statusClass = 'status-cancelled'; icon = 'fa-times-circle'; break; case 'Аннулирована': statusClass = 'status-annulled'; icon = 'fa-exclamation-triangle'; break; case 'Завершена': statusClass = 'status-completed'; icon = 'fa-check-double'; break; } let html = `<span class="status-label ${statusClass}" title="Статус: ${status}"><i class="fas ${icon}"></i> ${statusText}</span>`; if (status === 'Отклонена' && rejectedReason) { html += ` <i class="fas fa-info-circle" data-tooltip="Причина: ${escapeHtml(rejectedReason)}" style="margin-left: 5px; color: var(--danger-color); cursor: help;"></i>`; } return html; }
+        function generateActionButtons(status, bookingId) { /* ... (code from previous step, including Завершена for delete) ... */ let buttonsHtml = ''; if (status === 'Ожидает подтверждения') { buttonsHtml = `<form class="rental-action-form" data-action="confirm" data-booking-id="${bookingId}" action="/rentals/${bookingId}/confirm" method="POST"><button type="submit" class="btn-action btn-confirm" data-tooltip="Подтвердить"><i class="fas fa-check"></i><span class="button-spinner"></span></button></form><form class="rental-action-form" data-action="reject" data-booking-id="${bookingId}" action="/rentals/${bookingId}/reject" method="POST"><button type="button" class="btn-action btn-reject reject-button" data-tooltip="Отклонить"><i class="fas fa-times"></i><span class="button-spinner"></span></button></form>`; } else if (status === 'Активна') { buttonsHtml = `<form class="rental-action-form" data-action="cancel" data-booking-id="${bookingId}" action="/rentals/${bookingId}/cancel" method="POST"><button type="submit" class="btn-action btn-annul" data-tooltip="Аннулировать"><i class="fas fa-ban"></i><span class="button-spinner"></span></button></form>`; } else if (isAdmin && ['Отклонена', 'Отменена', 'Аннулирована', 'Завершена'].includes(status)) { buttonsHtml = `<form class="rental-action-form" data-action="delete" data-booking-id="${bookingId}" action="/rentals/${bookingId}/delete" method="POST"><button type="submit" class="btn-action btn-delete" data-tooltip="Удалить запись"><i class="fas fa-trash-alt"></i><span class="button-spinner"></span></button></form>`; } else { buttonsHtml = '<span>-</span>'; } return buttonsHtml; }
 
-        // Modal Handling (Reject & Confirm)
-        function openRejectModal(buttonElement) {
-            rejectTargetFormElement = buttonElement.closest('form'); if (!rejectTargetFormElement) return;
-            const bookingId = rejectTargetFormElement.dataset.bookingId;
-            rejectBookingIdSpan.textContent = bookingId.substring(0, 8) + '...';
-            rejectBookingIdInput.value = bookingId; rejectReasonTextarea.value = '';
-            rejectReasonTextarea.classList.remove('shake-error'); modalError.style.display = 'none';
-            confirmRejectBtn.disabled = false;
-            const rejectBtnText = confirmRejectBtn.querySelector('.button-text');
-            if (rejectBtnText) rejectBtnText.textContent = 'Отклонить бронь'; // Reset button text
-
-            rejectModal.style.display = 'block';
-            setTimeout(() => { rejectModal.classList.add('visible'); document.body.style.overflow = 'hidden'; }, 10);
-            rejectReasonTextarea.focus();
-        }
-        function closeRejectModal() {
-             rejectModal.classList.remove('visible'); setTimeout(() => { rejectModal.style.display = 'none'; if(confirmModal.style.display !== 'block') document.body.style.overflow='';}, 300); rejectTargetFormElement = null;
-        }
-        function showCustomConfirm(title, message, confirmText = 'Подтвердить', cancelText = 'Отмена') {
-             return new Promise((resolve) => { confirmTitle.innerHTML = title; confirmMessage.innerHTML = message; confirmOkButton.textContent = confirmText; confirmCancelButton.textContent = cancelText; confirmResolve = resolve; confirmModal.style.display = 'block'; setTimeout(() => { confirmModal.classList.add('visible'); document.body.style.overflow='hidden';}, 10); });
-        }
-        function closeConfirmModal(result) {
-             confirmModal.classList.remove('visible'); setTimeout(() => { confirmModal.style.display = 'none'; if(rejectModal.style.display !== 'block') document.body.style.overflow=''; }, 300); if (confirmResolve) { confirmResolve(result); confirmResolve = null; }
-        }
-        // Modal Close Event Handlers
-        [rejectModal, confirmModal].forEach(modal => { modal.querySelectorAll('.close-modal, .close-modal-button, #confirmCancel').forEach(button => { button.addEventListener('click', () => { if (modal.id === 'rejectReasonModal') closeRejectModal(); if (modal.id === 'customConfirmModal') closeConfirmModal(false); }); }); modal.addEventListener('click', (event) => { if (event.target === modal) { if (modal.id === 'rejectReasonModal') closeRejectModal(); if (modal.id === 'customConfirmModal') closeConfirmModal(false); } }); });
-        document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { if (rejectModal.classList.contains('visible')) closeRejectModal(); if (confirmModal.classList.contains('visible')) closeConfirmModal(false); } });
-        confirmOkButton.addEventListener('click', () => closeConfirmModal(true));
-
-        // *** NEW: Filter and Pagination Logic ***
-
-        function applyFiltersAndPagination() {
-            if (!tableBody) return;
-
+        // --- ИСПРАВЛЕНИЕ: Rendering Logic ---
+        function renderBookings() {
+            console.log("[Render] Starting renderBookings function..."); // Отладка
             const searchTerm = searchInput.value.toLowerCase().trim();
-            const selectedStatus = statusFilter.value; // Value from the dropdown ("" for all)
-            let visibleRowCount = 0;
-            let filteredRows = []; // Keep track of rows that pass filters
+            const selectedStatus = statusFilter.value;
 
-            // 1. Filter all existing rows based on search and status
-            allRows.forEach(row => {
-                const propertyTitle = (row.dataset.propertyTitle || '').toLowerCase();
-                const tenantName = (row.dataset.tenantName || '').toLowerCase();
-                const bookingId = (row.dataset.bookingId || '').toLowerCase();
-                const status = row.dataset.status || ''; // Get status from data attribute
+            // 1. Filter Data
+            const filteredBookings = allBookingsData.filter(booking => {
+                if (!booking) return false;
+                const propTitle = (booking.PropertyTitle || '').toLowerCase();
+                const tenantName = (booking.TenantName || '').toLowerCase();
+                const bookId = (booking.Id || '').toLowerCase();
+                const status = booking.Status || '';
 
                 const statusMatch = !selectedStatus || status === selectedStatus;
-                const searchMatch = !searchTerm ||
-                                    propertyTitle.includes(searchTerm) ||
-                                    tenantName.includes(searchTerm) ||
-                                    bookingId.includes(searchTerm); // Check partial ID match
+                const searchMatch = !searchTerm || propTitle.includes(searchTerm) || tenantName.includes(searchTerm) || bookId.includes(searchTerm);
 
-                if (statusMatch && searchMatch) {
-                    row.classList.remove('hidden-filter'); // Mark as visible by filter
-                    filteredRows.push(row); // Add to the list of filtered rows
-                    visibleRowCount++;
-                } else {
-                    row.classList.add('hidden-filter'); // Mark as hidden by filter
-                    row.classList.add('hidden-row'); // Also hide from pagination immediately
+                return statusMatch && searchMatch;
+            });
+            console.log(`[Render] Filtered bookings count: ${filteredBookings.length}`); // Отладка
+
+            // 2. Separate into sections
+            const pending = [];
+            const active = [];
+            filteredHistoryBookings = []; // Reset history
+
+            filteredBookings.forEach(booking => {
+                if (!booking || !booking.Status) {
+                     console.warn("[Render] Skipping booking with missing status:", booking);
+                     return;
+                 }
+                 switch (booking.Status) {
+                    case 'Ожидает подтверждения':
+                        pending.push(booking);
+                        break;
+                    case 'Активна':
+                        active.push(booking);
+                        break;
+                    default: // Все остальное (Отклонена, Отменена, Аннулирована, Завершена) идет в историю
+                        filteredHistoryBookings.push(booking);
+                        break;
                 }
             });
 
-            // 2. Update filtered count display
-            if (filteredCountSpan) {
-                 if (searchTerm || selectedStatus) { // Show filtered count only if filters are active
-                     filteredCountSpan.textContent = `(Найдено: ${visibleRowCount})`;
-                     filteredCountSpan.style.display = 'inline';
-                 } else {
-                     filteredCountSpan.style.display = 'none';
+            // Сортируем историю по дате создания (новые сверху)
+            filteredHistoryBookings.sort((a, b) => new Date(b.CreatedAt || 0) - new Date(a.CreatedAt || 0));
+            // Сортируем ожидающие по дате создания (новые сверху)
+            pending.sort((a, b) => new Date(b.CreatedAt || 0) - new Date(a.CreatedAt || 0));
+             // Сортируем активные по дате начала (ближайшие сверху)
+             active.sort((a, b) => new Date(a.StartDate || 0) - new Date(b.StartDate || 0));
+
+            console.log(`[Render] Pending: ${pending.length}, Active: ${active.length}, History: ${filteredHistoryBookings.length}`); // Отладка
+
+            // 3. Render Tables & Update Badges
+            renderTableSection(pendingSection, pending, 'Ожидающих');
+            renderTableSection(activeSection, active, 'Активных');
+            renderTableSection(historySection, filteredHistoryBookings, 'в Истории', true); // Pass true to handle pagination for history
+            displayHistoryPage(1); // Display page 1 of history
+
+            // 4. Show/Hide "No Results" Message
+            const hasAnyResults = pending.length > 0 || active.length > 0 || filteredHistoryBookings.length > 0;
+            noFilterResultsMessage.classList.toggle('hidden', hasAnyResults || allBookingsData.length === 0); // Скрываем, если есть результаты ИЛИ если данных нет вообще
+
+            // 5. Show/Hide Overall "No Bookings" Message
+            noBookingsOverallMessage.classList.toggle('hidden', allBookingsData.length > 0);
+
+        }
+
+        function renderTableSection(sectionElements, bookings, sectionNameSingular, requiresPagination = false) {
+            const { body, noDataMsg, countBadge } = sectionElements;
+            if (!body || !noDataMsg || !countBadge) {
+                 console.error(`[Render] Missing elements for section! Body: ${!!body}, Msg: ${!!noDataMsg}, Badge: ${!!countBadge}`);
+                 return;
+            }
+
+            body.innerHTML = ''; // Clear previous content
+            countBadge.textContent = bookings.length; // Update count
+
+            if (bookings.length === 0) {
+                noDataMsg.classList.remove('hidden');
+                if (requiresPagination && sectionElements.paginationContainer) {
+                    sectionElements.paginationContainer.classList.add('hidden'); // Hide history pagination
+                }
+            } else {
+                noDataMsg.classList.add('hidden');
+                if (!requiresPagination) { // Render all rows directly if not paginated
+                    bookings.forEach(booking => {
+                         try { body.appendChild(createTableRow(booking)); } catch(e) { console.error("Error creating row:", e, booking); }
+                    });
+                }
+                 // Pagination for history is handled separately by displayHistoryPage
+                 if (requiresPagination && sectionElements.paginationContainer) {
+                     // Initial state for history pagination visibility will be set by displayHistoryPage
                  }
             }
-
-            // 3. Show/Hide "No Results" or "No Bookings" message
-            if(noFilterResultsMessage) {
-                 noFilterResultsMessage.style.display = (visibleRowCount === 0 && allRows.length > 0) ? 'block' : 'none';
-            }
-            if(noBookingsMessage){
-                noBookingsMessage.style.display = (allRows.length === 0) ? 'block' : 'none';
-                if(tableBody && allRows.length === 0 && !tableBody.querySelector('td[colspan="6"]')){
-                    tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px; color: #6c757d;">Нет данных об арендах</td></tr>`;
-                } else if (tableBody && allRows.length > 0 && tableBody.querySelector('td[colspan="6"]')) {
-                    // Remove the empty message if rows appear
-                    tableBody.innerHTML = '';
-                }
-            }
-
-
-            // 4. Reset to page 1 and display the filtered results
-            displayPage(1, filteredRows); // Pass the filtered rows to displayPage
         }
 
-        function displayPage(page, filteredRows) {
-             if (!tableBody) return;
-
-             currentPage = page;
-             const totalVisibleItems = filteredRows.length; // Total items matching filter
-
-             // Determine which rows from the filtered set to show on this page
-             const start = (page - 1) * itemsPerPage;
-             const end = start + itemsPerPage;
-             const rowsForCurrentPage = filteredRows.slice(start, end);
-
-             // Clear the table body
-             tableBody.innerHTML = '';
-
-             // Append only the rows for the current page
-             rowsForCurrentPage.forEach(row => {
-                 row.classList.remove('hidden-row'); // Ensure it's not hidden by pagination
-                 // Animate appearance (optional but nice)
-                 row.style.opacity = '0';
-                 row.style.transform = 'translateY(10px)';
-                 tableBody.appendChild(row);
-                 setTimeout(() => {
-                      row.style.opacity = '1';
-                      row.style.transform = 'translateY(0)';
-                      row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-                 }, 50); // Stagger slightly maybe? Or remove timeout
-             });
-
-             // Hide all other rows (from the original unfiltered list) that are NOT on this page
-              allRows.forEach(row => {
-                   if (!rowsForCurrentPage.includes(row)) {
-                        row.classList.add('hidden-row');
-                   }
-              });
-
-
-             // Update pagination controls and info based on FILTERED count
-             renderPaginationControls(totalVisibleItems);
-             updatePaginationInfo(totalVisibleItems);
-
-             // Show appropriate message if no rows are displayed on the current page (after filtering)
-             if(totalVisibleItems === 0 && allRows.length > 0 && noFilterResultsMessage){
-                   noFilterResultsMessage.style.display = 'block';
+        function createTableRow(booking) {
+             // Проверка на null или undefined booking
+             if (!booking || typeof booking !== 'object') {
+                 console.error("[createTableRow] Invalid booking data received:", booking);
+                 // Возвращаем пустую строку или строку с ошибкой, чтобы избежать падения
+                 const trError = document.createElement('tr');
+                 trError.innerHTML = `<td colspan="6" style="color: red; font-style: italic;">Ошибка отображения строки</td>`;
+                 return trError;
              }
-             if(allRows.length === 0 && noBookingsMessage) {
-                  noBookingsMessage.style.display = 'block';
-                  tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px; color: #6c757d;">Нет данных об арендах</td></tr>`;
+
+            const tr = document.createElement('tr');
+            tr.id = `rental-row-${booking.Id || Math.random()}`; // Добавляем ID или случайный ID
+            tr.dataset.status = booking.Status || '';
+            tr.dataset.propertyTitle = booking.PropertyTitle || '';
+            tr.dataset.tenantName = booking.TenantName || '';
+            tr.dataset.bookingId = booking.Id || '';
+
+            // Обернем генерацию в try-catch для большей надежности
+             try {
+                 tr.innerHTML = `
+                     <td><a href="/properties/${escapeHtml(booking.PropertyId || '')}" title="${escapeHtml(booking.PropertyTitle || '')}">${escapeHtml(booking.PropertyTitle ? booking.PropertyTitle.substring(0, 30) : '???')}${booking.PropertyTitle && booking.PropertyTitle.length > 30 ? '...' : ''}</a></td>
+                     <td>${escapeHtml(booking.TenantName || '???')}</td>
+                     <td>${escapeHtml(booking.StartDateFormatted || '?')} - ${escapeHtml(booking.EndDateFormatted || '?')}</td>
+                     <td>${booking.TotalCost != null ? new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 }).format(booking.TotalCost) : 'Н/Д'}</td>
+                     <td class="status-cell">${generateStatusLabel(booking.Status, booking.RejectedReason)}</td>
+                     <td class="actions-cell">${generateActionButtons(booking.Status, booking.Id)}</td>
+                 `;
+             } catch (innerError) {
+                 console.error("[createTableRow] Error during innerHTML generation:", innerError, booking);
+                 tr.innerHTML = `<td colspan="6" style="color: red; font-style: italic;">Ошибка генерации строки (ID: ${booking.Id || 'N/A'})</td>`;
              }
+            return tr;
         }
 
-
-                function renderPaginationControls(totalItems) {
-            // Получаем контейнеры
-            const paginationContainer = document.getElementById('paginationContainer');
-            const paginationControls = document.getElementById('paginationControls');
-            const paginationInfoContainer = paginationContainer?.querySelector('.pagination-info'); // Найдем и контейнер с инфо
-
-            // Проверки на существование элементов
-            if (!paginationContainer || !paginationControls || !paginationInfoContainer) {
-                console.error("Pagination elements not found!");
-                return;
-            }
-
-            // --- НОВАЯ ЛОГИКА ОТОБРАЖЕНИЯ КОНТЕЙНЕРА ---
-            // Скрываем весь блок пагинации ТОЛЬКО если нет записей вообще
-            if (totalItems === 0) {
-                paginationContainer.classList.add('hidden');
-                paginationControls.innerHTML = ''; // Очищаем кнопки
-                updatePaginationInfo(0); // Очищаем инфо текст
-                return;
+        // --- History Pagination Logic (Без изменений) ---
+        function displayHistoryPage(page) {
+            if (!historySection.body) return;
+            historyCurrentPage = page;
+            const totalHistoryItems = filteredHistoryBookings.length;
+            const start = (page - 1) * historyItemsPerPage;
+            const end = start + historyItemsPerPage;
+            const rowsForCurrentPage = filteredHistoryBookings.slice(start, end);
+            historySection.body.innerHTML = '';
+            if (rowsForCurrentPage.length > 0) {
+                rowsForCurrentPage.forEach(booking => {
+                    try {
+                        const rowElement = createTableRow(booking);
+                        rowElement.style.opacity = '0';
+                        historySection.body.appendChild(rowElement);
+                        setTimeout(() => {
+                            rowElement.style.transition = 'opacity 0.3s ease';
+                            rowElement.style.opacity = '1';
+                        }, 50);
+                    } catch (e) {
+                        console.error("Error creating history row:", e, booking);
+                    }
+                });
+                historySection.noDataMsg.classList.add('hidden');
             } else {
-                // Показываем контейнер, если записи есть
-                paginationContainer.classList.remove('hidden');
+                historySection.noDataMsg.classList.remove('hidden');
             }
-            // --- КОНЕЦ НОВОЙ ЛОГИКИ КОНТЕЙНЕРА ---
+            renderHistoryPaginationControls(totalHistoryItems);
+            updateHistoryPaginationInfo(totalHistoryItems);
+        }
 
-            // --- ЛОГИКА ОТОБРАЖЕНИЯ КНОПОК ---
-            const pageCount = Math.ceil(totalItems / itemsPerPage);
-            paginationControls.innerHTML = ''; // Всегда очищаем кнопки перед перерисовкой
+        function renderHistoryPaginationControls(totalItems) {
+            const { paginationContainer, paginationControls } = historySection;
+            if (!paginationContainer || !paginationControls) return;
+            paginationContainer.classList.toggle('hidden', totalItems <= historyItemsPerPage);
+            paginationControls.innerHTML = '';
+            const pageCount = Math.ceil(totalItems / historyItemsPerPage);
+            if (pageCount <= 1) return;
 
-            // Не рисуем кнопки, если страница всего одна
-            if (pageCount <= 1) {
-                 paginationControls.style.display = 'none'; // Скрываем блок кнопок
-                 // Инфо и селект остаются видимыми, т.к. totalItems > 0
-                 updatePaginationInfo(totalItems); // Обновляем инфо на всякий случай
-                 return;
-             } else {
-                 paginationControls.style.display = 'flex'; // Показываем блок кнопок
-             }
-            // --- КОНЕЦ ЛОГИКИ ОТОБРАЖЕНИЯ КНОПОК ---
-
-            // --- Генерация кнопок (код остается без изменений) ---
-            // Предыдущая кнопка
             const prevButton = document.createElement('button');
             prevButton.innerHTML = '‹';
-            prevButton.disabled = currentPage === 1;
-            prevButton.addEventListener('click', () => {
-                const currentFilteredRows = allRows.filter(row => !row.classList.contains('hidden-filter'));
-                if (currentPage > 1) displayPage(currentPage - 1, currentFilteredRows);
-            });
+            prevButton.disabled = historyCurrentPage === 1;
+            prevButton.onclick = () => displayHistoryPage(historyCurrentPage - 1);
             paginationControls.appendChild(prevButton);
 
-            // Кнопки страниц (логика с многоточием остается той же)
-            const maxVisiblePages = 5; let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2)); let endPage = Math.min(pageCount, startPage + maxVisiblePages - 1); if (endPage - startPage + 1 < maxVisiblePages) { startPage = Math.max(1, endPage - maxVisiblePages + 1); }
-            if (startPage > 1) { const firstBtn = document.createElement('button'); firstBtn.textContent = '1'; firstBtn.addEventListener('click', () => displayPage(1, allRows.filter(r => !r.classList.contains('hidden-filter')))); paginationControls.appendChild(firstBtn); if (startPage > 2) { const dots = document.createElement('span'); dots.textContent = '...'; paginationControls.appendChild(dots); } }
-            for (let i = startPage; i <= endPage; i++) { const pageButton = document.createElement('button'); pageButton.textContent = i; if (i === currentPage) { pageButton.classList.add('active'); pageButton.disabled = true; } pageButton.addEventListener('click', () => displayPage(i, allRows.filter(r => !r.classList.contains('hidden-filter')))); paginationControls.appendChild(pageButton); }
-            if (endPage < pageCount) { if (endPage < pageCount - 1) { const dots = document.createElement('span'); dots.textContent = '...'; paginationControls.appendChild(dots); } const lastBtn = document.createElement('button'); lastBtn.textContent = pageCount; lastBtn.addEventListener('click', () => displayPage(pageCount, allRows.filter(r => !r.classList.contains('hidden-filter')))); paginationControls.appendChild(lastBtn); }
+            for (let i = 1; i <= pageCount; i++) {
+                const pageButton = document.createElement('button');
+                pageButton.textContent = i;
+                if (i === historyCurrentPage) {
+                    pageButton.classList.add('active');
+                    pageButton.disabled = true;
+                }
+                pageButton.onclick = () => displayHistoryPage(i);
+                paginationControls.appendChild(pageButton);
+            }
 
-            // Следующая кнопка
             const nextButton = document.createElement('button');
             nextButton.innerHTML = '›';
-            nextButton.disabled = currentPage === pageCount;
-            nextButton.addEventListener('click', () => {
-                 const currentFilteredRows = allRows.filter(row => !row.classList.contains('hidden-filter'));
-                 if (currentPage < pageCount) displayPage(currentPage + 1, currentFilteredRows);
-            });
+            nextButton.disabled = historyCurrentPage === pageCount;
+            nextButton.onclick = () => displayHistoryPage(historyCurrentPage + 1);
             paginationControls.appendChild(nextButton);
-
-            // Вызов обновления инфо происходит в displayPage, но можно и здесь продублировать для надежности
-             updatePaginationInfo(totalItems);
         }
 
-        function updatePaginationInfo(totalItems) {
-            if (!paginationInfo || totalItems === 0) {
-                if (paginationInfo) paginationInfo.textContent = '';
+        function updateHistoryPaginationInfo(totalItems) {
+            const { paginationInfo } = historySection;
+            if (!paginationInfo) return;
+            if (totalItems === 0) {
+                paginationInfo.textContent = '';
                 return;
             }
-            const pageCount = Math.ceil(totalItems / itemsPerPage);
-            const startItem = (currentPage - 1) * itemsPerPage + 1;
-            const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+            const startItem = (historyCurrentPage - 1) * historyItemsPerPage + 1;
+            const endItem = Math.min(historyCurrentPage * historyItemsPerPage, totalItems);
             paginationInfo.textContent = `Записи ${startItem}-${endItem} из ${totalItems}`;
         }
 
+        // --- AJAX Action Handling (Без изменений) ---
+        async function handleRentalAction(action, bookingId, submitButton, formData = null) {
+             const buttonTextSpan = submitButton.querySelector('.button-text') || submitButton; // Fallback if no span
+             const spinner = submitButton.querySelector('.button-spinner');
+             const originalButtonHtml = buttonTextSpan.innerHTML; // Store original icon/text
 
-        // *** AJAX Success/Error Handling ***
+             submitButton.disabled = true;
+             if(spinner) spinner.style.display = 'inline-block';
+             if(buttonTextSpan) {
+                 // Hide icon if it's not the spinner
+                  const icon = buttonTextSpan.querySelector('i:not(.button-spinner)');
+                  if (icon) icon.style.display = 'none';
+             }
+             jsMessagesContainer.innerHTML = '';
 
-        function handleActionSuccess(action, bookingId, result, buttonElement = null, originalButtonHtml = null) {
-            const row = document.getElementById(`rental-row-${bookingId}`);
-            if (!row) return;
+             try {
+                 const url = `/rentals/${bookingId}/${action}`;
+                 const options = { method: 'POST', headers: { 'Accept': 'application/json' } };
+                 if (action === 'reject' && formData) { options.headers['Content-Type'] = 'application/json'; options.body = JSON.stringify(Object.fromEntries(formData)); }
 
-            showRentalsJsMessage('success', result.message || 'Действие выполнено успешно.');
+                 const response = await fetch(url, options);
+                 const result = await response.json();
+                 if (!response.ok) { throw new Error(result.error || `Ошибка сервера: ${response.status}`); }
 
-            if (action === 'delete') {
-                // Find the index of the row in the main array
-                const rowIndex = allRows.findIndex(r => r.id === `rental-row-${bookingId}`);
-                if (rowIndex > -1) {
-                    allRows.splice(rowIndex, 1); // Remove from the source array
-                    if (totalCountSpan) { // Update total count
-                         totalCountSpan.textContent = allRows.length;
-                    }
-                    applyFiltersAndPagination(); // Re-apply filters and redisplay the current (or adjusted) page
-                    console.log(`Row ${bookingId} removed from allRows. New count: ${allRows.length}`);
-                } else {
-                    console.warn(`Row ${bookingId} not found in allRows array during delete.`);
-                    // Fallback: just remove from DOM if still present (might cause pagination issues)
-                    row.remove();
-                     applyFiltersAndPagination(); // Still need to refresh pagination
-                }
+                 showRentalsJsMessage('success', result.message || 'Действие выполнено.');
 
-            } else { // Confirm, Reject, Cancel - Update status and buttons in place
-                const newStatus = result.newStatus || 'Неизвестен';
-                row.dataset.status = newStatus; // Update data attribute for filtering
+                 const bookingIndex = allBookingsData.findIndex(b => b && b.Id === bookingId); // Check if b exists
 
-                // Update Status Cell visual
-                let statusClass = 'status-other'; let statusText = newStatus;
-                switch(newStatus) { /* ... (status class logic) ... */
-                     case 'Активна': statusClass = 'status-active'; break;
-                     case 'Ожидает подтверждения': statusClass = 'status-pending'; break;
-                     case 'Отклонена': statusClass = 'status-rejected'; break;
-                     case 'Отменена': statusClass = 'status-cancelled'; break;
-                     case 'Аннулирована': statusClass = 'status-annulled'; break;
-                }
-                const statusCell = row.querySelector('.status-cell');
-                if (statusCell) {
-                    let statusHtml = `<span class="status-label ${statusClass}" title="Статус: ${newStatus}">${statusText}</span>`;
-                    if (newStatus === 'Отклонена' && result.rejectedReason) {
-                        statusHtml += ` <i class="fas fa-info-circle" data-tooltip="Причина отклонения: ${escapeHtml(result.rejectedReason)}" style="margin-left: 5px;"></i>`;
-                    }
-                    statusCell.innerHTML = statusHtml;
-                    const newLabel = statusCell.querySelector('.status-label');
-                     if(newLabel){ newLabel.style.transform = 'scale(1.1)'; setTimeout(() => {newLabel.style.transform = 'scale(1)'; newLabel.style.transition = 'transform 0.3s ease'; }, 50); }
-                }
+                 if (action === 'delete') {
+                     if(bookingIndex > -1) {
+                          allBookingsData.splice(bookingIndex, 1);
+                          console.log(`[Action] Booking ${bookingId} removed from local data.`);
+                     } else { console.warn(`[Action] Booking ${bookingId} not found in local data for deletion.`); }
+                 } else {
+                     if (bookingIndex > -1 && result.updatedBookingData) {
+                         // Merge existing data with UPDATED data from backend
+                         allBookingsData[bookingIndex] = { ...allBookingsData[bookingIndex], ...result.updatedBookingData };
+                         console.log(`[Action] Booking ${bookingId} updated in local data:`, allBookingsData[bookingIndex]);
+                     } else {
+                          console.warn(`[Action] Booking ${bookingId} not found or no updated data received for ${action}. Triggering full render.`);
+                     }
+                 }
+                 // --- ВАЖНО: Перерисовываем ВСЕ секции ---
+                 renderBookings();
 
-                // Update Actions Cell
-                const actionsCell = row.querySelector('.actions-cell');
-                if (actionsCell) {
-                    actionsCell.innerHTML = generateActionButtons(newStatus, bookingId);
-                }
+             } catch (error) {
+                 console.error(`Error during action '${action}' for booking ${bookingId}:`, error);
+                 showRentalsJsMessage('error', error.message || 'Произошла ошибка.');
+                 // Re-enable button on error
+                 submitButton.disabled = false;
+                 if (spinner) spinner.style.display = 'none';
+                 if (buttonTextSpan && originalButtonHtml) {
+                      buttonTextSpan.innerHTML = originalButtonHtml; // Restore original icon/text
+                      const icon = buttonTextSpan.querySelector('i:not(.button-spinner)');
+                      if (icon) icon.style.display = ''; // Make sure original icon is visible
+                 }
+             }
+         }
 
-                // Re-apply filters AFTER updating the row's data attributes and content
-                 applyFiltersAndPagination();
-            }
-        }
-
-        // Generate Action Buttons helper (same as before)
-        function generateActionButtons(status, bookingId) { /* ... function code ... */
-            let buttonsHtml = '';
-             if (status === 'Ожидает подтверждения') { buttonsHtml = `<form class="rental-action-form" data-action="confirm" data-booking-id="${bookingId}" action="/rentals/${bookingId}/confirm" method="POST"> <button type="submit" class="btn btn-small btn-confirm" data-tooltip="Подтвердить"> <span class="button-text"><i class="fas fa-check"></i></span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button> </form> <form class="rental-action-form" data-action="reject" data-booking-id="${bookingId}" action="/rentals/${bookingId}/reject" method="POST"> <button type="button" class="btn btn-small btn-reject reject-button" data-tooltip="Отклонить"> <span class="button-text"><i class="fas fa-times"></i></span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button> </form>`;
-             } else if (status === 'Активна') { buttonsHtml = `<form class="rental-action-form" data-action="cancel" data-booking-id="${bookingId}" action="/rentals/${bookingId}/cancel" method="POST"> <button type="submit" class="btn btn-small btn-annul" data-tooltip="Аннулировать"> <span class="button-text"><i class="fas fa-ban"></i></span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button> </form>`;
-             } else if (isAdmin && ['Отклонена', 'Отменена', 'Аннулирована'].includes(status)) { buttonsHtml = `<form class="rental-action-form" data-action="delete" data-booking-id="${bookingId}" action="/rentals/${bookingId}/delete" method="POST"> <button type="submit" class="btn btn-small btn-delete" data-tooltip="Удалить запись"> <span class="button-text"><i class="fas fa-trash-alt"></i></span> <i class="fas fa-spinner fa-spin button-spinner"></i> </button> </form>`;
-             } else { buttonsHtml = '<span>-</span>'; }
-             return buttonsHtml;
-        }
-
-        // Error Handler (same as before)
-        function handleActionError(error, action, bookingId, submitButton, originalButtonHtml) { /* ... function code ... */
-            console.error(`Error action '${action}' for ${bookingId}:`, error);
-            showRentalsJsMessage('error', error.message || 'Unknown error.');
-            if (submitButton && submitButton.parentNode) { submitButton.disabled = false; const btnText = submitButton.querySelector('.button-text'); if(btnText && originalButtonHtml) btnText.innerHTML = originalButtonHtml; else if(btnText) { if (action === 'confirm') btnText.innerHTML = '<i class="fas fa-check"></i>'; else if (action === 'cancel') btnText.innerHTML = '<i class="fas fa-ban"></i>'; else if (action === 'delete') btnText.innerHTML = '<i class="fas fa-trash-alt"></i>'; else btnText.textContent = 'Retry';}}
-        }
-
-        // --- Event Listeners Setup ---
+        // --- Event Listeners ---
         document.addEventListener('DOMContentLoaded', () => {
-            console.log("Rentals Management DOM Loaded. Initializing...");
-            // Filter listeners
-            if (searchInput) searchInput.addEventListener('input', applyFiltersAndPagination);
-            if (statusFilter) statusFilter.addEventListener('change', applyFiltersAndPagination);
-            if (resetFiltersBtn) {
-                 resetFiltersBtn.addEventListener('click', () => {
-                     searchInput.value = '';
-                     statusFilter.value = ''; // Reset dropdown to "All statuses"
-                     applyFiltersAndPagination(); // Apply reset filters
-                 });
-            }
+            console.log("[Rentals Init] DOM Loaded. Initial bookings data count:", allBookingsData.length);
+            // Initial Render
+            renderBookings();
 
-            // Pagination listener
-            if (itemsPerPageSelect) {
-                itemsPerPageSelect.addEventListener('change', (event) => {
-                    itemsPerPage = parseInt(event.target.value);
-                    applyFiltersAndPagination(); // Re-apply filters which will reset to page 1
-                });
-            }
+            // Filter Listeners
+            searchInput?.addEventListener('input', renderBookings);
+            statusFilter?.addEventListener('change', renderBookings);
+            resetFiltersBtn?.addEventListener('click', () => {
+                if(searchInput) searchInput.value = '';
+                if(statusFilter) statusFilter.value = '';
+                renderBookings();
+            });
 
-            // Reject button listener (to open modal)
-            document.body.addEventListener('click', (event) => {
-                if (event.target && event.target.closest('.reject-button')) {
+            // Pagination Listener (for History)
+            historySection.itemsPerPageSelect?.addEventListener('change', (e) => {
+                 historyItemsPerPage = parseInt(e.target.value);
+                 displayHistoryPage(1); // Go to first page of history
+            });
+
+            // Action Button Listeners (Event Delegation)
+            document.body.addEventListener('submit', async (event) => {
+                const form = event.target;
+                if (form && form.classList.contains('rental-action-form')) {
                     event.preventDefault();
-                    openRejectModal(event.target.closest('.reject-button'));
+                    const action = form.dataset.action;
+                    const bookingId = form.dataset.bookingId;
+                    const submitButton = form.querySelector('button[type="submit"]');
+
+                    if (action === 'reject') return; // Reject is handled by modal
+
+                    let confirmed = true;
+                    if (action === 'cancel' || action === 'delete') {
+                        const title = action === 'cancel' ? 'Аннулировать бронь?' : 'Удалить запись?';
+                        const message = action === 'cancel' ? `Аннулировать активную бронь #${bookingId.substring(0, 6)}? Средства будут возвращены.` : `Удалить запись о бронировании #${bookingId.substring(0, 6)}?`;
+                        confirmed = await showCustomConfirm(title, message, action === 'delete' ? 'Удалить' : 'Аннулировать');
+                    }
+                    if (confirmed) { handleRentalAction(action, bookingId, submitButton); }
                 }
             });
 
-            // Confirm/Cancel/Delete actions are handled by the general form submit listener added earlier.
+            // Listener to open reject modal
+            document.body.addEventListener('click', (event) => {
+                 if (event.target && event.target.closest('.reject-button')) {
+                     event.preventDefault();
+                     openRejectModal(event.target.closest('.reject-button'));
+                 }
+             });
 
-            // Initial display: Apply filters (which shows all initially) and display page 1
-            applyFiltersAndPagination();
+            // Listener for reject reason form submission
+            if (rejectReasonForm) {
+                 rejectReasonForm.addEventListener('submit', (event) => {
+                     event.preventDefault();
+                     const bookingId = rejectBookingIdInput.value;
+                     // Используем handleRentalAction для отправки запроса
+                     handleRentalAction('reject', bookingId, confirmRejectBtn, new FormData(rejectReasonForm));
+                     closeRejectModal();
+                 });
+            }
 
-            // Initial Total Count Update
-            if (totalCountSpan) { totalCountSpan.textContent = allRows.length; }
-
-             // Initial Page Title Animation (if needed)
-            const pageTitle = document.querySelector('h1');
-            if(pageTitle){ pageTitle.style.opacity='0'; pageTitle.style.transform='translateY(-20px)'; setTimeout(() => {pageTitle.style.transition='opacity 0.5s ease, transform 0.5s ease'; pageTitle.style.opacity='1'; pageTitle.style.transform='translateY(0)';}, 100);}
-        });
+        }); // End DOMContentLoaded
 
     </script>
-
 </body>
 </html>
