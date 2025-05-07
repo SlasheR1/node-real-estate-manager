@@ -68,6 +68,7 @@ function createWindow () {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
+    fullscreen: true,
     webPreferences: {
       // Указываем preload.js
       preload: path.join(__dirname, 'preload.js'),
@@ -105,7 +106,7 @@ function createWindow () {
   console.log('Loading URL: http://localhost:3000/');
   mainWindow.loadURL('http://localhost:3000/');
 
-  mainWindow.webContents.openDevTools();
+  //mainWindow.webContents.openDevTools();
 
   mainWindow.on('closed', function () {
     console.log('Main window closed.');
@@ -226,6 +227,12 @@ ipcMain.on('install-update', (event) => {
   }
 });
 // --------------------------------------------
+
+// Обработчик для закрытия приложения
+ipcMain.on('quit-app', () => {
+  log.info('[IPC Receive <- Renderer] === QUIT APP SIGNAL RECEIVED ===');
+  app.quit();
+});
 
 // Создание preload.js (если его нет)
 const preloadPath = path.join(__dirname, 'preload.js');

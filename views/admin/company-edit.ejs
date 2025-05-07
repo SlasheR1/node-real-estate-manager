@@ -1,0 +1,79 @@
+<!-- views/admin/company-edit.ejs -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/css/forms.css">
+    <link rel="stylesheet" href="/css/admin.css">
+    <style>
+        .current-logo-preview { max-width: 150px; max-height: 150px; margin-bottom: 10px; border-radius: 4px; }
+        .logo-upload-section { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <%- include('../partials/header', { user: user, totalUnreadChatCount: locals.totalUnreadChatCount }) %>
+
+    <div class="container page-container">
+        <%- include('../partials/messages', { message: message }) %>
+
+        <div class="page-header">
+            <h1><i class="fas fa-edit"></i> <%= title %></h1>
+            <a href="/admin/companies" class="btn btn-outline-secondary btn-sm">Назад к списку компаний</a>
+        </div>
+
+        <div class="form-container card-style">
+            <form action="/admin/companies/<%= company.companyId %>/edit" method="POST" enctype="multipart/form-data">
+                <div class="form-grid">
+                    <div class="form-group form-group-full">
+                        <label for="companyName">Название компании *</label>
+                        <input type="text" id="companyName" name="companyName" value="<%= company.companyName %>" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="companyContactEmail">Контактный Email</label>
+                        <input type="email" id="companyContactEmail" name="companyContactEmail" value="<%= company.companyContactEmail || '' %>">
+                    </div>
+                    <div class="form-group">
+                        <label for="companyContactPhone">Контактный Телефон</label>
+                        <input type="tel" id="companyContactPhone" name="companyContactPhone" value="<%= company.companyContactPhone || '' %>">
+                    </div>
+                    <div class="form-group form-group-full">
+                        <label for="companyWebsite">Веб-сайт</label>
+                        <input type="url" id="companyWebsite" name="companyWebsite" value="<%= company.companyWebsite || '' %>" placeholder="https://...">
+                    </div>
+
+                    <div class="form-group form-group-full logo-upload-section">
+                        <label>Логотип компании</label>
+                        <% if (company.companyLogoData) { %>
+                            <p>Текущий логотип:</p>
+                            <% let logoTypeCurrent = company.companyLogoData.startsWith('/9j/') ? 'image/jpeg' : 'image/png'; %>
+                            <img src="data:<%= logoTypeCurrent %>;base64,<%= company.companyLogoData %>" alt="Текущий логотип" class="current-logo-preview">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="1" id="removeLogo" name="removeLogo">
+                                <label class="form-check-label" for="removeLogo">
+                                    Удалить текущий логотип
+                                </label>
+                            </div>
+                        <% } else { %>
+                            <p>Логотип не установлен.</p>
+                        <% } %>
+                        <label for="companyLogo" class="form-label" style="margin-top: 10px;">Загрузить новый логотип (макс. 5MB)</label>
+                        <input class="form-control" type="file" id="companyLogo" name="companyLogo" accept="image/png, image/jpeg">
+                        <small>Если выбрать новый файл, он заменит текущий логотип. Если отметить "Удалить", логотип будет удален.</small>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Сохранить изменения</button>
+                    <a href="/admin/companies" class="btn btn-secondary">Отмена</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <%- include('../partials/footer') %>
+</body>
+</html> 

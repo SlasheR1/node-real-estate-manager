@@ -9,7 +9,7 @@ contextBridge.exposeInMainWorld(
   {
     // Функция для отправки сообщения из рендера в main (например, 'install-update')
     send: (channel, data) => {
-      let validChannels = ['install-update']; // Список разрешенных каналов для отправки
+      let validChannels = ['install-update', 'quit-app']; // Список разрешенных каналов для отправки
       if (validChannels.includes(channel)) {
         ipcRenderer.send(channel, data);
       } else {

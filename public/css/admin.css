@@ -1,0 +1,115 @@
+/* public/css/admin.css */
+
+/* Общие стили для админ-контейнера (можно взять из style.css или адаптировать) */
+.page-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 1.5rem;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    color: #333;
+}
+
+.card-style {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.07);
+    margin-bottom: 1.5rem;
+}
+
+/* Стили для таблиц (адаптировано из tables.css) */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.custom-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+    background-color: transparent;
+    font-size: 0.9rem;
+    color: #444;
+}
+
+.custom-table th,
+.custom-table td {
+    padding: 0.8rem 1rem; /* Увеличенный padding */
+    vertical-align: middle; /* Выравнивание по центру */
+    border-top: 1px solid #dee2e6;
+    text-align: left; /* Выравнивание текста по левому краю по умолчанию */
+}
+
+.custom-table thead th {
+    vertical-align: bottom;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    color: #333;
+    background-color: #f8f9fa; /* Светлый фон для шапки */
+}
+
+.custom-table tbody + tbody {
+    border-top: 2px solid #dee2e6;
+}
+
+/* Чередование строк */
+.custom-table tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.custom-table tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+/* Выравнивание для специфичных колонок */
+.custom-table .actions-header,
+.custom-table .actions-cell {
+    text-align: right; /* Выравнивание действий по правому краю */
+    white-space: nowrap; /* Запрет переноса кнопок */
+}
+
+.custom-table .text-center { text-align: center; }
+.custom-table .text-right { text-align: right; }
+.custom-table .text-nowrap { white-space: nowrap; }
+
+
+/* Стили для кнопок действий в таблице */
+.actions-cell .btn {
+    margin-left: 5px; /* Небольшой отступ между кнопками */
+}
+
+.actions-cell .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    border-radius: 0.2rem;
+}
+
+/* Стили для логотипа в таблице */
+.logo-thumbnail {
+    max-width: 45px; /* Немного уменьшим */
+    max-height: 45px;
+    border-radius: 4px;
+    vertical-align: middle;
+    object-fit: contain; /* Чтобы лого не искажалось */
+    background-color: #f0f0f0; /* Фон для прозрачных лого */
+}
+.actions-cell i.fas {
+    margin-right: 0; /* Убрать отступ иконки в кнопке */
+} 

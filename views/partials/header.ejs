@@ -67,6 +67,14 @@
                             <span>Пользователи</span>
                         </a>
                     <% } %>
+
+                    <%# Управление компаниями (только для Admin) %>
+                    <% if (currentUser.role === 'Admin') { %>
+                        <a href="/admin/companies" class="nav-link">
+                            <i class="fas fa-landmark"></i>
+                            <span>Компании (Админ)</span>
+                        </a>
+                    <% } %>
                 <% } else { %>
                     <%# Ссылки для неавторизованных %>
                     <a href="/login" class="nav-link auth-link">
@@ -146,6 +154,15 @@
         </button>
         -->
     </nav>
+
+    <div class="header-controls">
+        <button id="closeAppBtn" title="Закрыть приложение">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="1em" height="1em" fill="currentColor">
+                <!--!Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.-->
+                <path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"/>
+            </svg>
+        </button>
+    </div>
 
     <!-- ===== Модальное окно обновления (остается как было) ===== -->
     <div id="updateModalOverlay" style="display: none;">
@@ -850,6 +867,108 @@
         right: 0;
     }
 }
+
+/* Стили для кнопки закрытия приложения */
+.btn-close-app {
+    background-color: transparent;
+    color: #6c757d; /* Цвет иконки по умолчанию - должен быть виден */
+    border: none; /* Убираем границу, чтобы не мешала */
+    padding: 0.5rem 0.9rem; /* Паддинг можно настроить для размера */
+    border-radius: 0.375rem;
+    transition: all 0.2s ease-in-out;
+    font-size: 1.2rem; /* Размер иконки крестика */
+    line-height: 1; /* Для лучшего вертикального выравнивания иконки */
+    cursor: pointer;
+    margin-left: 1rem; /* Отступ слева от других элементов */
+}
+
+.btn-close-app i {
+    display: block; /* Убирает лишнее пространство под иконкой если есть */
+}
+
+.btn-close-app:hover,
+.btn-close-app:focus {
+    color: #fff;
+    background-color: #dc3545; /* Красный цвет при наведении */
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    transform: translateY(-1px) scale(1.05);
+}
+
+.btn-close-app:active {
+    transform: translateY(0) scale(1);
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
+/* Контейнер для кнопок управления окном Electron */
+.header-controls {
+    position: absolute !important; /* Абсолютное позиционирование */
+    top: 0px !important;          /* Отступ сверху */
+    right: 0px !important;         /* Отступ справа */
+    height: 100%; /* Высота как у хедера */
+    display: flex !important;
+    align-items: center !important; /* Вертикальное выравнивание по центру */
+    padding-right: 10px !important; /* Небольшой отступ справа для самой кнопки */
+    z-index: 2000 !important;       /* Очень высокий z-index */
+}
+
+#closeAppBtn {
+    background: transparent !important;
+    border: none !important;
+    color: #555555 !important; /* Явный цвет для SVG (fill="currentColor" будет использовать это) */
+    font-size: inherit; /* У SVG свой размер через width/height атрибуты, но можно повлиять на line-height контейнера */
+    width: 38px !important; /* Явная ширина для кликабельной области */
+    height: 100% !important; /* Высота как у родителя .header-controls */
+    padding: 0 !important; /* Убираем внутренние отступы, т.к. SVG сам задает размер */
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+#closeAppBtn svg {
+    width: 16px !important; /* Размер самого SVG */
+    height: 16px !important;
+    display: block !important; /* или inline-block, чтобы SVG был виден */
+}
+
+/* Убираем специфичные стили для i.fas.fa-times, они больше не нужны */
+
+#closeAppBtn:hover {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+    color: #dc3545 !important; /* Иконка SVG окрасится в этот цвет */
+}
+
+#closeAppBtn:active {
+    background-color: rgba(220, 53, 69, 0.2) !important;
+}
+
+.btn-electron-control {
+    background-color: transparent;
+    border: none;
+    color: #333; /* Темный цвет для видимости по умолчанию */
+    padding: 8px 12px;
+    font-size: 16px; /* Размер иконки */
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.btn-electron-control i {
+    display: inline-block; /* Убедимся, что иконка отображается */
+    vertical-align: middle;
+}
+
+.btn-electron-control:hover {
+    background-color: #e6e6e6; /* Светло-серый фон при наведении */
+    color: #dc3545; /* Красный цвет иконки при наведении */
+}
+
+.btn-electron-control:active {
+    background-color: #d4d4d4;
+}
 </style>
 <!-- views/partials/header.ejs -->
 <!-- ======================== ГЛОБАЛЬНЫЙ СКРИПТ ДЛЯ HEADER ======================== -->
@@ -1281,3 +1400,22 @@
     @keyframes shake-error { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); } 20%, 40%, 60%, 80% { transform: translateX(5px); } }
     .shake-error { animation: shake-error 0.5s cubic-bezier(.36,.07,.19,.97) both; border-color: var(--danger-color) !important; }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const closeAppButton = document.getElementById('closeAppBtn');
+        if (closeAppButton) {
+            closeAppButton.addEventListener('click', () => {
+                if (window.electronUpdater && typeof window.electronUpdater.send === 'function') {
+                    console.log('[Header Script] Attempting to send quit-app signal.');
+                    window.electronUpdater.send('quit-app');
+                } else {
+                    console.error('[Header Script] electronUpdater.send is not available to quit app.');
+                }
+            });
+        }
+    });
+</script>
+
+</body>
+</html>

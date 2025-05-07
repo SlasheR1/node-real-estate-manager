@@ -318,57 +318,99 @@ async function removeStaffFromCompany(companyId, staffUsername) {
 /**
  * Обновляет баланс компании с использованием транзакции.
  * @param {string} companyId ID компании.
- * @param {number} amountToAdd Сумма для добавления (может быть отрицательной для списания).
+ * @param {number} targetBalance Целевой баланс для установки.
  * @param {string} operationType Тип операции для истории.
  * @param {string} description Описание операции для истории.
  * @returns {Promise<number>} Финальный баланс компании после обновления.
  */
-async function updateCompanyBalance(companyId, amountToAdd, operationType, description) {
-    const companyRef = db.ref(`companies/${companyId}`);
+async function updateCompanyBalance(companyId, targetBalance, operationType, description) {
+    // Добавим предварительную проверку существования компании
+    try {
+        const preCheckSnapshot = await db.ref(`companies/${companyId}`).once('value');
+        if (!preCheckSnapshot.exists()) {
+            log.error(`[FirebaseService] updateCompanyBalance PRE-CHECK: Company ${companyId} not found BEFORE transaction.`);
+            throw new Error(`Company ${companyId} not found (pre-check).`);
+        }
+        log.info(`[FirebaseService] updateCompanyBalance PRE-CHECK: Company ${companyId} found. Proceeding with transaction.`);
+    } catch (e) {
+        log.error(`[FirebaseService] Error during pre-check for company ${companyId}:`, e);
+        throw e; // Перебрасываем ошибку, если предварительная проверка не удалась
+    }
+
+    const balanceRef = db.ref(`companies/${companyId}/Balance`); // <<< Ref specifically for balance
+    const historyRef = db.ref(`companies/${companyId}/balanceHistory`); // <<< Ref for history
+
     try {
         if (!companyId) throw new Error("Company ID required for balance update.");
-        if (typeof amountToAdd !== 'number' || isNaN(amountToAdd)) throw new Error("Amount must be a number.");
+        if (typeof targetBalance !== 'number' || isNaN(targetBalance)) throw new Error("Target balance must be a number.");
 
-        const transactionResult = await companyRef.transaction(currentData => {
-            if (currentData === null) {
-                log.error(`[FirebaseService] updateCompanyBalance: Company ${companyId} not found during transaction.`);
-                return undefined; // Отменяем транзакцию
-            }
-            const currentBalance = currentData.Balance || 0;
-            const newBalance = parseFloat((currentBalance + amountToAdd).toFixed(2)); // Округление до 2 знаков
+        // Read current balance *before* transaction for history calculation
+        const currentBalanceSnapshot = await balanceRef.once('value');
+        const currentBalance = currentBalanceSnapshot.val() || 0;
+        const amountToAdd = parseFloat((targetBalance - currentBalance).toFixed(2)); // Вычисляем дельту
 
-            // Обновляем баланс
-            currentData.Balance = newBalance;
-
-            // Добавляем запись в историю
-            if (!currentData.balanceHistory) { currentData.balanceHistory = {}; }
-            const historyRef = companyRef.child('balanceHistory').push(); // Генерируем ключ
-            const historyKey = historyRef.key;
-            if (historyKey) {
-                 currentData.balanceHistory[historyKey] = {
-                     Id: historyKey,
-                     Date: new Date().toISOString(), // Используем ISO строку для простоты
-                     Amount: amountToAdd,
-                     OperationType: operationType || "Коррекция",
-                     Description: description || "-",
-                     NewBalance: newBalance
-                 };
-            } else {
-                 log.error(`[FirebaseService] Failed to generate history key for company ${companyId}`);
-                 // Можно отменить транзакцию, вернув undefined, или просто не добавлять историю
-            }
-            return currentData; // Возвращаем обновленные данные для Firebase
+        // --- Transaction only on Balance --- 
+        log.info(`[FirebaseService] Attempting transaction ONLY on Balance for ${companyId}`);
+        const transactionResult = await balanceRef.transaction(currentBalanceInTx => {
+            log.info(`[FirebaseService] INSIDE BALANCE TRANSACTION for ${companyId}. currentBalanceInTx is:`, currentBalanceInTx);
+            // Просто возвращаем новое значение. Firebase сама обработает конфликты.
+            return parseFloat(targetBalance.toFixed(2)); // Return the new value to set
         });
 
-        if (!transactionResult.committed || !transactionResult.snapshot.exists()) {
-            // Либо компания не найдена, либо транзакция была отменена (вернули undefined)
-            throw new Error(`Company ${companyId} not found or balance transaction aborted.`);
+        if (!transactionResult.committed) {
+            log.error(`[FirebaseService] Balance-only transaction ABORTED for ${companyId}.`);
+            throw new Error(`Failed to update balance for company ${companyId} via transaction.`);
         }
-        const finalBalance = transactionResult.snapshot.val().Balance;
-        log.info(`[FirebaseService] Company ${companyId} balance updated by ${amountToAdd}. New balance: ${finalBalance}`);
-        return finalBalance; // Возвращаем финальный баланс
+        
+        const finalBalance = transactionResult.snapshot.val(); // The final balance value
+        log.info(`[FirebaseService] Balance-only transaction COMMITTED for ${companyId}. New balance: ${finalBalance}`);
+
+        // --- Update History (Non-Transactionally for this test) --- 
+        log.info(`[FirebaseService] Adding balance history record non-transactionally for ${companyId}`);
+        try {
+            const newHistoryRecordRef = historyRef.push(); // Generate new key
+            const historyKey = newHistoryRecordRef.key;
+            if (historyKey) {
+                await newHistoryRecordRef.set({
+                    Id: historyKey,
+                    Date: new Date().toISOString(),
+                    Amount: amountToAdd, // Дельта, рассчитанная ранее
+                    OperationType: operationType || "Админ. коррекция",
+                    Description: description || "-",
+                    NewBalance: finalBalance // Итоговый баланс после транзакции
+                });
+                log.info(`[FirebaseService] Balance history record ${historyKey} added successfully.`);
+            } else {
+                 log.error(`[FirebaseService] Failed to generate history key for company ${companyId}`);
+            }
+        } catch (historyError) {
+             log.error(`[FirebaseService] Failed to add balance history non-transactionally for ${companyId}:`, historyError);
+             // Можно решить, пробрасывать ли эту ошибку дальше
+        }
+
+        return finalBalance; // Return the final balance
+
     } catch (error) {
-        log.error(`[FirebaseService] Error updating balance for company ${companyId}:`, error);
+        // Логируем ошибку транзакции или предварительного чтения баланса
+        log.error(`[FirebaseService] Error in balance update process for company ${companyId}:`, error);
+        throw error;
+    }
+}
+
+/**
+ * Получает список всех компаний.
+ * @returns {Promise<Array<object>>} Массив объектов компаний.
+ */
+async function getAllCompanies() {
+    try {
+        const snapshot = await db.ref('companies').once('value');
+        const companiesData = snapshot.val();
+        // Преобразуем объект в массив, добавляя ключ (companyId) в каждый объект
+        const companyList = companiesData ? Object.entries(companiesData).map(([companyId, data]) => ({ ...data, companyId: companyId })) : [];
+        // log.info(`[FirebaseService] Fetched ${companyList.length} companies.`);
+        return companyList;
+    } catch (error) {
+        log.error("[FirebaseService] Error fetching all companies:", error);
         throw error;
     }
 }
@@ -1480,6 +1522,7 @@ module.exports = {
     addStaffToCompany,
     removeStaffFromCompany,
     updateCompanyBalance,
+    getAllCompanies,
     // Properties
     getPropertyById,
     getAllProperties,

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/css/forms.css">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+    <%- include('../partials/header', { user: user, totalUnreadChatCount: locals.totalUnreadChatCount }) %>
+
+    <div class="container page-container">
+        <%- include('../partials/messages', { message: message }) %>
+
+        <div class="page-header">
+            <h1><i class="fas fa-wallet"></i> <%= title %></h1>
+            <a href="/admin/companies" class="btn btn-outline-secondary btn-sm">Назад к списку компаний</a>
+        </div>
+        
+        <div class="form-container card-style">
+            <p><strong>Компания:</strong> <%= company.companyName %></p>
+            <p><strong>Текущий баланс:</strong> <%= (company.Balance || 0).toFixed(2) %></p>
+            
+            <form action="/admin/companies/<%= company.companyId %>/balance" method="POST">
+                <div class="form-group">
+                    <label for="newBalance">Новый баланс *</label>
+                    <input type="number" step="0.01" id="newBalance" name="newBalance" class="form-control" value="<%= (company.Balance || 0).toFixed(2) %>" required>
+                    <small>Укажите итоговое значение баланса.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="reason">Причина изменения (необязательно)</label>
+                    <textarea id="reason" name="reason" class="form-control" rows="3" placeholder="Например: Корректировка, Бонус и т.д."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-check-circle"></i> Установить новый баланс</button>
+                    <a href="/admin/companies" class="btn btn-secondary">Отмена</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <%- include('../partials/footer') %>
+    
+    <script>
+        // Небольшой скрипт для предотвращения случайной отправки формы, если баланс не изменился
+        const balanceForm = document.querySelector('form[action*="/balance"]');
+        const initialBalance = parseFloat(document.getElementById('newBalance').value);
+        
+        if (balanceForm) {
+            balanceForm.addEventListener('submit', function(event) {
+                const currentNewBalance = parseFloat(document.getElementById('newBalance').value);
+                if (currentNewBalance === initialBalance && !document.getElementById('reason').value.trim()) {
+                    if (!confirm('Новый баланс совпадает с текущим, и причина не указана. Вы уверены, что хотите продолжить? Это не приведет к изменениям, если причина пуста.')) {
+                        event.preventDefault();
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html> 

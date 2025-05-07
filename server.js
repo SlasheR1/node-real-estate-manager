@@ -37,6 +37,7 @@ const userRoutes = require('./routes/userRoutes');
 const rentalRoutes = require('./routes/rentalRoutes');
 const companyRoutes = require('./routes/companyRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const adminCompanyRoutes = require('./routes/adminCompanyRoutes');
 const { checkCompanyProfile } = require('./middleware/ownerMiddleware');
 const { ensureCompanyExists } = require('./middleware/companyMiddleware');
 
@@ -207,6 +208,7 @@ app.use('/bookings', bookingRoutes); // Используем префикс
 app.use('/users', userRoutes); // Используем префикс
 app.use('/rentals', rentalRoutes); // Используем префикс
 app.use('/company', companyRoutes); // Используем префикс
+app.use('/admin/companies', adminCompanyRoutes); // <--- И ДОБАВИТЬ ЭТУ СТРОКУ
 app.use(chatRoutes); // Без префикса '/chats', т.к. они уже там
 
 // === НОВЫЙ МАРШРУТ: Страница всех задач ===
