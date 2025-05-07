@@ -135,8 +135,9 @@
              <section class="map-section">
                 <h2>Местоположение на карте</h2>
                 <div id="propertyMap"
-                      data-address="<%= property && property.Address ? JSON.stringify(property.Address) : '' %>"
-                      data-title-hint="<%= property && property.Title ? JSON.stringify(property.Title) : '' %>">
+                      style="width: 100%; height: 400px; background-color: #f0f0f0;"
+                      data-address="<%= property && property.Address ? property.Address : '' %>"
+                      data-title-hint="<%= property && property.Title ? property.Title : '' %>">
                     <%# Карта будет вставлена сюда через JavaScript %>
                  </div>
              </section>
@@ -146,7 +147,7 @@
             <section class="reviews-section">
                 <h2>Отзывы (<span id="reviewCountDisplay"><%= locals.reviews && locals.reviews.length ? locals.reviews.length : 0 %></span>)</h2>
                 <div id="js-review-messages"></div>
-                <div id="reviewsListContainer"> <% if (locals.reviews && locals.reviews.length > 0) { %><% reviews.forEach(review => { %> <div class="review-item" id="review-<%= review.reviewId %>"> <div class="review-header"> <span class="review-author"><%= review.username || 'Аноним' %></span> <div class="review-header-right"> <span class="review-date"><%= review.createdAt ? new Date(review.createdAt).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric'}) : '' %></span> <% if (currentUser && currentUser.role === 'Admin') { %> <button class="review-delete-btn" title="Удалить отзыв" data-review-id="<%= review.reviewId %>" data-property-id="<%= property.Id %>" onclick="deleteReview(this)">×</button> <% } %> </div> </div> <div class="review-rating"> <% for (let i = 1; i <= 5; i++) { %><span class="star <%= i <= review.rating ? '' : 'star-empty' %>">★</span><% } %> </div> <p class="review-comment"><%= review.comment %></p> </div> <% }) %><% } else { %> <p id="noReviewsMessage" style="text-align: center; color: #64748b; margin-top: 15px;">Отзывов пока нет.</p> <% } %> </div>
+                <div id="reviewsListContainer"> <% if (locals.reviews && locals.reviews.length > 0) { %><% reviews.forEach(review => { %> <div class="review-item" id="review-<%= review.reviewId %>"> <div class="review-header"> <span class="review-author"><%= review.FullName || review.username || 'Аноним' %></span> <div class="review-header-right"> <span class="review-date"><%= review.createdAt ? new Date(review.createdAt).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric'}) : '' %></span> <% if (currentUser && currentUser.role === 'Admin') { %> <button class="review-delete-btn" title="Удалить отзыв" data-review-id="<%= review.reviewId %>" data-property-id="<%= property.Id %>" onclick="deleteReview(this)">×</button> <% } %> </div> </div> <div class="review-rating"> <% for (let i = 1; i <= 5; i++) { %><span class="star <%= i <= review.rating ? '' : 'star-empty' %>">★</span><% } %> </div> <p class="review-comment"><%= review.comment %></p> </div> <% }) %><% } else { %> <p id="noReviewsMessage" style="text-align: center; color: #64748b; margin-top: 15px;">Отзывов пока нет.</p> <% } %> </div>
             </section>
 
 
@@ -285,18 +286,17 @@
         initializeChatModalHandlers();
     });
 
-    function initMap() { /* ... код initMap без изменений ... */
+    function initMap() {
         const mapContainer = document.getElementById('propertyMap');
         if (!mapContainer) { console.error('Map container #propertyMap not found!'); return; }
-        let propertyAddress = null;
-        let propertyTitleHint = null;
-        try {
-            const addressJson = mapContainer.dataset.address;
-            const titleJson = mapContainer.dataset.titleHint;
-            if (addressJson && addressJson !== '""') propertyAddress = JSON.parse(addressJson);
-            if (titleJson && titleJson !== '""') propertyTitleHint = JSON.parse(titleJson);
-        } catch (e) { console.error("Ошибка парсинга data-атрибутов карты:", e); }
-        if (!propertyAddress) { mapContainer.innerHTML = '<div class="map-error-message">Адрес объекта не указан.</div>'; return; }
+        let propertyAddress = mapContainer.dataset.address;
+        let propertyTitleHint = mapContainer.dataset.titleHint;
+
+        if (!propertyAddress || String(propertyAddress).trim() === '') {
+            mapContainer.innerHTML = '<div class="map-error-message">Адрес объекта не указан или некорректен для отображения на карте.</div>';
+            console.warn("Адрес для карты не был получен или был некорректен. Data-address был: ", mapContainer.dataset.address);
+            return; 
+        }
         ymaps.geocode(propertyAddress, { results: 1 })
             .then(function (res) {
                 const firstGeoObject = res.geoObjects.get(0);
@@ -305,6 +305,14 @@
                 const initialZoom = 15;
                 const propertyMap = new ymaps.Map('propertyMap', { center: coords, zoom: initialZoom, controls: ['zoomControl', 'fullscreenControl', 'typeSelector'] });
                 propertyMap.setCenter(coords, initialZoom);
+                
+                // Принудительно обновляем размер карты после создания и небольшой задержки
+                setTimeout(() => {
+                    if (propertyMap && propertyMap.container) {
+                        propertyMap.container.fitToViewport();
+                    }
+                }, 100); // Задержка 100 мс
+
                 const placemark = new ymaps.Placemark(coords, { hintContent: propertyTitleHint || propertyAddress, balloonContent: `<strong>${propertyTitleHint || 'Объект'}</strong><br>${propertyAddress}` }, { preset: 'islands#blueDotIconWithCaption' });
                 propertyMap.geoObjects.add(placemark);
             })

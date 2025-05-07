@@ -30,7 +30,7 @@
                 <% if (currentUser.role === 'Owner') { %>
                 <div class="quick-actions-section">
                     <h6 class="quick-actions-title">Быстрые действия</h6>
-                    <a href="/properties/new" class="btn btn-primary-action">
+                    <a href="/properties/add" class="btn btn-primary-action">
                         <i class="fas fa-plus-circle"></i> Добавить объект
                     </a>
                     <a href="/properties" class="btn btn-secondary-action">
@@ -47,7 +47,8 @@
                     </a>
                 </div>
                 <% } else if (currentUser.role === 'Tenant') { %>
-                    <div class="quick-actions-section">
+                    <%# УДАЛЯЕМ БЛОК БЫСТРОГО ДОСТУПА ДЛЯ TENANT %>
+                    <%# <div class="quick-actions-section">
                         <h6 class="quick-actions-title">Быстрый доступ</h6>
                         <a href="/properties" class="btn btn-primary-action">
                             <i class="fas fa-search"></i> Найти и арендовать
@@ -61,7 +62,7 @@
                          <a href="/profile/balance-history" class="btn btn-secondary-action">
                             <i class="fas fa-wallet"></i> Мой баланс
                         </a>
-                    </div>
+                    </div> %>
                 <% } else if (currentUser.role === 'Admin') { %>
                     <div class="quick-actions-section">
                         <h6 class="quick-actions-title">Администрирование</h6>

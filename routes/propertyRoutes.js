@@ -307,7 +307,16 @@ router.post('/:id/reviews', isLoggedIn, isTenant, async (req, res, next) => { //
         if (hasReviewed) throw new Error("Вы уже оставили отзыв.");
         const reviewRef = db.ref(`properties/${propertyId}/reviews`).push();
         const newReviewId = reviewRef.key;
-        const newReviewData = { reviewId: newReviewId, propertyId, userId: currentUser.username, username: currentUser.username, rating: numRating, comment: comment.trim(), createdAt: new Date().toISOString() };
+        const newReviewData = {
+            reviewId: newReviewId,
+            propertyId,
+            userId: currentUser.username,
+            username: currentUser.username,
+            FullName: currentUser.FullName || currentUser.username,
+            rating: numRating,
+            comment: comment.trim(),
+            createdAt: new Date().toISOString()
+        };
         const currentReviews = await firebaseService.getPropertyReviews(propertyId);
         const allRatings = Array.isArray(currentReviews) ? currentReviews.map(r => r.rating) : [];
         allRatings.push(numRating);

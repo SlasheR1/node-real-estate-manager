@@ -5,9 +5,9 @@
     --sidebar-bg: #f8f9fa;
     --chat-panel-bg: #ffffff;
     --message-out-bg: linear-gradient(135deg, #79d2ff, #56a4ff);
-    --message-in-bg: #f0f0f0;
-    --message-out-text: #f5e4e4;
-    --message-in-text: #d4d4d4;
+    --message-in-bg: #6c757d;
+    --message-out-text: #ffffff;
+    --message-in-text: #ffffff;
     --primary-accent: #0d6efd;
     --text-secondary: #667781;
     --text-primary: #2c3e50;

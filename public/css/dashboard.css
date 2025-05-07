@@ -544,6 +544,11 @@ body {
     height: 100%;
 }
 
+/* Добавляем правило для скрытия card-quick-actions у Tenant */
+.tenant-dashboard-grid .card-quick-actions {
+    display: none;
+}
+
 /* Адаптивность */
 @media (max-width: 1200px) {
     .dashboard-grid {
