@@ -6,8 +6,8 @@
     --chat-panel-bg: #ffffff;
     --message-out-bg: linear-gradient(135deg, #79d2ff, #56a4ff);
     --message-in-bg: #f0f0f0;
-    --message-out-text: #ffffff;
-    --message-in-text: #303030;
+    --message-out-text: #f5e4e4;
+    --message-in-text: #d4d4d4;
     --primary-accent: #0d6efd;
     --text-secondary: #667781;
     --text-primary: #2c3e50;
@@ -35,7 +35,7 @@
     --tg-text-color: #ffffff;
     --tg-secondary-text: #8e9297;
     --tg-message-out: #2b5278;
-    --tg-message-in: #182533;
+    --tg-message-in: #356585;
     --tg-hover: rgba(112, 117, 121, 0.1);
     --tg-active: rgba(112, 117, 121, 0.2);
     --tg-border: #3e546a;
